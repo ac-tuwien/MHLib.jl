@@ -1,0 +1,13 @@
+name = "MHLib"
+uuid = "c462d6b0-5efa-43a1-9742-845ab4f2bb9a"
+authors = ["Günther Raidl"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
