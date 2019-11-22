@@ -1,4 +1,9 @@
-export MAXSATInstance, MAXSATSolution, copy!, copy
+module OneMax
+
+import Base: copy, copy!
+import MHLib: BoolVectorSolution, calc_objective
+
+export MAXSATInstance, MAXSATSolution
 
 """MAXSATInstance
 
@@ -246,3 +251,5 @@ return obj_val
 end
 
 =#
+
+end  # module

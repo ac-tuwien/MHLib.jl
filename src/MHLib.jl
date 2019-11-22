@@ -5,15 +5,11 @@ A Toolbox for Metaheuristics and Hybrid Optimization Methods
 """
 module MHLib
 
-using StaticArrays
 using Random
+using Base: copy, copy!
 
-export greet
-
-greet() = print("Hello World!")
-
-export Solution, to_maximize, obj!, invalidate!, is_better, is_worse,
-    is_better_obj, is_worse_obj, dist, check
+export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
+    is_better, is_worse, is_better_obj, is_worse_obj, dist, check
 
 """Solution
 
@@ -39,24 +35,41 @@ This default implementation returns true.
 to_maximize(::Type) = true
 to_maximize(s::Solution) = to_maximize(typeof(s))
 
-"""obj!(::Solution)
+"""obj(::Solution)
 
 Return obj_val if obj_val_valid or calculate it via objective(::Solution).
 """
-obj!(s::Solution) = s.obj_val_valid ? s.obj_value : calc_objective(s)
+function obj(s::Solution)
+    if !s.obj_val_valid
+        s.obj_val = calc_objective(s)
+        s.obj_val_valid = true
+    end
+    s.obj_val
+end
+
+calc_objective(::Solution) =
+    error("calc_objective not implemented for concrete solution")
 
 """invalidate!(::Solution)
 
 Invalidate a possibly cached objective value, usually due to a change in the solution.
 """
-invalidate!(solution::Solution) = obj_val_valid = false;
+invalidate!(s::Solution) = s.obj_val_valid = false;
+
+"""is_equal(::Solution, ::Solution)
+
+Return true if the two solutions are considered equal and false otherwise.
+
+The default implementation just checks if the objective values are the same.
+"""
+is_equal(s1::Solution, s2::Solution) = obj(s1) == obj(s2)
 
 """is_better(::Solution, ::Solution)
 
 Return true if the first solution is better than the second.
 """
 function is_better(s1::S, s2::S) where S <: Solution
-    to_maximize(s1) ? obj!(s1) > obj!(s2) : obj!(s1) < obj!(s2)
+    to_maximize(s1) ? obj(s1) > obj(s2) : obj(s1) < obj(s2)
 end
 
 """is_worse(::Solution, ::Solution)
@@ -64,7 +77,7 @@ end
 Return true if the first solution is worse than the second.
 """
 function is_worse(s1::S, s2::S) where S <: Solution
-    to_maximize(s1) ? obj!(s1) < obj!(s2) : obj!(s1) > obj!(s2)
+    to_maximize(s1) ? obj(s1) < obj(s2) : obj(s1) > obj(s2)
 end
 
 """is_better_obj(::Solution, obj1, obj2)
@@ -85,14 +98,15 @@ function is_worse_obj(s::Solution, obj1, obj2)
     to_maximize(s) ? obj1 < obj2 : obj1 > obj2
 end
 
-"""distthe distance of s1 to s2
+"""dist(::Solution, ::Solution)
 
-Return true if the first solution is worse than the second.
-The default implementation just returns false if the solutions are the same
-and true otherwise.
+Return distance of the two solutions.
+
+The default implementation just returns 0 when the objective values
+are the same and 1 otherwise.
 
 """
-dist(s1::S, s2::S) where S <: Solution = s1 != s2
+dist(s1::S, s2::S) where S <: Solution = obj(s1) == obj(s2) ? 0 : 1
 
 """Check validity of solution.
 
@@ -101,11 +115,11 @@ The default implementation just re-calculates the objective value.
 """
 function check(s::Solution)::Nothing
     if s.obj_val_valid
-        old_obj = self.obj_val
+        old_obj = s.obj_val
         invalidate!(s)
-        if old_obj != s.obj!()
+        if old_obj != obj(s)
             error("Solution has wrong objective value: $old_obj, " *
-                  "should be $(s.obj!())")
+                  "should be $(obj(s))")
         end
     end
 end
@@ -123,22 +137,17 @@ Concrete subtypes need to implement:
 """
 abstract type VectorSolution{N,T} <: Solution end
 
-"""copy!(::Solution, ::Solution)
-
-Make first solution an independent copy of the second solution.
-"""
-function copy!(s1::S, s2::S) where S <: VectorSolution
-      # copy!(s1, s2)
-end
-
 """len(::VectorSolution)
 
 Length of the solution vector.
 """
 len(s::VectorSolution) = length(s.x)
 
+is_equal(s1::VectorSolution, s2::VectorSolution) =
+    obj(s1) == obj(s2) && s1.x == s2.x
 
-export BoolVectorSolution
+
+export BoolVectorSolution, initialize!
 
 """BoolVectorSolution
 
@@ -148,38 +157,13 @@ abstract type BoolVectorSolution{N} <: VectorSolution{N,Bool} end
 
 initialize!(s::BoolVectorSolution) = ( rand!(s.x); invalidate!(s) )
 
+"""dist(::BoolVectorSolution, ::BoolVectorSolution)
 
-"""OneMaxSolution
-
-A concrete solution type to solve the MAXSAT problem.
+Return Hamming distance.
 """
-mutable struct OneMaxSolution{N} <: BoolVectorSolution{N}
-    obj_val::Int
-    obj_val_valid::Bool
-    x::MVector{N,Bool}
-    OneMaxSolution{N}() where {N} = new{N}(-1, false, MVector{N,Bool}(undef))
-    OneMaxSolution{N}(s::OneMaxSolution{N}) where {N} =
-        new{N}(s.obj_val, s.obj_val_valid, MVector{N,Bool}(s.x))
-end
-
-calc_objective(s::OneMaxSolution) = sum(s.x)
-
-function copy!(s1::S, s2::S) where {S <: OneMaxSolution}
-    s1.obj_val = s2.obj_val
-    s1.obj_val_valid = s2.obj_val_valid
-    s1.x[:] = s2.x
-end
-
-copy(s::OneMaxSolution) = deepcopy(s)
+dist(s1::BoolVectorSolution, s2::BoolVectorSolution) = sum(abs.(s1.x - s2.x))
 
 
-include("MAXSAT.jl")
-
-
-
-
-s = OneMaxSolution{5}()
-initialize!(s)
-print("$s, $(obj!(s))")
+include("demos/OneMax.jl")
 
 end # module
