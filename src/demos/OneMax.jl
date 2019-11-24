@@ -1,9 +1,17 @@
 module OneMax
 
 import Base: copy, copy!
-import MHLib: BoolVectorSolution, calc_objective
+import MHLib: BoolVectorSolution, calc_objective, settings, settings_cfg
+using ArgParse
 
 export OneMaxSolution
+
+@add_arg_table settings_cfg begin
+    "--maxsat_n"
+        help = "length of solution string in MAXSAT problem"
+        arg_type = Int
+        default = 100
+end
 
 
 """OneMaxSolution

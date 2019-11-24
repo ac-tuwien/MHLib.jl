@@ -18,5 +18,5 @@ using MHLib.OneMax
     @test dist(s1, s3) == 1
     println("$s1, $(obj(s1))")
     check(s1)
-
+    println(settings)
 end
