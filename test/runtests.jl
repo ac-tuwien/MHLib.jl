@@ -22,5 +22,5 @@ using MHLib.OneMax
     # println("$s1, $(obj(s1))")
     check(s1)
 
-    
+
 end

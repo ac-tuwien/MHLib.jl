@@ -1,8 +1,8 @@
 module OneMax
 
 import Base: copy, copy!
-import MHLib: BoolVectorSolution, calc_objective, settings, settings_cfg
 using ArgParse
+import MHLib: BoolVectorSolution, calc_objective, settings, settings_cfg
 
 export OneMaxSolution
 

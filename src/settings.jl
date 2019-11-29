@@ -1,7 +1,7 @@
 using ArgParse
 using Random
 
-export settings_cfg, settings, @add_arg_table, parse_settings!,
+export settings_cfg, settings, parse_settings!, add_arg_table,
     get_settings_as_string, seed_random_generator
 
 """settings_cfg
@@ -59,7 +59,7 @@ function seed_random_generator(seed::Int=-1)
         seed = settings[:seed]
     end
     if seed == 0
-        seed = rand(Int)
+        seed = rand(1:typemax(Int32))
         settings[:seed] = seed
     end
     Random.seed!(seed)

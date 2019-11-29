@@ -165,6 +165,7 @@ dist(s1::BoolVectorSolution, s2::BoolVectorSolution) = sum(abs.(s1.x - s2.x))
 
 
 include("settings.jl")
+include("scheduler.jl")
 include("demos/OneMax.jl")
 
 end # module
