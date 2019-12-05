@@ -1,7 +1,7 @@
 
 """MHLib
 
-A Toolbox for Metaheuristics and Hybrid Optimization Methods
+A Toolbox for Metaheuristics and Hybrid Optimization Methods.
 """
 module MHLib
 

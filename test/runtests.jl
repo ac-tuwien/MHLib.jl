@@ -2,11 +2,11 @@ using Test
 using MHLib
 using MHLib.Scheduler
 using MHLib.OneMax
+using Random
 
 @testset "MHLib.jl" begin
     parse_settings!(["--seed=1"])
     println(get_settings_as_string())
-
     s1 = OneMaxSolution{5}()
     initialize!(s1)
     s2 = OneMaxSolution{5}()
@@ -25,6 +25,7 @@ using MHLib.OneMax
 end
 
 @testset "scheduler.jl" begin
+    parse_settings!(["--seed=1"])
     sol = OneMaxSolution{10}()
     println(sol)
     methods = [MHMethod("con", construct!, 0),
@@ -38,4 +39,6 @@ end
         println(sol)
     end
     main_results(sched)
+    check(sol)
+    @test obj(sol) >= 0
 end
