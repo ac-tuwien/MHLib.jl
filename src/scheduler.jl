@@ -8,7 +8,13 @@ The module is intended for metaheuristics in which a set of methods
 module Scheduler
 
 using ArgParse
-import MHLib: @add_arg_table, settings_cfg
+using Printf
+using MHLib
+# import MHLib: @add_arg_table, settings, settings_cfg, Solution, obj
+
+export Result, MHMethod, MHMethodStatistics, MHScheduler, perform_method!,
+    next_method, update_incumbent!, check_termination, perform_sequentially!,
+    main_results
 
 @add_arg_table settings_cfg begin
     "--mh_titer"
@@ -16,8 +22,7 @@ import MHLib: @add_arg_table, settings_cfg
         arg_type = Int
         default = 100
 end
-
-#=
+#= TODO
 parser = get_settings_parser()
 parser.add_argument("--mh_titer", type=int, default=100, help='maximum number of iterations (<0: turned off)')
 parser.add_argument("--mh_tciter", type=int, default=-1,
@@ -26,180 +31,272 @@ parser.add_argument("--mh_ttime", type=int, default=-1, help='time limit [s] (<0
 parser.add_argument("--mh_tctime", type=int, default=-1, help='maximum time [s] without improvement (<0: turned off)')
 parser.add_argument("--mh_tobj", type=float, default=-1,
                     help='objective value at which should be terminated when reached (<0: turned off)')
-add_bool_arg(parser, "mh_lnewinc", default=True, help='write iteration log if new incumbent solution')
+add_bool_arg(parser, "mh_lnewinc", default=true, help='write iteration log if new incumbent solution')
 parser.add_argument("--mh_lfreq", type=int, default=0,
                     help='frequency of writing iteration logs (0: none, >0: number of iterations, '
                          '-1: iteration 1,2,5,10,20,...')
-add_bool_arg(parser, "mh_checkit", default=False, help='call check() for each solution after each method application')
+add_bool_arg(parser, "mh_checkit", default=false, help='call check() for each solution after each method application')
 parser.add_argument("--mh_workers", type=int, default=4, help='number of worker processes when using multiprocessing')
+=#
 
 
-class Result:
-    """Data in conjunction with a method application's result.
+"""Result
 
-    Attributes
-        - changed: if false, the solution has not been changed by the method application
-        - terminate: if true, a termination condition has been fulfilled
-        - log_info: customized log info
-    """
-    __slots__ = ('changed', 'terminate', 'log_info')
+Data in conjunction with a method application's result.
 
-    def __init__(self):
-        self.changed = True
-        self.terminate = False
-        self.log_info = None
+Attributes
+    - changed: if false, the solution has not been changed by the method application
+    - terminate: if true, a termination condition has been fulfilled
+    - log_info: customized log info
+"""
+mutable struct Result
+    changed::Bool
+    terminate::Bool
+    log_info::String
+end
 
-    def __repr__(self):
-        return f"(changed={self.changed}, terminate={self.terminate}, log_info={self.log_info})"
-
-
-@dataclass
-class Method:
-    """A method to be applied by the scheduler.
-
-    Attributes
-        - name: name of the method; must be unique over all used methods
-        - method: a function called for a Solution object
-        - par: a parameter provided when calling the method
-    """
-    __slots__ = ('name', 'func', 'par')
-    name: str
-    func: Callable[[Solution, Any, Result], None]
-    par: Any
+Result() = Result(true, false, "")
 
 
-@dataclass
-class MethodStatistics:
-    """Class that collects data on the applications of a Method.
+"""MHMethod
 
-    Attributes
-        - applications: number of applications of this method
-        - netto_time: accumulated time of all applications of this method without further costs (e.g., VND)
-        - successes: number of applications in which an improved solution was found
-        - obj_gain: sum of gains in the objective values over all successful applications
-        - brutto_time: accumulated time of all applications of this method including further costs (e.g., VND)
-    """
-    applications: int = 0
-    netto_time: float = 0.0
-    successes: int = 0
-    obj_gain: float = 0.0
-    brutto_time: float = 0.0
+A method to be applied to a solution by the scheduler.
+
+Attributes
+    - name: name of the method; must be unique over all used methods
+    - method: a function called for a Solution object
+    - par: a parameter provided when calling the method
+"""
+struct MHMethod
+    name::String
+    func::Function
+    par::Int
+end
 
 
-class Scheduler(ABC):
-    """Abstract class for metaheuristics that work by iteratively applying certain operators.
+"""Class that collects data on the applications of a MHMethod.
 
-    Attributes
-        - incumbent: incumbent solution, i.e., initial solution and always best solution so far encountered
-        - incumbent_valid: True if incumbent is a valid solution to be considered
-        - incumbent_iteration: iteration in which incumbent was found
-        - incumbent_time: time at which incumbent was found
-        - population: only used in derived population-based metaheurstics and here for logging, otherwise None
-        - methods: list of all Methods
-        - method_stats: dict of MethodStatistics for each Method
-        - iteration: overall number of method applications
-        - time_start: starting time of algorithm
-        - run_time: overall runtime (set when terminating)
-        - logger: pymhlib's logger for logging general info
-        - iter_logger: pymhlib's logger for logging iteration info
-        - own_settings: own settings object with possibly individualized parameter values
-    """
-    eps = 1e-12  # epsilon value for is_logarithmic_number()
-    log10_2 = log10(2)  # log10(2)
-    log10_5 = log10(5)  # log10(5)
+Attributes
+    - applications: number of applications of this method
+    - netto_time: accumulated time of all applications of this method without further costs
+        (e.g., VND)
+    - successes: number of applications in which an improved solution was found
+    - obj_gain: sum of gains in the objective values over all successful applications
+    - brutto_time: accumulated time of all applications of this method including further
+        costs (e.g., VND)
+"""
+mutable struct MHMethodStatistics
+    applications::Int
+    netto_time::Float64
+    successes::Int
+    obj_gain::Float64
+    brutto_time::Float64
+end
 
-    def __init__(self, sol: Solution, methods: List[Method], own_settings: dict = None, consider_initial_sol=False,
-                 population=None):
-        """
-        :param sol: template/initial solution
-        :param methods: list of scheduler methods to apply
-        :param own_settings: an own settings object for locally valid settings that override the global ones
-        :param consider_initial_sol: if true consider sol as valid solution that should be improved upon; otherwise
-            sol is considered just a possibly uninitialized of invalid solution template
-        :param population: optional population object used in derived population-based metaheuristic
-        """
-        self.incumbent = sol
-        self.incumbent_valid = consider_initial_sol
-        self.incumbent_iteration = 0
-        self.incumbent_time = 0.0
-        self.population = population
-        self.methods = methods
-        self.method_stats = {method.name: MethodStatistics() for method in methods}
-        self.iteration = 0
-        self.time_start = time.process_time()
-        self.run_time = None
-        self.logger = logging.getLogger("pymhlib")
-        self.iter_logger = logging.getLogger("pymhlib_iter")
-        self.log_iteration_header()
-        if self.incumbent_valid:
-            self.log_iteration('-', float('NaN'), sol, True, True, None)
-        self.own_settings = OwnSettings(own_settings) if own_settings else settings
+MHMethodStatistics() = MHMethodStatistics(0,0.0,0,0.0,0.0)
 
-    def update_incumbent(self, sol, current_time):
-        """If the given solution is better than incumbent (or we do not have an incumbent yet) update it."""
-        if not self.incumbent_valid or sol.is_better(self.incumbent):
-            self.incumbent.copy_from(sol)
-            self.incumbent_iteration = self.iteration
-            self.incumbent_time = current_time
-            self.incumbent_valid = True
-            return True
 
-    @staticmethod
-    def next_method(meths: List, *, randomize: bool = False, repeat: bool = False):
-        """Generator for obtaining a next method from a given list of methods, iterating through all methods.
+"""MHScheduler
 
-        :param meths: List of methods
-        :param randomize: random order, otherwise consider given order
-        :param repeat: repeat infinitely, otherwise just do one pass
-        """
-        if randomize:
-            meths = meths.copy()
-        while True:
-            if randomize:
-                random.shuffle(meths)
-            for method in meths:
-                yield method
-            if not repeat:
+Class for metaheuristics that work by iteratively applying certain operators.
+
+Attributes
+    - incumbent: incumbent solution, i.e., initial solution and always best solution so far
+        encountered
+    - incumbent_valid: true if incumbent is a valid solution to be considered
+    - incumbent_iteration: iteration in which incumbent was found
+    - incumbent_time: time at which incumbent was found
+    - population: only used in derived population-based metaheurstics and here for logging,
+        otherwise None
+    - methods: list of all MHMethods
+    - method_stats: dict of MHMethodStatistics for each MHMethod
+    - iteration: overall number of method applications
+    - time_start: starting time of algorithm
+    - run_time: overall runtime (set when terminating)
+    - logger: pymhlib's logger for logging general info
+    - iter_logger: pymhlib's logger for logging iteration info
+    - own_settings: own settings object with possibly individualized parameter values
+"""
+mutable struct MHScheduler
+    incumbent::Solution
+    incumbent_valid::Bool
+    incumbent_iteration::Int
+    incumbent_time::Float64
+    methods::Vector{MHMethod}
+    method_stats::Dict{String,MHMethodStatistics}
+    iteration::Int
+    time_start::Float64
+    run_time::Float64
+    # logger = logging.getLogger("pymhlib") TODO
+    # iter_logger = logging.getLogger("pymhlib_iter")
+end
+
+
+"""MHScheduler
+
+Create a method scheduler.
+
+Arguments
+    - sol: template/initial solution
+    - methods: list of scheduler methods to apply
+    - own_settings: an own settings object for locally valid settings that override
+        the global ones
+    - consider_initial_sol: if true consider sol as valid solution that should be
+        improved upon; otherwise sol is considered just a possibly uninitialized
+        of invalid solution template
+"""
+function MHScheduler(sol::Solution, methods::Vector{MHMethod}, consider_initial_sol=false)
+    method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
+    return MHScheduler(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
+        time(), 0.0)
+    # TODO self.log_iteration_header()
+    # if self.incumbent_valid:
+    #    self.log_iteration('-', float('NaN'), sol, true, true, None)
+    #    self.own_settings = OwnSettings(own_settings) if own_settings else settings
+end
+
+
+"""update_incumbent!(scheduler, solution, current_time)
+
+If the given solution is better than incumbent (or we do not have an incumbent yet)
+update it.
+"""
+function update_incumbent!(s::MHScheduler, sol::Solution, current_time::Float64)
+    if !s.incumbent_valid || is_better(sol, s.incumbent)
+        copy!(s.incumbent, sol)
+        s.incumbent_iteration = s.iteration
+        s.incumbent_time = current_time
+        s.incumbent_valid = true
+        return true
+    end
+    false
+end
+
+
+"""next_method(meths; randomize=false, repeat=false)
+
+Generator for obtaining a next method from a given list of methods, iterating through
+    all methods.
+
+Parameters
+    - meths: List of methods
+    - randomize: random order, otherwise consider given order
+    - repeat: repeat infinitely, otherwise just do one pass
+"""
+function next_method(meths::Vector{MHMethod}; randomize::Bool=false, repeat::Bool=false)
+    if randomize
+        meths = meths.copy()
+    end
+    function gen_methods(channel::Channel)
+        while true
+            # if randomize TODO
+            #     random.shuffle(meths)
+            # end
+            for method in meths
+                put!(channel, method)
+            end
+            if !repeat
                 break
+            end
+        end
+    end
+    Channel(gen_methods)
+end
 
-    def perform_method(self, method: Method, sol: Solution, delayed_success=False) -> Result:
-        """Performs method on given solution and returns Results object.
 
-        Also updates incumbent, iteration and the method's statistics in method_stats.
-        Furthermore checks the termination condition and eventually sets terminate in the returned Results object.
+"""Perform method on given solution and returns Results object.
 
-        :param method: method to be performed
-        :param sol: solution to which the method is applied
-        :param delayed_success: if set the success is not immediately determined and updated but at some later
-                call of delayed_success_update()
-        :returns: Results object
-        """
-        res = Result()
-        obj_old = sol.obj()
-        t_start = time.process_time()
-        method.func(sol, method.par, res)
-        t_end = time.process_time()
-        if __debug__ and self.own_settings.mh_checkit:
-            sol.check()
-        ms = self.method_stats[method.name]
-        ms.applications += 1
-        ms.netto_time += t_end - t_start
-        obj_new = sol.obj()
-        if not delayed_success:
-            ms.brutto_time += t_end - t_start
-            if sol.is_better_obj(sol.obj(), obj_old):
-                ms.successes += 1
-                ms.obj_gain += obj_new - obj_old
-        self.iteration += 1
-        new_incumbent = self.update_incumbent(sol, t_end - self.time_start)
-        terminate = self.check_termination()
-        self.log_iteration(method.name, obj_old, sol, new_incumbent, terminate, res.log_info)
-        if terminate:
-            self.run_time = time.process_time() - self.time_start
-            res.terminate = True
-        return res
+Also updates incumbent, iteration and the method's statistics in method_stats.
+Furthermore checks the termination condition and eventually sets terminate in the
+returned Results object.
 
-    def perform_method_pair(self, destroy: Method, repair: Method, sol: Solution) -> Result:
+Parameters
+    - method: method to be performed
+    - sol: solution to which the method is applied
+    - delayed_success: if set the success is not immediately determined and updated
+        but at some later call of delayed_success_update()
+"""
+function perform_method!(s::MHScheduler, method::MHMethod, sol::Solution,
+    delayed_success=false)::Result
+    res = Result()
+    obj_old = obj(sol)
+    t_start = time()
+    method.func(sol, method.par, res)
+    t_end = time()
+    # if __debug__ and self.own_settings.mh_checkit: TODO
+    #     sol.check()
+    ms = s.method_stats[method.name]
+    ms.applications += 1
+    ms.netto_time += t_end - t_start
+    obj_new = obj(sol)
+    if !delayed_success
+        ms.brutto_time += t_end - t_start
+        if is_better_obj(sol, obj(sol), obj_old)
+            ms.successes += 1
+            ms.obj_gain += obj_new - obj_old
+        end
+    end
+    s.iteration += 1
+    new_incumbent = update_incumbent!(s, sol, t_end - s.time_start)
+    terminate = check_termination(s)
+    # TODO self.log_iteration(method.name, obj_old, sol, new_incumbent, terminate, res.log_info)
+    if terminate
+        s.run_time = time() - s.time_start
+        res.terminate = true
+    end
+    res
+end
+
+
+"""check_termination(scheduler)
+
+Check termination conditions and return true when to terminate.
+"""
+function check_termination(s::MHScheduler)::Bool
+    t = time()
+    if 0 <= settings[:mh_titer] <= s.iteration
+            # TODO or \
+            #0 <= self.own_settings.mh_tciter <= self.iteration - self.incumbent_iteration or \
+            #0 <= self.own_settings.mh_ttime <= t - self.time_start or \
+            #0 <= self.own_settings.mh_tctime <= t - self.incumbent_time or \
+            #0 <= self.own_settings.mh_tobj and not self.incumbent.is_worse_obj(self.incumbent.obj(),
+            #                                                                   self.own_settings.mh_tobj):
+        return true
+    end
+    false
+end
+
+
+"""perform_sequentially!
+
+Applies the given list of methods sequentially, finally keeping the best solution as
+incumbent.
+"""
+function perform_sequentially!(s::MHScheduler, sol::Solution, meths::Vector{Method})
+    for m in s.next_method(meths)
+        res = self.perform_method!(m, sol)
+        if res.terminate
+            break
+        end
+        self.update_incumbent!(sol, time() - s.time_start)
+    end
+end
+
+
+"""Write main results to logger."""
+function main_results(s::MHScheduler)
+    str = "T best solution: $(s.incumbent)\nT best obj: $(obj(s.incumbent))\n" *
+        "T best iteration: $(s.incumbent_iteration)\n" *
+        "T total iterations: $(s.iteration)\n" *
+        @sprintf("T best time [s]: %.3f\n", s.incumbent_time) *
+        @sprintf("T total time [s]: %.4f\n", s.run_time)
+    # TODO self.logger.info(LogLevel.indent(s))
+    print(str)
+    check(s.incumbent)
+end
+
+#=
+    def perform_method_pair(self, destroy: MHMethod, repair: MHMethod, sol: Solution) -> Result:
         """Performs a destroy/repair method pair on given solution and returns Results object.
 
         Also updates incumbent, iteration and the method's statistics in method_stats.
@@ -221,40 +318,8 @@ class Scheduler(ABC):
                                           t_destroyed - t_start, t_end - t_destroyed)
         return res
 
-    def perform_methods(self, methods: List[Method], sol: Solution) -> Result:
-        """Performs all methods on given solution and returns Results object.
 
-        Also updates incumbent, iteration and the method's statistics in method_stats.
-        Furthermore checks the termination condition and eventually sets terminate in the returned Results object.
-
-        :param methods: list of methods to perform
-        :param sol: solution to which the method is applied
-        :returns: Results object
-        """
-        res = Result()
-        obj_old = sol.obj()
-        method_name = ""
-        for method in methods:
-            if method_name != "":
-                method_name += "+"
-            method_name += method.name
-
-            method.func(sol, method.par, res)
-            if res.terminate:
-                break
-        t_end = time.process_time()
-
-        self.iteration += 1
-        new_incumbent = self.update_incumbent(sol, t_end - self.time_start)
-        terminate = self.check_termination()
-        self.log_iteration(method_name, obj_old, sol, new_incumbent, terminate, res.log_info)
-        if terminate:
-            self.run_time = time.process_time() - self.time_start
-            res.terminate = True
-
-        return res
-
-    def update_stats_for_method_pair(self, destroy: Method, repair: Method, sol: Solution, res: Result, obj_old: TObj,
+    def update_stats_for_method_pair(self, destroy: MHMethod, repair: MHMethod, sol: Solution, res: Result, obj_old: TObj,
                                      t_destroy: float, t_repair: float):
         """Update statistics, incumbent and check termination condition after having performed a destroy+repair."""
         if __debug__ and self.own_settings.mh_checkit:
@@ -280,9 +345,9 @@ class Scheduler(ABC):
                            terminate, res.log_info)
         if terminate:
             self.run_time = time.process_time() - self.time_start
-            res.terminate = True
+            res.terminate = true
 
-    def delayed_success_update(self, method: Method, obj_old: TObj, t_start: TObj, sol: Solution):
+    def delayed_success_update(self, method: MHMethod, obj_old: TObj, t_start: TObj, sol: Solution):
         """Update an earlier performed method's success information in method_stats.
 
         :param method: earlier performed method
@@ -298,17 +363,6 @@ class Scheduler(ABC):
             ms.successes += 1
             ms.obj_gain += obj_new - obj_old
 
-    def check_termination(self):
-        """Check termination conditions and return True when to terminate."""
-        t = time.process_time()
-        if 0 <= self.own_settings.mh_titer <= self.iteration or \
-                0 <= self.own_settings.mh_tciter <= self.iteration - self.incumbent_iteration or \
-                0 <= self.own_settings.mh_ttime <= t - self.time_start or \
-                0 <= self.own_settings.mh_tctime <= t - self.incumbent_time or \
-                0 <= self.own_settings.mh_tobj and not self.incumbent.is_worse_obj(self.incumbent.obj(),
-                                                                                   self.own_settings.mh_tobj):
-            return True
-
     def log_iteration_header(self):
         """Write iteration log header."""
         s = f"I {'iteration':>10} {'best':>16} {'obj_old':>16} {'obj_new':>16} "
@@ -321,6 +375,10 @@ class Scheduler(ABC):
 
     @staticmethod
     def is_logarithmic_number(x: int):
+        const eps = 1e-12  # epsilon value for is_logarithmic_number()
+        const log10_2 = log10(2)
+        const log10_5 = log10(5)
+
         lr = log10(x) % 1
         return abs(lr) < Scheduler.eps or abs(lr-Scheduler.log10_2) < Scheduler.eps or \
             abs(lr-Scheduler.log10_5) < Scheduler.eps
@@ -342,9 +400,9 @@ class Scheduler(ABC):
         if not log:
             lfreq = self.own_settings.mh_lfreq
             if lfreq > 0 and self.iteration % lfreq == 0:
-                log = True
+                log = true
             elif lfreq < 0 and self.is_logarithmic_number(self.iteration):
-                log = True
+                log = true
         if log:
             s = f"I {self.iteration:>10d} {self.incumbent.obj():16.5f} {obj_old:16.6f} {new_sol.obj():16.5f} "
 
@@ -356,10 +414,6 @@ class Scheduler(ABC):
 
             self.iter_logger.info(s)
 
-    @abstractmethod
-    def run(self):
-        """Actually performs the optimization."""
-        pass
 
     @staticmethod
     def sdiv(x, y):
@@ -404,28 +458,8 @@ class Scheduler(ABC):
              f"{total_brutto_time:10.4f} {self.sdiv(total_brutto_time, self.run_time)*100:11.4f}\n"
         self.logger.info(LogLevel.indent(s))
 
-    def main_results(self):
-        """Write main results to logger."""
-        s = f"T best solution: {self.incumbent}\nT best obj: {self.incumbent.obj()}\n" \
-            f"T best iteration: {self.incumbent_iteration}\n" \
-            f"T total iterations: {self.iteration}\n" \
-            f"T best time [s]: {self.incumbent_time:.3f}\n" \
-            f"T total time [s]: {self.run_time:.4f}\n"
 
-        if self.population is not None:
-            s += f"T population obj avg: {self.population.obj_avg()}\n" \
-                f"T population obj std: {self.population.obj_std()}\n"
 
-        self.logger.info(LogLevel.indent(s))
-        self.incumbent.check()
-
-    def perform_sequentially(self, sol: Solution, meths: List[Method]):
-        """Applies the given list of methods sequentially, finally keeping the best solution as incumbent."""
-        for m in self.next_method(meths):
-            res = self.perform_method(m, sol)
-            if res.terminate:
-                break
-            self.update_incumbent(sol, time.process_time())
 
 =#
 

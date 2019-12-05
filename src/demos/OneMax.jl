@@ -2,9 +2,11 @@ module OneMax
 
 import Base: copy, copy!
 using ArgParse
-import MHLib: BoolVectorSolution, calc_objective, settings, settings_cfg
+import MHLib: BoolVectorSolution, calc_objective, settings, settings_cfg, initialize!,
+    invalidate!, k_random_flips!
+import MHLib.Scheduler: Method, Result
 
-export OneMaxSolution
+export OneMaxSolution, construct!, local_improve!, shaking!
 
 @add_arg_table settings_cfg begin
     "--maxsat_n"
@@ -27,7 +29,9 @@ mutable struct OneMaxSolution{N} <: BoolVectorSolution{N}
         new{N}(s.obj_val, s.obj_val_valid, copy(s.x))
 end
 
+
 calc_objective(s::OneMaxSolution) = sum(s.x)
+
 
 function copy!(s1::S, s2::S) where {S <: OneMaxSolution}
     s1.obj_val = s2.obj_val
@@ -35,6 +39,31 @@ function copy!(s1::S, s2::S) where {S <: OneMaxSolution}
     s1.x[:] = s2.x
 end
 
+
 copy(s::OneMaxSolution) = deepcopy(s)
+
+
+"""construct!(::OneMaxSolution, par, result)
+
+Scheduler method that constructs a new random solution.
+"""
+function construct!(s::OneMaxSolution, par::Int, result::Result)
+    initialize!(s)
+end
+
+
+function local_improve!(s::OneMaxSolution, par::Int, result::Result)
+    println("TODO local improve")
+end
+
+
+"""shaking!(::OneMaxSolution, par, result)
+
+Scheduler method that performs shaking by flipping par random positions.
+"""
+function shaking!(s::OneMaxSolution, par::Int, result::Result)
+    k_random_flips!(s, par)
+end
+
 
 end  # module

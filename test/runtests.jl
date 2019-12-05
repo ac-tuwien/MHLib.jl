@@ -1,5 +1,6 @@
 using Test
 using MHLib
+using MHLib.Scheduler
 using MHLib.OneMax
 
 @testset "MHLib.jl" begin
@@ -21,6 +22,20 @@ using MHLib.OneMax
     @test dist(s1, s3) == 1
     # println("$s1, $(obj(s1))")
     check(s1)
+end
 
-
+@testset "scheduler.jl" begin
+    sol = OneMaxSolution{10}()
+    println(sol)
+    methods = [MHMethod("con", construct!, 0),
+        MHMethod("li1", local_improve!, 1),
+        MHMethod("sh1", shaking!, 1),
+        MHMethod("sh2", shaking!, 2),
+        MHMethod("sh3", shaking!, 3)]
+    sched = MHScheduler(sol, methods)
+    for m in next_method(methods)
+        perform_method!(sched, m, sol)
+        println(sol)
+    end
+    main_results(sched)
 end
