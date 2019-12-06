@@ -1,4 +1,4 @@
-module OneMax
+module MAXSAT
 
 import Base: copy, copy!
 import MHLib: BoolVectorSolution, calc_objective

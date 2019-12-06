@@ -1,6 +1,7 @@
 using Test
 using MHLib
-using MHLib.Scheduler
+using MHLib.Schedulers
+using MHLib.GVNSs
 using MHLib.OneMax
 using Random
 
@@ -33,7 +34,7 @@ end
         MHMethod("sh1", shaking!, 1),
         MHMethod("sh2", shaking!, 2),
         MHMethod("sh3", shaking!, 3)]
-    sched = MHScheduler(sol, methods)
+    sched = Scheduler(sol, methods)
     for m in next_method(methods)
         perform_method!(sched, m, sol)
         println(sol)

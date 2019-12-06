@@ -209,7 +209,9 @@ end
 #-----------------------------------------------------------
 
 include("settings.jl")
-include("scheduler.jl")
+include("Schedulers.jl")
+include("GVNSs.jl")
+
 include("demos/OneMax.jl")
 
 end # module

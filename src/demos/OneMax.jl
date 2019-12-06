@@ -4,7 +4,7 @@ import Base: copy, copy!
 using ArgParse
 import MHLib: BoolVectorSolution, calc_objective, settings, settings_cfg, initialize!,
     invalidate!, k_random_flips!
-import MHLib.Scheduler: Method, Result
+import MHLib.Schedulers: Method, Result
 
 export OneMaxSolution, construct!, local_improve!, shaking!
 
@@ -64,6 +64,5 @@ Scheduler method that performs shaking by flipping par random positions.
 function shaking!(s::OneMaxSolution, par::Int, result::Result)
     k_random_flips!(s, par)
 end
-
 
 end  # module

@@ -5,14 +5,14 @@ The module is intended for metaheuristics in which a set of methods
 (or several of them) are in some way repeatedly applied to candidate solutions.
 =#
 
-module Scheduler
+module Schedulers
 
 using ArgParse
 using Printf
 using MHLib
 # import MHLib: @add_arg_table, settings, settings_cfg, Solution, obj
 
-export Result, MHMethod, MHMethodStatistics, MHScheduler, perform_method!,
+export Result, MHMethod, MHMethodStatistics, Scheduler, perform_method!,
     next_method, update_incumbent!, check_termination, perform_sequentially!,
     main_results
 
@@ -96,7 +96,7 @@ end
 MHMethodStatistics() = MHMethodStatistics(0,0.0,0,0.0,0.0)
 
 
-"""MHScheduler
+"""Scheduler
 
 Class for metaheuristics that work by iteratively applying certain operators.
 
@@ -117,7 +117,7 @@ Attributes
     - iter_logger: pymhlib's logger for logging iteration info
     - own_settings: own settings object with possibly individualized parameter values
 """
-mutable struct MHScheduler
+mutable struct Scheduler
     incumbent::Solution
     incumbent_valid::Bool
     incumbent_iteration::Int
@@ -132,9 +132,9 @@ mutable struct MHScheduler
 end
 
 
-"""MHScheduler
+"""Scheduler
 
-Create a method scheduler.
+Create a MHMethod scheduler.
 
 Arguments
     - sol: template/initial solution
@@ -145,9 +145,9 @@ Arguments
         improved upon; otherwise sol is considered just a possibly uninitialized
         of invalid solution template
 """
-function MHScheduler(sol::Solution, methods::Vector{MHMethod}, consider_initial_sol=false)
+function Scheduler(sol::Solution, methods::Vector{MHMethod}, consider_initial_sol=false)
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
-    return MHScheduler(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
+    return Scheduler(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
         time(), 0.0)
     # TODO self.log_iteration_header()
     # if self.incumbent_valid:
@@ -161,7 +161,7 @@ end
 If the given solution is better than incumbent (or we do not have an incumbent yet)
 update it.
 """
-function update_incumbent!(s::MHScheduler, sol::Solution, current_time::Float64)
+function update_incumbent!(s::Scheduler, sol::Solution, current_time::Float64)
     if !s.incumbent_valid || is_better(sol, s.incumbent)
         copy!(s.incumbent, sol)
         s.incumbent_iteration = s.iteration
@@ -216,7 +216,7 @@ Parameters
     - delayed_success: if set the success is not immediately determined and updated
         but at some later call of delayed_success_update()
 """
-function perform_method!(s::MHScheduler, method::MHMethod, sol::Solution,
+function perform_method!(s::Scheduler, method::MHMethod, sol::Solution,
     delayed_success=false)::Result
     res = Result()
     obj_old = obj(sol)
@@ -252,7 +252,7 @@ end
 
 Check termination conditions and return true when to terminate.
 """
-function check_termination(s::MHScheduler)::Bool
+function check_termination(s::Scheduler)::Bool
     t = time()
     if 0 <= settings[:mh_titer] <= s.iteration
             # TODO or \
@@ -272,7 +272,7 @@ end
 Applies the given list of methods sequentially, finally keeping the best solution as
 incumbent.
 """
-function perform_sequentially!(s::MHScheduler, sol::Solution, meths::Vector{Method})
+function perform_sequentially!(s::Scheduler, sol::Solution, meths::Vector{Method})
     for m in s.next_method(meths)
         res = self.perform_method!(m, sol)
         if res.terminate
@@ -284,7 +284,7 @@ end
 
 
 """Write main results to logger."""
-function main_results(s::MHScheduler)
+function main_results(s::Scheduler)
     str = "T best solution: $(s.incumbent)\nT best obj: $(obj(s.incumbent))\n" *
         "T best iteration: $(s.incumbent_iteration)\n" *
         "T total iterations: $(s.iteration)\n" *
