@@ -5,22 +5,22 @@ VND, GRASP, IG etc.
 It extends the more general scheduler module/class by distinguishing between construction
 heuristics, local improvement methods and shaking methods.
 =#
-
 module GVNSs
 
 using MHLib
 using MHLib.Schedulers
 
+export GVNS
 
-"""GVNS
 
+"""
 A general variable neighborhood search (GVNS).
 
 Attributes
-    - scheduler: Scheduler object
-    - meths_ch: list of construction heuristic methods
-    - meths_li: list of local improvement methods
-    - meths_sh: list of shaking methods
+- `scheduler`: Scheduler object
+- `meths_ch`: list of construction heuristic methods
+- `meths_li`: list of local improvement methods
+- `meths_sh`: list of shaking methods
 """
 mutable struct GVNS
     scheduler::Scheduler
@@ -29,17 +29,15 @@ mutable struct GVNS
     meths_sh::Vector{MHMethod}
 end
 
-"""GVNS(sol, meths_ch, meths_li, mehts_sh, consider_initial_sol=false)
+"""
+    GVNS(solution, meths_ch, meths_li, meths_sh, consider_initial_sol=false)
 
-Parameters
-    - sol: solution to be improved
-    - meths_ch: list of construction heuristic methods
-    - meths_li: list of local improvement methods
-    - meths_sh: list of shaking methods
-    - own_settings: optional dictionary with specific settings
-    - consider_initial_sol: if true consider sol as valid solution that should be
-        improved upon; otherwise
-    sol is considered just a possibly uninitialized of invalid solution template
+Create a GVNS.
+
+Create a GVNS for the given solution with the given construction,
+local improvement, and shaking methods provides as `Vector{MHMethod}`.
+If `consider_initial_sol`, consider the given solution as valid initial solution;
+otherwise it is assumed to be uninitialized.
 """
 function GVNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_li::Vector{MHMethod},
     meths_sh::Vector{MHMethod}; consider_initial_sol::Bool=false)

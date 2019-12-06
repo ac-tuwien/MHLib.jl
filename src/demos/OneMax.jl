@@ -1,3 +1,7 @@
+#=
+OneMax Problem: Maximize the number of set bits in a binary string.
+This problem is just for simple demonstration/debugging purposes.
+=#
 module OneMax
 
 import Base: copy, copy!
@@ -8,6 +12,7 @@ import MHLib.Schedulers: Method, Result
 
 export OneMaxSolution, construct!, local_improve!, shaking!
 
+
 @add_arg_table settings_cfg begin
     "--maxsat_n"
         help = "length of solution string in MAXSAT problem"
@@ -16,8 +21,7 @@ export OneMaxSolution, construct!, local_improve!, shaking!
 end
 
 
-"""OneMaxSolution
-
+"""
 A concrete solution type to solve the MAXSAT problem.
 """
 mutable struct OneMaxSolution{N} <: BoolVectorSolution{N}
@@ -43,7 +47,8 @@ end
 copy(s::OneMaxSolution) = deepcopy(s)
 
 
-"""construct!(::OneMaxSolution, par, result)
+"""
+    onstruct!(::OneMaxSolution, par, result)
 
 Scheduler method that constructs a new random solution.
 """
@@ -52,12 +57,18 @@ function construct!(s::OneMaxSolution, par::Int, result::Result)
 end
 
 
+"""
+    local_improve!(::OneMaxSolution, par, result)
+
+Scheduler method that tries to locally improve the solution.
+"""
 function local_improve!(s::OneMaxSolution, par::Int, result::Result)
     println("TODO local improve")
 end
 
 
-"""shaking!(::OneMaxSolution, par, result)
+"""
+    shaking!(::OneMaxSolution, par, result)
 
 Scheduler method that performs shaking by flipping par random positions.
 """

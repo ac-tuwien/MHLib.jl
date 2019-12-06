@@ -1,7 +1,5 @@
-
-"""MHLib
-
-A Toolbox for Metaheuristics and Hybrid Optimization Methods.
+"""
+`MHLib` - A Toolbox for Metaheuristics and Hybrid Optimization Methods.
 """
 module MHLib
 
@@ -14,8 +12,7 @@ export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
 
 #----------------------------- Solution ------------------------------
 
-"""Solution
-
+"""
 An abstract solution to an optimization problem.
 
 Concrete subtypes need to implement:
@@ -29,7 +26,8 @@ Concrete subtypes need to implement:
 abstract type Solution end
 
 
-"""to_maximize(::Type)
+"""
+    to_maximize(::Type)
 
 Return true if the optimization goal is to maximize the objective function
 in the given type of solutions.
@@ -40,7 +38,8 @@ to_maximize(::Type) = true
 to_maximize(s::Solution) = to_maximize(typeof(s))
 
 
-"""obj(::Solution)
+"""
+    obj(::Solution)
 
 Return obj_val if obj_val_valid or calculate it via objective(::Solution).
 """
@@ -53,7 +52,8 @@ function obj(s::Solution)
 end
 
 
-"""calc_objective(solution)
+"""
+    calc_objective(::Solution)
 
 Actually calculate the objective value of the given solution.
 """
@@ -61,14 +61,16 @@ calc_objective(::Solution) =
     error("calc_objective not implemented for concrete solution")
 
 
-"""invalidate!(::Solution)
+"""
+    invalidate!(::Solution)
 
 Invalidate a possibly cached objective value, usually due to a change in the solution.
 """
 invalidate!(s::Solution) = s.obj_val_valid = false;
 
 
-"""is_equal(::Solution, ::Solution)
+"""
+    is_equal(::Solution, ::Solution)
 
 Return true if the two solutions are considered equal and false otherwise.
 
@@ -77,7 +79,8 @@ The default implementation just checks if the objective values are the same.
 is_equal(s1::Solution, s2::Solution) = obj(s1) == obj(s2)
 
 
-"""is_better(::Solution, ::Solution)
+"""
+    is_better(::Solution, ::Solution)
 
 Return true if the first solution is better than the second.
 """
@@ -86,7 +89,8 @@ function is_better(s1::S, s2::S) where S <: Solution
 end
 
 
-"""is_worse(::Solution, ::Solution)
+"""
+    is_worse(::Solution, ::Solution)
 
 Return true if the first solution is worse than the second.
 """
@@ -95,7 +99,8 @@ function is_worse(s1::S, s2::S) where S <: Solution
 end
 
 
-"""is_better_obj(::Solution, obj1, obj2)
+"""
+    is_better_obj(::Solution, obj1, obj2)
 
 Return true if obj1 is a better objective value than obj2 in
 the given solution type.
@@ -105,7 +110,8 @@ function is_better_obj(s::Solution, obj1, obj2)
 end
 
 
-"""is_worse_obj(::Solution, obj1, obj2)
+"""
+    is_worse_obj(::Solution, obj1, obj2)
 
 Return true if obj1 is a worse objective value than obj2 in
 the given solution type.
@@ -115,7 +121,8 @@ function is_worse_obj(s::Solution, obj1, obj2)
 end
 
 
-"""dist(::Solution, ::Solution)
+"""
+    dist(::Solution, ::Solution)
 
 Return distance of the two solutions.
 
@@ -126,7 +133,10 @@ are the same and 1 otherwise.
 dist(s1::S, s2::S) where S <: Solution = obj(s1) == obj(s2) ? 0 : 1
 
 
-"""Check validity of solution.
+"""
+    check(::Solution)
+
+Check validity of solution.
 
 If a problem is encountered, raise an exception.
 The default implementation just re-calculates the objective value.
@@ -147,8 +157,7 @@ end
 
 export VectorSolution, copy!, len
 
-"""VectorSolution
-
+"""
 An abstract solution encoded by a vector of length `N` and type `T`.
 
 Concrete subtypes need to implement:
@@ -158,7 +167,8 @@ Concrete subtypes need to implement:
 abstract type VectorSolution{N,T} <: Solution end
 
 
-"""len(::VectorSolution)
+"""
+    len(::VectorSolution)
 
 Length of the solution vector.
 """
@@ -173,34 +183,36 @@ is_equal(s1::VectorSolution, s2::VectorSolution) =
 
 export BoolVectorSolution, initialize!, k_random_flips!
 
-"""BoolVectorSolution
-
+"""
 An abstract solution encoded by a fixed-length boolean vector.
 """
 abstract type BoolVectorSolution{N} <: VectorSolution{N,Bool} end
 
 
-"""initialize!(solution)
+"""
+    initialize!(::BoolVectorSolution)
 
 Initializes the given solution randomly.
 """
 initialize!(s::BoolVectorSolution) = ( rand!(s.x); invalidate!(s) )
 
 
-"""dist(::BoolVectorSolution, ::BoolVectorSolution)
+"""
+    dist(::BoolVectorSolution, ::BoolVectorSolution)
 
 Return Hamming distance.
 """
 dist(s1::BoolVectorSolution, s2::BoolVectorSolution) = sum(abs.(s1.x - s2.x))
 
 
-"""k_random_flips!(::BoolVectorSolution, k)
+"""
+    k_random_flips!(::BoolVectorSolution, k)
 
 Perform k random flips and call invalidate.
 """
 function k_random_flips!(s::BoolVectorSolution, k::Int)
     for i in 1:k
-        p = rand(1:length(s.x))
+        p = rand(1:len(s))
         s.x[p] = !s.x[p]
     end
     invalidate!(s)

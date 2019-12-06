@@ -1,17 +1,21 @@
+#=
+Managing global settings via decentralized specifications.
+=#
+
 using ArgParse
 using Random
 
 export settings_cfg, settings, parse_settings!, add_arg_table,
     get_settings_as_string, seed_random_generator
 
-"""settings_cfg
 
+"""
 ArgParseSettings used to add further arguments in modules.
 """
 const settings_cfg = ArgParseSettings()
 
-"""settings
 
+"""
 Dictionary with all parameters and their values.
 """
 const settings = Dict{Symbol,Any}()
@@ -23,10 +27,12 @@ const settings = Dict{Symbol,Any}()
         default = 0
 end
 
-"""parse_settings!(;args)
+
+"""
+    parse_settings!(;args=ARGS)
 
 Parses the arguments and stores initializing settings correspondingly,
-and seed the random number generator if seed != 0.
+and seed the random number generator if `settings[:seed] != 0`.
 """
 function parse_settings!(args = ARGS)
     settings_cfg.fromfile_prefix_chars = Set('@')
@@ -37,7 +43,9 @@ function parse_settings!(args = ARGS)
     settings
 end
 
-"""get_settings_as_string()
+
+"""
+    get_settings_as_string()
 
 Get all parameters and their values as descriptive multi-line string.
 """
@@ -49,10 +57,11 @@ function get_settings_as_string()
     s
 end
 
-"""seed_random_generator!(seed=-1)
 
+"""
+    seed_random_generator!(seed=-1)
 Initialize random number generators with settings.seed.
-If zero, a random seed is generated, if -1 settings[:seed] is used
+If zero, a random seed is generated, if -1 `settings[:seed]` is used.
 """
 function seed_random_generator(seed::Int=-1)
     if seed == -1

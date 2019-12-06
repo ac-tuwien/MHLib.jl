@@ -1,3 +1,6 @@
+"""
+MAXSAT demo problem.
+"""
 module MAXSAT
 
 import Base: copy, copy!
@@ -5,31 +8,30 @@ import MHLib: BoolVectorSolution, calc_objective
 
 export MAXSATInstance, MAXSATSolution
 
-"""MAXSATInstance
-
+"""
 A MAXSAT problem instance.
 
 The goal is to maximize the number of clauses satisfied in a boolean function given in conjunctive normal form.
 
 Attributes
-    - n: number of variables, i.e., size of incidence vector
-    - m: number of clauses
-    - clauses: vector of clauses, where each clause is represented by a
-        vector of integers;
-        a positive integer v refers to the v-th variable, while a negative
-        integer v refers to the negated form of the v-th variable
-    - variable_usage: vector containing for each variable a vector with the
-        indices of the clauses in which the variable appears;
-        needed for efficient incremental evaluation
+- `n`: number of variables, i.e., size of incidence vector
+- `m`: number of clauses
+- `clauses`: vector of clauses, where each clause is represented by a
+    vector of integers;
+    a positive integer v refers to the v-th variable, while a negative
+    integer v refers to the negated form of the v-th variable
+- `variable_usage`: vector containing for each variable a vector with the
+    indices of the clauses in which the variable appears;
+    needed for efficient incremental evaluation
 """
-struct MAXSATInstance
-    n::Int
+struct MAXSATInstance n::Int
     m::Int
     clauses::Vector{Vector{Int}}
     variable_usage::Vector{Vector{Int}}
 end
 
-""" MAXSATInstance
+"""
+    MAXSATInstance(file_name)
 
 Read a MAXSATInstance from the given file.
 """
@@ -68,8 +70,7 @@ end
 inst = MAXSATInstance("../data/maxsat-simple.cnf")
 
 
-"""MAXSATSolution
-
+"""
 A concrete solution type to solve the MAXSAT problem.
 """
 mutable struct MAXSATSolution{N} <: BoolVectorSolution{N}
@@ -79,7 +80,8 @@ mutable struct MAXSATSolution{N} <: BoolVectorSolution{N}
     x::MVector{N,Bool}
 end
 
-"""MAXSATSolution(::MAXSATInstance)
+"""
+    MAXSATSolution(::MAXSATInstance)
 
 Create a solution object for the given `MAXSATInstance`.
 """
@@ -96,7 +98,8 @@ end
 copy(s::MAXSATSolution) =
     MAXSATSolution{s.inst.n}(s.inst, -1, false, Base.copy(s.x[:]))
 
-"""calc_objective(::MAXSATSolution)
+"""
+    calc_objective(::MAXSATSolution)
 
 Count the number of satisfied clauses.
 """

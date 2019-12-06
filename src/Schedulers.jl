@@ -1,10 +1,10 @@
-#=
+#=Schedulers
+
 General scheduler for realizing (G)VNS, GRASP, IG and similar metaheuristics.
 
 The module is intended for metaheuristics in which a set of methods
 (or several of them) are in some way repeatedly applied to candidate solutions.
 =#
-
 module Schedulers
 
 using ArgParse
@@ -40,14 +40,13 @@ parser.add_argument("--mh_workers", type=int, default=4, help='number of worker 
 =#
 
 
-"""Result
-
+"""
 Data in conjunction with a method application's result.
 
 Attributes
-    - changed: if false, the solution has not been changed by the method application
-    - terminate: if true, a termination condition has been fulfilled
-    - log_info: customized log info
+- `changed`: if false, the solution has not been changed by the method application
+- `terminate`: if true, a termination condition has been fulfilled
+- `log_info`: customized log info
 """
 mutable struct Result
     changed::Bool
@@ -58,14 +57,13 @@ end
 Result() = Result(true, false, "")
 
 
-"""MHMethod
-
+"""
 A method to be applied to a solution by the scheduler.
 
 Attributes
-    - name: name of the method; must be unique over all used methods
-    - method: a function called for a Solution object
-    - par: a parameter provided when calling the method
+- 'name`: name of the method; must be unique over all used methods
+- `method`: a function called for a Solution object
+- `par`: a parameter provided when calling the method
 """
 struct MHMethod
     name::String
@@ -74,16 +72,17 @@ struct MHMethod
 end
 
 
-"""Class that collects data on the applications of a MHMethod.
+"""
+Struct that collects data on the applications of a `MHMethod`.
 
 Attributes
-    - applications: number of applications of this method
-    - netto_time: accumulated time of all applications of this method without further costs
-        (e.g., VND)
-    - successes: number of applications in which an improved solution was found
-    - obj_gain: sum of gains in the objective values over all successful applications
-    - brutto_time: accumulated time of all applications of this method including further
-        costs (e.g., VND)
+- `applications`: number of applications of this method
+- `netto_time`: accumulated time of all applications of this method without further costs
+    (e.g., VND)
+- `successes`: number of applications in which an improved solution was found
+- `obj_gain`: sum of gains in the objective values over all successful applications
+- `brutto_time`: accumulated time of all applications of this method including further
+    costs (e.g., VND)
 """
 mutable struct MHMethodStatistics
     applications::Int
@@ -96,26 +95,21 @@ end
 MHMethodStatistics() = MHMethodStatistics(0,0.0,0,0.0,0.0)
 
 
-"""Scheduler
-
-Class for metaheuristics that work by iteratively applying certain operators.
+"""
+Struct for metaheuristics that work by iteratively applying certain methods/operations.
 
 Attributes
-    - incumbent: incumbent solution, i.e., initial solution and always best solution so far
-        encountered
-    - incumbent_valid: true if incumbent is a valid solution to be considered
-    - incumbent_iteration: iteration in which incumbent was found
-    - incumbent_time: time at which incumbent was found
-    - population: only used in derived population-based metaheurstics and here for logging,
-        otherwise None
-    - methods: list of all MHMethods
-    - method_stats: dict of MHMethodStatistics for each MHMethod
-    - iteration: overall number of method applications
-    - time_start: starting time of algorithm
-    - run_time: overall runtime (set when terminating)
-    - logger: pymhlib's logger for logging general info
-    - iter_logger: pymhlib's logger for logging iteration info
-    - own_settings: own settings object with possibly individualized parameter values
+- `incumbent`: incumbent solution, i.e., initial solution and always best solution so far
+    encountered
+- `incumbent_valid`: true if incumbent is a valid solution to be considered
+- `incumbent_iteration`: iteration in which incumbent was found
+- `incumbent_time`: time at which incumbent was found
+- `methods`: vector of all MHMethods
+- `method_stats`: dict of MHMethodStatistics for each MHMethod
+- `iteration`: overall number of method applications
+- `time_start`: starting time of algorithm
+- `run_time`: overall runtime (set when terminating)
+- `own_settings`: own settings object with possibly individualized parameter values
 """
 mutable struct Scheduler
     incumbent::Solution
@@ -132,18 +126,15 @@ mutable struct Scheduler
 end
 
 
-"""Scheduler
+"""
+    Scheduler(solution, methods, consider_initial_sol)
 
-Create a MHMethod scheduler.
+Create a `MHMethod` scheduler.
 
-Arguments
-    - sol: template/initial solution
-    - methods: list of scheduler methods to apply
-    - own_settings: an own settings object for locally valid settings that override
-        the global ones
-    - consider_initial_sol: if true consider sol as valid solution that should be
-        improved upon; otherwise sol is considered just a possibly uninitialized
-        of invalid solution template
+Create a Scheduler for the given solution with the given methods provides as
+`Vector{MHMethod}`. If `consider_initial_sol`, consider the given solution as
+valid initial solution; otherwise it is assumed to be uninitialized.
+
 """
 function Scheduler(sol::Solution, methods::Vector{MHMethod}, consider_initial_sol=false)
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
@@ -156,9 +147,10 @@ function Scheduler(sol::Solution, methods::Vector{MHMethod}, consider_initial_so
 end
 
 
-"""update_incumbent!(scheduler, solution, current_time)
+"""
+    update_incumbent!(scheduler, solution, current_time)
 
-If the given solution is better than incumbent (or we do not have an incumbent yet)
+If the given solution is better than the incumbent (or we do not have an incumbent yet)
 update it.
 """
 function update_incumbent!(s::Scheduler, sol::Solution, current_time::Float64)
@@ -173,15 +165,12 @@ function update_incumbent!(s::Scheduler, sol::Solution, current_time::Float64)
 end
 
 
-"""next_method(meths; randomize=false, repeat=false)
+"""
+    next_method(meths; randomize=false, repeat=false)
 
-Generator for obtaining a next method from a given list of methods, iterating through
-    all methods.
-
-Parameters
-    - meths: List of methods
-    - randomize: random order, otherwise consider given order
-    - repeat: repeat infinitely, otherwise just do one pass
+Generator for obtaining a next method from a given vector of methods, iterating through
+all of them. `randomize`: random order, otherwise consider given order;
+`repeat`: repeat infinitely, otherwise just do one pass.
 """
 function next_method(meths::Vector{MHMethod}; randomize::Bool=false, repeat::Bool=false)
     if randomize
@@ -204,19 +193,17 @@ function next_method(meths::Vector{MHMethod}; randomize::Bool=false, repeat::Boo
 end
 
 
-"""Perform method on given solution and returns Results object.
+"""
+    perform_method!(scheduler, method, solution; delayed_success=false)::Result
+
+Perform method on given solution and return Results object.
 
 Also updates incumbent, iteration and the method's statistics in method_stats.
 Furthermore checks the termination condition and eventually sets terminate in the
-returned Results object.
-
-Parameters
-    - method: method to be performed
-    - sol: solution to which the method is applied
-    - delayed_success: if set the success is not immediately determined and updated
-        but at some later call of delayed_success_update()
+returned Results object. If `delayed_success`, the success is not immediately determined
+and the statistics updated accordingly but at some later call of `delayed_success_update`.
 """
-function perform_method!(s::Scheduler, method::MHMethod, sol::Solution,
+function perform_method!(s::Scheduler, method::MHMethod, sol::Solution;
     delayed_success=false)::Result
     res = Result()
     obj_old = obj(sol)
@@ -248,7 +235,8 @@ function perform_method!(s::Scheduler, method::MHMethod, sol::Solution,
 end
 
 
-"""check_termination(scheduler)
+"""
+    check_termination(scheduler)
 
 Check termination conditions and return true when to terminate.
 """
@@ -267,9 +255,10 @@ function check_termination(s::Scheduler)::Bool
 end
 
 
-"""perform_sequentially!
+"""
+    perform_sequentially!(scheduler, solution, methods)
 
-Applies the given list of methods sequentially, finally keeping the best solution as
+Applies the given methods sequentially, finally keeping the best solution as
 incumbent.
 """
 function perform_sequentially!(s::Scheduler, sol::Solution, meths::Vector{Method})
@@ -283,7 +272,11 @@ function perform_sequentially!(s::Scheduler, sol::Solution, meths::Vector{Method
 end
 
 
-"""Write main results to logger."""
+"""
+    main_results(scheduler)
+    
+Print main results.
+"""
 function main_results(s::Scheduler)
     str = "T best solution: $(s.incumbent)\nT best obj: $(obj(s.incumbent))\n" *
         "T best iteration: $(s.incumbent_iteration)\n" *
