@@ -10,7 +10,7 @@ module GVNSs
 using MHLib
 using MHLib.Schedulers
 
-export GVNS
+export GVNS, vnd!, gvns!, run!
 
 
 """
@@ -42,66 +42,89 @@ otherwise it is assumed to be uninitialized.
 function GVNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_li::Vector{MHMethod},
     meths_sh::Vector{MHMethod}; consider_initial_sol::Bool=false)
     # TODO own_settings
-    GVNS(Scheduler(sol, [meths_ch; meths_li; meths_sh]),
-        consider_initial_sol=consider_initial_sol)
+    GVNS(Scheduler(sol, [meths_ch; meths_li; meths_sh]), meths_ch, meths_li, meths_sh)
 end
 
-#=
-    def vnd(self, sol: Solution) -> bool:
-        """Perform variable neighborhood descent (VND) on given solution.
 
-        :returns: true if a global termination condition is fulfilled, else False.
-        """
-        sol2 = sol.copy()
-        while True:
-            for m in self.next_method(self.meths_li):
-                res = self.perform_method(m, sol2)
-                if sol2.is_better(sol):
-                    sol.copy_from(sol2)
-                    if res.terminate:
-                        return True
-                    break
-                else:
-                    if res.terminate:
-                        return True
-                    if res.changed:
-                        sol2.copy_from(sol)
-            else:  # local optimum reached
-                return False
+"""vnd(scheduler, solution)
 
-    def gvns(self, sol: Solution):
-        """Perform general variable neighborhood search (GVNS) to given solution."""
-        sol2 = sol.copy()
-        if self.vnd(sol2) or not self.meths_sh:
-            return
-        use_vnd = bool(self.meths_li)
-        while True:
-            for m in self.next_method(self.meths_sh, repeat=True):
-                t_start = time.process_time()
-                res = self.perform_method(m, sol2, delayed_success=use_vnd)
-                terminate = res.terminate
-                if not terminate and use_vnd:
-                    terminate = self.vnd(sol2)
-                self.delayed_success_update(m, sol.obj(), t_start, sol2)
-                if sol2.is_better(sol):
-                    sol.copy_from(sol2)
-                    if terminate or res.terminate:
-                        return
-                    break
-                else:
-                    if terminate or res.terminate:
-                        return
-                    sol2.copy_from(sol)
-            else:
+Perform variable neighborhood descent (VND) on given solution.
+Return true if a global termination condition is fulfilled, else False.
+"""
+function vnd!(gvns::GVNS, sol::Solution)::Bool
+    sol2 = copy(sol)
+    improvement_found = true
+    while improvement_found
+        for m in next_method(gvns.meths_li)
+            res = perform_method!(gvns.scheduler, m, sol2)
+            if is_better(sol2, sol)
+                copy!(sol, sol2)
+                res.terminate && return true
+                improvement_found = true
                 break
+            else
+                res.terminate && return true
+                if res.changed
+                    copy!(sol2, sol)
+                end
+                improvement_found = false
+            end
+        end
+    end
+    false
+end
 
-    def run(self) -> None:
-        """Actually performs the construction heuristics followed by the GVNS."""
-        sol = self.incumbent.copy()
-        assert self.incumbent_valid or self.meths_ch
-        self.perform_sequentially(sol, self.meths_ch)
-        self.gvns(sol)
 
-=#
+"""
+    gvns(gvns, solution)
+
+Perform general variable neighborhood search (GVNS) to given solution.
+"""
+function gvns!(gvns::GVNS, sol::Solution)
+    sol2 = copy(sol)
+    if vnd!(gvns, sol2) || isempty(gvns.meths_sh)
+        return
+    end
+    use_vnd = !isempty(gvns.meths_li)
+    improvement_found = true
+    while improvement_found
+        for m in next_method(gvns.meths_sh, repeat=true)
+            t_start = time()
+            res = perform_method!(gvns.scheduler, m, sol2, delayed_success=use_vnd)
+            terminate = res.terminate
+            if !terminate && use_vnd
+                terminate = vnd!(gvns, sol2)
+            end
+            delayed_success_update!(gvns.scheduler, m, obj(sol), t_start, sol2)
+            if is_better(sol2, sol)
+                copy!(sol, sol2)
+                if terminate || res.terminate
+                    return
+                end
+                improvement_found = true
+                break
+            else
+                if terminate || res.terminate
+                    return
+                end
+                improvement_found = false
+                copy!(sol2, sol)
+            end
+        end
+    end
+end
+
+
+"""
+    run(gvns)
+
+Actually performs the construction heuristics followed by the GVNS.
+"""
+function run!(gvns::GVNS)
+    sol = copy(gvns.scheduler.incumbent)
+    @assert gvns.scheduler.incumbent_valid || !isempty(gvns.meths_ch)
+    perform_sequentially!(gvns.scheduler, sol, gvns.meths_ch)
+    gvns!(gvns, sol)
+end
 
 end  # module

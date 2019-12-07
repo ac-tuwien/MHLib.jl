@@ -14,8 +14,8 @@ export OneMaxSolution, construct!, local_improve!, shaking!
 
 
 @add_arg_table settings_cfg begin
-    "--maxsat_n"
-        help = "length of solution string in MAXSAT problem"
+    "--onemax_n"
+        help = "length of solution string in the problem"
         arg_type = Int
         default = 100
 end
@@ -48,7 +48,7 @@ copy(s::OneMaxSolution) = deepcopy(s)
 
 
 """
-    onstruct!(::OneMaxSolution, par, result)
+    construct!(::OneMaxSolution, par, result)
 
 Scheduler method that constructs a new random solution.
 """
@@ -63,7 +63,7 @@ end
 Scheduler method that tries to locally improve the solution.
 """
 function local_improve!(s::OneMaxSolution, par::Int, result::Result)
-    println("TODO local improve")
+    # does nothing here
 end
 
 

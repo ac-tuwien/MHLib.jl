@@ -9,18 +9,28 @@ module Schedulers
 
 using ArgParse
 using Printf
+using Random
 using MHLib
 # import MHLib: @add_arg_table, settings, settings_cfg, Solution, obj
 
 export Result, MHMethod, MHMethodStatistics, Scheduler, perform_method!,
     next_method, update_incumbent!, check_termination, perform_sequentially!,
-    main_results
+    main_results, delayed_success_update!, log_iteration, log_iteration_header
 
 @add_arg_table settings_cfg begin
     "--mh_titer"
         help = "maximum number of iterations (<0: turned off)"
         arg_type = Int
         default = 100
+    "--mh_lnewinc"
+        help = "write iteration log if new incumbent solution"
+        arg_type = Bool
+        default = true
+    "--mh_lfreq"
+        help = "frequency of writing iteration logs (0: none, >0: number of iterations, " *
+               "-1: iteration 1,2,5,10,20,..."
+        arg_type = Int
+        default = 0
 end
 #= TODO
 parser = get_settings_parser()
@@ -31,12 +41,7 @@ parser.add_argument("--mh_ttime", type=int, default=-1, help='time limit [s] (<0
 parser.add_argument("--mh_tctime", type=int, default=-1, help='maximum time [s] without improvement (<0: turned off)')
 parser.add_argument("--mh_tobj", type=float, default=-1,
                     help='objective value at which should be terminated when reached (<0: turned off)')
-add_bool_arg(parser, "mh_lnewinc", default=true, help='write iteration log if new incumbent solution')
-parser.add_argument("--mh_lfreq", type=int, default=0,
-                    help='frequency of writing iteration logs (0: none, >0: number of iterations, '
-                         '-1: iteration 1,2,5,10,20,...')
 add_bool_arg(parser, "mh_checkit", default=false, help='call check() for each solution after each method application')
-parser.add_argument("--mh_workers", type=int, default=4, help='number of worker processes when using multiprocessing')
 =#
 
 
@@ -138,12 +143,14 @@ valid initial solution; otherwise it is assumed to be uninitialized.
 """
 function Scheduler(sol::Solution, methods::Vector{MHMethod}, consider_initial_sol=false)
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
-    return Scheduler(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
+    s = Scheduler(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
         time(), 0.0)
-    # TODO self.log_iteration_header()
-    # if self.incumbent_valid:
-    #    self.log_iteration('-', float('NaN'), sol, true, true, None)
-    #    self.own_settings = OwnSettings(own_settings) if own_settings else settings
+    log_iteration_header(s)
+    if s.incumbent_valid
+        log_iteration(s, '-', NaN, sol, true, true, None)
+        # TODO s.own_settings = OwnSettings(own_settings) if own_settings else settings
+    end
+    s
 end
 
 
@@ -178,9 +185,9 @@ function next_method(meths::Vector{MHMethod}; randomize::Bool=false, repeat::Boo
     end
     function gen_methods(channel::Channel)
         while true
-            # if randomize TODO
-            #     random.shuffle(meths)
-            # end
+            if randomize
+                shuffle!(meths)
+            end
             for method in meths
                 put!(channel, method)
             end
@@ -226,7 +233,7 @@ function perform_method!(s::Scheduler, method::MHMethod, sol::Solution;
     s.iteration += 1
     new_incumbent = update_incumbent!(s, sol, t_end - s.time_start)
     terminate = check_termination(s)
-    # TODO self.log_iteration(method.name, obj_old, sol, new_incumbent, terminate, res.log_info)
+    log_iteration(s, method.name, obj_old, sol, new_incumbent, terminate, res.log_info)
     if terminate
         s.run_time = time() - s.time_start
         res.terminate = true
@@ -261,20 +268,20 @@ end
 Applies the given methods sequentially, finally keeping the best solution as
 incumbent.
 """
-function perform_sequentially!(s::Scheduler, sol::Solution, meths::Vector{Method})
-    for m in s.next_method(meths)
-        res = self.perform_method!(m, sol)
+function perform_sequentially!(s::Scheduler, sol::Solution, meths::Vector{MHMethod})
+    for m in next_method(meths)
+        res = perform_method!(s, m, sol)
         if res.terminate
             break
         end
-        self.update_incumbent!(sol, time() - s.time_start)
+        update_incumbent!(s, sol, time() - s.time_start)
     end
 end
 
 
 """
     main_results(scheduler)
-    
+
 Print main results.
 """
 function main_results(s::Scheduler)
@@ -287,6 +294,85 @@ function main_results(s::Scheduler)
     print(str)
     check(s.incumbent)
 end
+
+
+"""
+    delayed_success_update!(scheduler, method, obj_old, t_start, solution)
+
+Update an earlier performed method's success information in method_stats using the
+given solution, old objective value and the given thime when the application of the
+method had started.
+"""
+function delayed_success_update!(s::Scheduler, method::MHMethod, obj_old, t_start::Float64,
+    sol::Solution)
+    t_end = time()
+    ms = s.method_stats[method.name]
+    ms.brutto_time += t_end - t_start
+    obj_new = obj(sol)
+    if is_better_obj(sol, obj(sol), obj_old)
+        ms.successes += 1
+        ms.obj_gain += obj_new - obj_old
+    end
+end
+
+
+"""
+    log_iteration_header(scheduler)
+
+Write iteration log header.
+"""
+function log_iteration_header(sched::Scheduler)
+    s = "I  iteration             best          obj_old          obj_new" *
+        "         time_method               info"
+    # TODO iter_logger.info(sched, s)
+    println(s)
+end
+
+
+const EPS = 1e-12
+const LOG10_2 = log10(2)
+const LOG10_5 = log10(5)
+
+function is_logarithmic_number(x::Int)::Bool
+
+    lr = log10(x) % 1
+    abs(lr) < EPS || abs(lr-LOG10_2) < EPS || abs(lr-LOG10_5) < EPS
+    true
+end
+
+
+"""Writes iteration log info.
+
+A line is written if in_any_case is set or in dependence of
+`settings[:mh_lfreq]` and `settings[:mh_lnewinc]`.
+`method_name`: name of applied method or "-" (if initially given solution);
+`obj_old`: objective value before applying last operator;
+`param new_sol`: newly created solution;
+`new_incumbent`: true if the method yielded a new incumbent solution;
+`in_any_case`: turns filtering of iteration logs off;
+`log_info`: customize log info optionally added if not ""
+"""
+function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::Solution,
+    new_incumbent::Bool, in_any_case::Bool, log_info::String="")
+    log = in_any_case || new_incumbent && settings[:mh_lnewinc]
+    if !log
+        lfreq = settings[:mh_lfreq]
+        if lfreq > 0 && sched.iteration % lfreq == 0
+            log = true
+        elseif lfreq < 0 && is_logarithmic_number(sched, sched.iteration)
+            log = true
+        end
+    end
+    if log
+        s = @sprintf("%10d %16.5f %16.6f %16.5f%12.4f%20s %s",
+            sched.iteration, obj(sched.incumbent), obj_old, obj(new_sol),
+            time()-sched.time_start, method_name, log_info)
+        # TODO self.iter_logger.info(s)
+        println(s)
+    end
+end
+
+
 
 #=
     def perform_method_pair(self, destroy: MHMethod, repair: MHMethod, sol: Solution) -> Result:
@@ -340,72 +426,7 @@ end
             self.run_time = time.process_time() - self.time_start
             res.terminate = true
 
-    def delayed_success_update(self, method: MHMethod, obj_old: TObj, t_start: TObj, sol: Solution):
-        """Update an earlier performed method's success information in method_stats.
 
-        :param method: earlier performed method
-        :param obj_old: objective value of solution with which to compare to determine success
-        :param t_start: time when the application of method dad started
-        :param sol: current solution considered the final result of the method
-        """
-        t_end = time.process_time()
-        ms = self.method_stats[method.name]
-        ms.brutto_time += t_end - t_start
-        obj_new = sol.obj()
-        if sol.is_better_obj(sol.obj(), obj_old):
-            ms.successes += 1
-            ms.obj_gain += obj_new - obj_old
-
-    def log_iteration_header(self):
-        """Write iteration log header."""
-        s = f"I {'iteration':>10} {'best':>16} {'obj_old':>16} {'obj_new':>16} "
-
-        if self.population is not None:
-            s += f"{'pop_obj_avg':>16} {'pop_obj_std':>16} "
-
-        s += f"{'time':>12} {'method':<20} info"
-        self.iter_logger.info(s)
-
-    @staticmethod
-    def is_logarithmic_number(x: int):
-        const eps = 1e-12  # epsilon value for is_logarithmic_number()
-        const log10_2 = log10(2)
-        const log10_5 = log10(5)
-
-        lr = log10(x) % 1
-        return abs(lr) < Scheduler.eps or abs(lr-Scheduler.log10_2) < Scheduler.eps or \
-            abs(lr-Scheduler.log10_5) < Scheduler.eps
-
-    def log_iteration(self, method_name: str, obj_old: TObj, new_sol: Solution, new_incumbent: bool, in_any_case: bool,
-                      log_info: Optional[str]):
-        """Writes iteration log info.
-
-        A line is written if in_any_case is set or in dependence of settings.mh_lfreq and settings.mh_lnewinc.
-
-        :param method_name: name of applied method or '-' (if initially given solution)
-        :param obj_old: objective value before applying last operator
-        :param new_sol: newly created solution
-        :param new_incumbent: true if the method yielded a new incumbent solution
-        :param in_any_case: turns filtering of iteration logs off
-        :param log_info: customize log info optionally added if not None
-        """
-        log = in_any_case or new_incumbent and self.own_settings.mh_lnewinc
-        if not log:
-            lfreq = self.own_settings.mh_lfreq
-            if lfreq > 0 and self.iteration % lfreq == 0:
-                log = true
-            elif lfreq < 0 and self.is_logarithmic_number(self.iteration):
-                log = true
-        if log:
-            s = f"I {self.iteration:>10d} {self.incumbent.obj():16.5f} {obj_old:16.6f} {new_sol.obj():16.5f} "
-
-            if self.population is not None:
-                s += f"{self.population.obj_avg():16.6f} {self.population.obj_std():16.5f} "
-
-            s += f"{time.process_time()-self.time_start:12.4f} " \
-                f"{method_name:<20} {log_info if log_info is not None else ''}"
-
-            self.iter_logger.info(s)
 
 
     @staticmethod

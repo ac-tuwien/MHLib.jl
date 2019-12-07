@@ -225,5 +225,7 @@ include("Schedulers.jl")
 include("GVNSs.jl")
 
 include("demos/OneMax.jl")
+include("demos/MAXSAT.jl")
+
 
 end # module

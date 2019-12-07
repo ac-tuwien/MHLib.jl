@@ -29,17 +29,22 @@ end
     parse_settings!(["--seed=1"])
     sol = OneMaxSolution{10}()
     println(sol)
-    methods = [MHMethod("con", construct!, 0),
-        MHMethod("li1", local_improve!, 1),
-        MHMethod("sh1", shaking!, 1),
-        MHMethod("sh2", shaking!, 2),
-        MHMethod("sh3", shaking!, 3)]
-    sched = Scheduler(sol, methods)
-    for m in next_method(methods)
-        perform_method!(sched, m, sol)
-        println(sol)
-    end
-    main_results(sched)
+    # methods = [MHMethod("con", construct!, 0),
+    #     MHMethod("li1", local_improve!, 1),
+    #     MHMethod("sh1", shaking!, 1),
+    #     MHMethod("sh2", shaking!, 2),
+    #     MHMethod("sh3", shaking!, 3)]
+    # sched = Scheduler(sol, methods)
+    # for m in next_method(methods)
+    #     perform_method!(sched, m, sol)
+    #     println(sol)
+    # end
+    gvns = GVNS(sol, [MHMethod("con", construct!, 0)],
+        [MHMethod("li1", local_improve!, 1)],
+        [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
+            MHMethod("sh3", shaking!, 3)],)
+    run!(gvns)
+    main_results(gvns.scheduler)
     check(sol)
     @test obj(sol) >= 0
 end

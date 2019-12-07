@@ -3,10 +3,13 @@ MAXSAT demo problem.
 """
 module MAXSAT
 
-import Base: copy, copy!
-import MHLib: BoolVectorSolution, calc_objective
+using StaticArrays
+import Base: copy, copy!, show
+using MHLib
+# import MHLib: BoolVectorSolution, calc_objective, initialize!,
+using MHLib.Schedulers
 
-export MAXSATInstance, MAXSATSolution
+export MAXSATInstance, MAXSATSolution, construct!, local_improve!, shaking!
 
 """
 A MAXSAT problem instance.
@@ -67,7 +70,6 @@ function MAXSATInstance(file_name::String)
     MAXSATInstance(n, m, clauses, variable_usage)
 end
 
-inst = MAXSATInstance("../data/maxsat-simple.cnf")
 
 
 """
@@ -98,6 +100,9 @@ end
 copy(s::MAXSATSolution) =
     MAXSATSolution{s.inst.n}(s.inst, -1, false, Base.copy(s.x[:]))
 
+Base.show(io::IO, s::MAXSATSolution) =
+    println(io, "Solution: ", s.x)
+
 """
     calc_objective(::MAXSATSolution)
 
@@ -116,6 +121,36 @@ function calc_objective(s::MAXSATSolution)
     satisfied
 end
 
+
+"""
+    construct!(::MAXSATSolution, par, result)
+
+Scheduler method that constructs a new random solution.
+"""
+function construct!(s::MAXSATSolution, par::Int, result::Result)
+    initialize!(s)
+end
+
+
+"""
+    local_improve!(::MAXSATSolution, par, result)
+
+Scheduler method that tries to locally improve the solution.
+"""
+function local_improve!(s::MAXSATSolution, par::Int, result::Result)
+    # does nothing here
+end
+
+
+"""
+    shaking!(::MAXSATSolution, par, result)
+
+Scheduler method that performs shaking by flipping par random positions.
+"""
+function shaking!(s::MAXSATSolution, par::Int, result::Result)
+    k_random_flips!(s, par)
+end
+
 #=
 
 function local_improve(self, par, _result)
@@ -131,15 +166,6 @@ function local_improve(self, par, _result)
     return false
 end
 
-function shaking(self, par, _result)
-    """Scheduler method that performs shaking by flipping par random positions."""
-    x = PyArray(self."x")
-    for i in 1:par
-        p = rand(1:length(x))
-        x[p] = !x[p]
-    end
-    self.invalidate()
-end
 
 function destroy(self, par, _result)
     """Destroy operator for ALNS selects par*ALNS.get_number_to_destroy positions
