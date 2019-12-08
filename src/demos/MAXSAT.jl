@@ -1,20 +1,27 @@
 """
 MAXSAT demo problem.
+
+The goal is to maximize the number of clauses satisfied in a boolean function given in
+conjunctive normal form.
 """
 module MAXSAT
 
 using StaticArrays
-import Base: copy, copy!, show
+using Random
 using MHLib
-# import MHLib: BoolVectorSolution, calc_objective, initialize!,
 using MHLib.Schedulers
 
-export MAXSATInstance, MAXSATSolution, construct!, local_improve!, shaking!
+import Base: copy, copy!, show
+import MHLib: calc_objective, flip_variable!
+
+export MAXSATInstance, MAXSATSolution
+
 
 """
 A MAXSAT problem instance.
 
-The goal is to maximize the number of clauses satisfied in a boolean function given in conjunctive normal form.
+The goal is to maximize the number of clauses satisfied in a boolean function given in
+conjunctive normal form.
 
 Attributes
 - `n`: number of variables, i.e., size of incidence vector
@@ -71,7 +78,6 @@ function MAXSATInstance(file_name::String)
 end
 
 
-
 """
 A concrete solution type to solve the MAXSAT problem.
 """
@@ -90,6 +96,7 @@ Create a solution object for the given `MAXSATInstance`.
 MAXSATSolution(inst::MAXSATInstance) =
     MAXSATSolution{inst.n}(inst, -1, false, MVector{inst.n, Bool}(undef))
 
+
 function copy!(s1::S, s2::S) where {S <: MAXSATSolution}
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
@@ -97,18 +104,21 @@ function copy!(s1::S, s2::S) where {S <: MAXSATSolution}
     s1.x[:] = s2.x
 end
 
+
 copy(s::MAXSATSolution) =
     MAXSATSolution{s.inst.n}(s.inst, -1, false, Base.copy(s.x[:]))
 
+
 Base.show(io::IO, s::MAXSATSolution) =
     println(io, "Solution: ", s.x)
+
 
 """
     calc_objective(::MAXSATSolution)
 
 Count the number of satisfied clauses.
 """
-function calc_objective(s::MAXSATSolution)
+function calc_objective(s::MAXSATSolution)::Int
     satisfied = 0
     for clause in s.inst.clauses
         for v in clause
@@ -122,50 +132,30 @@ function calc_objective(s::MAXSATSolution)
 end
 
 
-"""
-    construct!(::MAXSATSolution, par, result)
-
-Scheduler method that constructs a new random solution.
-"""
-function construct!(s::MAXSATSolution, par::Int, result::Result)
-    initialize!(s)
-end
-
-
-"""
-    local_improve!(::MAXSATSolution, par, result)
-
-Scheduler method that tries to locally improve the solution.
-"""
-function local_improve!(s::MAXSATSolution, par::Int, result::Result)
-    # does nothing here
-end
-
-
-"""
-    shaking!(::MAXSATSolution, par, result)
-
-Scheduler method that performs shaking by flipping par random positions.
-"""
-function shaking!(s::MAXSATSolution, par::Int, result::Result)
-    k_random_flips!(s, par)
+function flip_variable!(s::MAXSATSolution, pos::Int)::Int
+    obj_val = obj(s)
+    val = !s.x[pos]
+    s.x[pos] = val
+    for clause in s.inst.variable_usage[pos]
+        fulfilled_by_other = false
+        val_fulfills_now = false
+        for v in s.inst.clauses[clause]
+            if v == 0 break end
+            if abs(v) == pos
+                val_fulfills_now = (v>0 ? val : !val)
+            elseif s.x[abs(v)] == (v>0 ? 1 : 0)
+                fulfilled_by_other = true
+                break  # clause fulfilled by other variable, no change
+            end
+        end
+        if !fulfilled_by_other
+            obj_val += (val_fulfills_now ? 1 : -1)
+        end
+    end
+    return obj_val
 end
 
 #=
-
-function local_improve(self, par, _result)
-    """Perform one k_flip_neighborhood_search."""
-    x = self.x
-    obj_val = self.obj()
-    new_obj_val = k_flip_neighborhood_search!(x, obj_val, self.inst.julia_inst, par, false)
-    if new_obj_val > obj_val
-        PyArray(self."x")[:] = x
-        self.obj_val = new_obj_val
-        return true
-    end
-    return false
-end
-
 
 function destroy(self, par, _result)
     """Destroy operator for ALNS selects par*ALNS.get_number_to_destroy positions
@@ -194,89 +184,6 @@ end
 function crossover(self, other)
     """ Perform uniform crossover as crossover."""
     return self.uniform_crossover(other)
-end
-
-
-function k_flip_neighborhood_search!(x::Vector{Bool}, obj_val::Int, julia_inst::JMAXSATInstance,
-                                 k::Int, best_improvement::Bool)::Int
-"""Perform one major iteration of a k-flip local search, i.e., search one neighborhood.
-
-If best_improvement is set, the neighborhood is completely searched and a best neighbor is
-kept; otherwise the search terminates in a first-improvement manner, i.e., keeping a first
-encountered better solution.
-
-:returns: Objective value.
-"""
-len_x = length(x)
-@assert 0 < k <= len_x
-better_found = false
-best_sol = copy(x)
-best_obj = obj_val
-perm = randperm(len_x)  # random permutation for randomizing enumeration order
-p = fill(-1, k)  # flipped positions
-# initialize
-i = 1  # current index in p to consider
-while i >= 1
-    # evaluate solution
-    if i == k + 1
-        if obj_val > best_obj
-            if !best_improvement
-                return true
-            end
-            best_sol[:] = x
-            best_obj = obj_val
-            better_found = true
-        end
-        i -= 1  # backtrack
-    else
-        if p[i] == -1
-            # this index has not yet been placed
-            p[i] = (i>1 ? p[i-1] : 0) + 1
-            obj_val = flip_variable!(x, perm[p[i]], julia_inst, obj_val)
-            i += 1  # continue with next position (if any)
-        elseif p[i] < len_x - (k - i)
-            # further positions to explore with this index
-            obj_val = flip_variable!(x, perm[p[i]], julia_inst, obj_val)
-            p[i] += 1
-            obj_val = flip_variable!(x, perm[p[i]], julia_inst, obj_val)
-            i += 1
-        else
-            # we are at the last position with the i-th index, backtrack
-            obj_val = flip_variable!(x, perm[p[i]], julia_inst, obj_val)
-            p[i] = -1  # unset position
-            i -= 1
-        end
-    end
-end
-if better_found
-    x[:] = best_sol
-    obj_val = best_obj
-end
-return obj_val
-end
-
-
-function flip_variable!(x::Vector{Bool}, pos::Int, julia_inst::JMAXSATInstance, obj_val::Int)::Int
-val = !x[pos]
-x[pos] = val
-for clause in view(julia_inst.variable_usage,:,pos)
-    if clause == 0 break end
-    fulfilled_by_other = false
-    val_fulfills_now = false
-    for v in view(julia_inst.clauses,:,clause)
-        if v == 0 break end
-        if abs(v) == pos
-            val_fulfills_now = (v>0 ? val : !val)
-        elseif x[abs(v)] == (v>0 ? 1 : 0)
-            fulfilled_by_other = true
-            break  # clause fulfilled by other variable, no change
-        end
-    end
-    if !fulfilled_by_other
-        obj_val += (val_fulfills_now ? 1 : -1)
-    end
-end
-return obj_val
 end
 
 =#

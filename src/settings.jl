@@ -6,7 +6,7 @@ using ArgParse
 using Random
 
 export settings_cfg, settings, parse_settings!, add_arg_table,
-    get_settings_as_string, seed_random_generator
+    get_settings_as_string, seed_random_generator, settings_new_default_value
 
 
 """
@@ -26,6 +26,19 @@ const settings = Dict{Symbol,Any}()
         arg_type = Int
         default = 0
 end
+
+
+"""
+    settings_new_default_value(name, value)
+
+Set a new default value for a registered parameter.
+"""
+function settings_new_default_value(name::String, value)
+    fields = settings_cfg.args_table.fields
+    p = findfirst(x -> x.dest_name==name, fields)
+    fields[p].default = value
+end
+
 
 
 """

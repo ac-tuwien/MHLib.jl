@@ -181,7 +181,9 @@ is_equal(s1::VectorSolution, s2::VectorSolution) =
 
 #----------------------------- BoolVectorSolution ------------------------------
 
-export BoolVectorSolution, initialize!, k_random_flips!
+export BoolVectorSolution, initialize!, k_random_flips!, k_flip_neighborhood_search!,
+    flip_variable!
+
 
 """
 An abstract solution encoded by a fixed-length boolean vector.
@@ -217,6 +219,83 @@ function k_random_flips!(s::BoolVectorSolution, k::Int)
     end
     invalidate!(s)
 end
+
+
+"""
+    k_flip_neighborhood_search!(::BoolVectorSolution, k::Int, best_improvement::Bool)
+
+Perform one major iteration of a k-flip local search, i.e., search one neighborhood.
+
+If `best_improvement` is set, the neighborhood is completely searched and a best neighbor is
+kept; otherwise the search terminates in a first-improvement manner, i.e., keeping a first
+encountered better solution. The new bjective value is returned.
+"""
+function k_flip_neighborhood_search!(s::BoolVectorSolution, k::Int, best_improvement::Bool)
+    len_x = length(s.x)
+    @assert 0 < k <= len_x
+    better_found = false
+    obj_val = obj(s)
+    best_sol = copy(s.x)
+    best_obj = obj_val
+    perm = randperm(len_x)  # random permutation for randomizing enumeration order
+    p = fill(-1, k)  # flipped positions
+    # initialize
+    i = 1  # current index in p to consider
+    while i >= 1
+        # evaluate solution
+        if i == k + 1
+            if obj_val > best_obj
+                if !best_improvement
+                    return true
+                end
+                best_sol[:] = s.x
+                best_obj = obj_val
+                better_found = true
+            end
+            i -= 1  # backtrack
+        else
+            if p[i] == -1
+                # this index has not yet been placed
+                p[i] = (i>1 ? p[i-1] : 0) + 1
+                obj_val = flip_variable!(s, perm[p[i]])
+                i += 1  # continue with next position (if any)
+            elseif p[i] < len_x - (k - i)
+                # further positions to explore with this index
+                obj_val = flip_variable!(s, perm[p[i]])
+                p[i] += 1
+                obj_val = flip_variable!(s, perm[p[i]])
+                i += 1
+            else
+                # we are at the last position with the i-th index, backtrack
+                obj_val = flip_variable!(s, perm[p[i]])
+                p[i] = -1  # unset position
+                i -= 1
+            end
+        end
+    end
+    if better_found
+        s.x[:] = best_sol
+        obj_val = best_obj
+    end
+    obj_val
+end
+
+
+"""
+    flip_variable!(::BoolVectorSolution, pos::Int)
+
+Flip the value at the given position and return new objective value.
+
+Should be overloaded with a problem-specific implementation realizing incremental
+evaluation if possible.
+"""
+function flip_variable!(s::BoolVectorSolution, pos::Int)
+    s.x[pos] = !s.x[pos]
+    invalidate!(s)
+    print(".")
+    obj(s)
+end
+
 
 #-----------------------------------------------------------
 

@@ -6,11 +6,12 @@ module OneMax
 
 import Base: copy, copy!
 using ArgParse
-import MHLib: BoolVectorSolution, calc_objective, settings, settings_cfg, initialize!,
-    invalidate!, k_random_flips!
-import MHLib.Schedulers: Method, Result
 
-export OneMaxSolution, construct!, local_improve!, shaking!
+using MHLib
+using MHLib.Schedulers
+import MHLib: calc_objective
+
+export OneMaxSolution
 
 
 @add_arg_table settings_cfg begin
@@ -46,34 +47,5 @@ end
 
 copy(s::OneMaxSolution) = deepcopy(s)
 
-
-"""
-    construct!(::OneMaxSolution, par, result)
-
-Scheduler method that constructs a new random solution.
-"""
-function construct!(s::OneMaxSolution, par::Int, result::Result)
-    initialize!(s)
-end
-
-
-"""
-    local_improve!(::OneMaxSolution, par, result)
-
-Scheduler method that tries to locally improve the solution.
-"""
-function local_improve!(s::OneMaxSolution, par::Int, result::Result)
-    # does nothing here
-end
-
-
-"""
-    shaking!(::OneMaxSolution, par, result)
-
-Scheduler method that performs shaking by flipping par random positions.
-"""
-function shaking!(s::OneMaxSolution, par::Int, result::Result)
-    k_random_flips!(s, par)
-end
 
 end  # module

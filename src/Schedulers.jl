@@ -15,7 +15,8 @@ using MHLib
 
 export Result, MHMethod, MHMethodStatistics, Scheduler, perform_method!,
     next_method, update_incumbent!, check_termination, perform_sequentially!,
-    main_results, delayed_success_update!, log_iteration, log_iteration_header
+    main_results, delayed_success_update!, log_iteration, log_iteration_header,
+    construct!, local_improve!, shaking!
 
 @add_arg_table settings_cfg begin
     "--mh_titer"
@@ -373,7 +374,6 @@ function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::
 end
 
 
-
 #=
     def perform_method_pair(self, destroy: MHMethod, repair: MHMethod, sol: Solution) -> Result:
         """Performs a destroy/repair method pair on given solution and returns Results object.
@@ -476,5 +476,66 @@ end
 
 
 =#
+
+#--------------------- Diverse generic Scheduler methods -----------------------
+
+
+"""
+    construct!(::Solution, par, result)
+
+Scheduler method that constructs a new solution.
+Will usually be specialized for a specific problem.
+"""
+function construct!(s::Solution, par::Int, result::Result)
+    initialize!(s)
+end
+
+
+"""
+    local_improve!(::Solution, par, result)
+
+Scheduler method that tries to locally improve the solution.
+Will usually be specialized for a specific problem.
+This abstract implementation just throws an exception.
+"""
+function local_improve!(s::Solution, par::Int, result::Result)
+    error("Abstract method local_improve! called")
+end
+
+
+"""
+    shaking!(::Solution, par, result)
+
+Scheduler method that performs shaking.
+Will usually be specialized for a specific problem.
+This abstract implementation just throws an exception.
+"""
+function shaking!(s::Solution, par::Int, result::Result)
+    error("Abstract method local_improve! called")
+end
+
+
+"""
+    local_improve!(::BoolVectorSolution, par, result)
+
+Scheduler method that tries to locally improve the solution.
+Perform one k_flip_neighborhood_search.
+"""
+function local_improve!(s::BoolVectorSolution, par::Int, result::Result)
+    k_flip_neighborhood_search!(s, par, false)
+end
+
+
+"""
+    shaking!(::BoolVectorSolution, par, result)
+
+Scheduler method that performs shaking.
+Will usually be specialized for a specific problem.
+This abstract implementation just throws an exception.
+"""
+function shaking!(s::BoolVectorSolution, par::Int, result::Result)
+    k_random_flips!(s, par)
+end
+
 
 end  # module

@@ -3,14 +3,16 @@
 using MHLib
 using MHLib.Schedulers
 using MHLib.GVNSs
-using MHLib.OneMax
+import MHLib.OneMax: OneMaxSolution
 using MHLib.MAXSAT
 
-println(ARGS)
+println("Arguments: ", ARGS)
+settings_new_default_value("mh_titer", 1000)
 parse_settings!()
 println(get_settings_as_string())
 
 function onemax()
+    s1 = OneMaxSolution{5}()
     initialize!(s1)
     s2 = OneMaxSolution{5}()
     initialize!(s2)
@@ -20,17 +22,16 @@ function onemax()
     println("$s1, $(obj(s1))\n$s2, $(obj(s2))\n$s3, $(obj(s3))")
 end
 
-# function maxsat()
-    inst = MAXSATInstance("data/maxsat-simple.cnf")
+function maxsat()
+    inst = MAXSATInstance("data/maxsat-adv1.cnf")
     sol = MAXSATSolution(inst)
     println(sol)
     gvns = GVNS(sol, [MHMethod("con", construct!, 0)],
         [MHMethod("li1", local_improve!, 1)],
-        [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
-            MHMethod("sh3", shaking!, 3)],) 
+        [MHMethod("sh$i", shaking!, i) for i in 1:5])
     run!(gvns)
     main_results(gvns.scheduler)
     check(sol)
-# end
+end
 
-# maxsat()
+maxsat()
