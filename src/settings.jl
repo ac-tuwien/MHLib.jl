@@ -5,7 +5,7 @@ Managing global settings via decentralized specifications.
 using ArgParse
 using Random
 
-export settings_cfg, settings, parse_settings!, add_arg_table,
+export settings_cfg, settings, parse_settings!, add_arg_table!,
     get_settings_as_string, seed_random_generator, settings_new_default_value
 
 
@@ -20,7 +20,7 @@ Dictionary with all parameters and their values.
 """
 const settings = Dict{Symbol,Any}()
 
-@add_arg_table settings_cfg begin
+@add_arg_table! settings_cfg begin
     "--seed"
         help = "random seed, 0: initialize randomly"
         arg_type = Int

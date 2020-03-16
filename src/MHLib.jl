@@ -292,7 +292,6 @@ evaluation if possible.
 function flip_variable!(s::BoolVectorSolution, pos::Int)
     s.x[pos] = !s.x[pos]
     invalidate!(s)
-    print(".")
     obj(s)
 end
 

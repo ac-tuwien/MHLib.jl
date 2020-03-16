@@ -14,7 +14,7 @@ import MHLib: calc_objective
 export OneMaxSolution
 
 
-@add_arg_table settings_cfg begin
+@add_arg_table! settings_cfg begin
     "--onemax_n"
         help = "length of solution string in the problem"
         arg_type = Int

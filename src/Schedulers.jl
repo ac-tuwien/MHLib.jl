@@ -11,14 +11,14 @@ using ArgParse
 using Printf
 using Random
 using MHLib
-# import MHLib: @add_arg_table, settings, settings_cfg, Solution, obj
+# import MHLib: @add_arg_table!, settings, settings_cfg, Solution, obj
 
 export Result, MHMethod, MHMethodStatistics, Scheduler, perform_method!,
     next_method, update_incumbent!, check_termination, perform_sequentially!,
     main_results, delayed_success_update!, log_iteration, log_iteration_header,
     construct!, local_improve!, shaking!
 
-@add_arg_table settings_cfg begin
+@add_arg_table! settings_cfg begin
     "--mh_titer"
         help = "maximum number of iterations (<0: turned off)"
         arg_type = Int
