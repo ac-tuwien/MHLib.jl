@@ -373,62 +373,65 @@ function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::
     end
 end
 
+"""
+    perform_method_pair!(scheduler, destroy, repair, sol)
 
+Performs a destroy/repair method pair on given solution and returns Results object.
+
+Also updates incumbent, iteration and the method's statistics in method_stats.
+Furthermore checks the termination condition and eventually sets terminate in the returned Results object.
+"""
+function perform_method_pair!(scheduler::Scheduler, destroy::MHMethod, repair::MHMethod, sol::Solution)
+    res = Result()
+    obj_old = obj(sol)
+    t_start = time()
+    destroy.func(sol, destroy.par, res)
+    t_destroyed = time()
+    repair.func(sol, repair.par, res)
+    t_end = time()
+    update_stats_for_method_pair(scheduler, destroy, repair, sol, res, obj_old,
+                                      t_destroyed - t_start, t_end - t_destroyed)
+    return res
+end
+
+
+"""
+    update_stats_for_method_pair!(scheduler, destroy, repair, sol, res, obj_old, t_destroy, t_repair)
+
+Update statistics, incumbent and check termination condition after having performed a destroy+repair.
+"""
+function update_stats_for_method_pair!(scheduler::Scheduler, destroy::MHMethod,
+     repair::MHMethod, sol::Solution, res::Result, obj_old, t_destroy::Float64, t_repair::Float64)
+     #=
+     if __debug__ and self.own_settings.mh_checkit:
+         sol.check()
+     =#
+     ms_destroy = scheduler.method_stats[destroy.name]
+     ms_destroy.applications += 1
+     ms_destroy.netto_time += t_destroy
+     ms_destroy.brutto_time += t_destroy
+     ms_repair = scheduler.method_stats[repair.name]
+     ms_repair.applications += 1
+     ms_repair.netto_time += t_repair
+     ms_repair.brutto_time += t_repair
+     obj_new = obj(sol)
+     if is_better_obj(sol, obj_new, obj_old)
+         ms_destroy.successes += 1
+         ms_destroy.obj_gain += obj_new - obj_old
+         ms_repair.successes += 1
+         ms_repair.obj_gain += obj_new - obj_old
+     end
+     scheduler.iteration += 1
+     new_incumbent = update_incumbent!(scheduler, sol, time() - scheduler.time_start)
+     terminate = check_termination(scheduler)
+     log_iteration(scheduler, destroy.name+'+'+repair.name, obj_old, sol, new_incumbent, terminate, res.log_info)
+     if terminate
+         scheduler.run_time = time - scheduler.start_time
+         res.terminate = true
+     end
+end
+    
 #=
-    def perform_method_pair(self, destroy: MHMethod, repair: MHMethod, sol: Solution) -> Result:
-        """Performs a destroy/repair method pair on given solution and returns Results object.
-
-        Also updates incumbent, iteration and the method's statistics in method_stats.
-        Furthermore checks the termination condition and eventually sets terminate in the returned Results object.
-
-        :param destroy: destroy destroy method to be performed
-        :param repair: repair destroy method to be performed
-        :param sol: solution to which the method is applied
-        :returns: Results object
-        """
-        res = Result()
-        obj_old = sol.obj()
-        t_start = time.process_time()
-        destroy.func(sol, destroy.par, res)
-        t_destroyed = time.process_time()
-        repair.func(sol, repair.par, res)
-        t_end = time.process_time()
-        self.update_stats_for_method_pair(destroy, repair, sol, res, obj_old,
-                                          t_destroyed - t_start, t_end - t_destroyed)
-        return res
-
-
-    def update_stats_for_method_pair(self, destroy: MHMethod, repair: MHMethod, sol: Solution, res: Result, obj_old: TObj,
-                                     t_destroy: float, t_repair: float):
-        """Update statistics, incumbent and check termination condition after having performed a destroy+repair."""
-        if __debug__ and self.own_settings.mh_checkit:
-            sol.check()
-        ms_destroy = self.method_stats[destroy.name]
-        ms_destroy.applications += 1
-        ms_destroy.netto_time += t_destroy
-        ms_destroy.brutto_time += t_destroy
-        ms_repair = self.method_stats[repair.name]
-        ms_repair.applications += 1
-        ms_repair.netto_time += t_repair
-        ms_repair.brutto_time += t_repair
-        obj_new = sol.obj()
-        if sol.is_better_obj(sol.obj(), obj_old):
-            ms_destroy.successes += 1
-            ms_destroy.obj_gain += obj_new - obj_old
-            ms_repair.successes += 1
-            ms_repair.obj_gain += obj_new - obj_old
-        self.iteration += 1
-        new_incumbent = self.update_incumbent(sol, time.process_time() - self.time_start)
-        terminate = self.check_termination()
-        self.log_iteration(destroy.name+'+'+repair.name, obj_old, sol, new_incumbent,
-                           terminate, res.log_info)
-        if terminate:
-            self.run_time = time.process_time() - self.time_start
-            res.terminate = true
-
-
-
-
     @staticmethod
     def sdiv(x, y):
         """Safe division: return x/y if y!=0 and nan otherwise."""

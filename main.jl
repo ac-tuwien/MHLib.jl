@@ -3,6 +3,7 @@
 using MHLib
 using MHLib.Schedulers
 using MHLib.GVNSs
+import MHLib.ALNSs
 import MHLib.OneMax: OneMaxSolution
 using MHLib.MAXSAT
 
