@@ -1,4 +1,6 @@
 #=
+    GVNSs
+
 A general variable neighborhood search class which can also be used for plain local search,
 VND, GRASP, IG etc.
 
@@ -14,6 +16,8 @@ export GVNS, vnd!, gvns!, run!
 
 
 """
+    GVNS
+
 A general variable neighborhood search (GVNS).
 
 Attributes
@@ -46,7 +50,8 @@ function GVNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_li::Vector{MHMeth
 end
 
 
-"""vnd(scheduler, solution)
+"""
+    vnd(scheduler, solution)
 
 Perform variable neighborhood descent (VND) on given solution.
 Return true if a global termination condition is fulfilled, else False.
@@ -126,8 +131,6 @@ function run!(gvns::GVNS)
     perform_sequentially!(gvns.scheduler, sol, gvns.meths_ch)
     gvns!(gvns, sol)
 end
-
-
 
 
 end  # module

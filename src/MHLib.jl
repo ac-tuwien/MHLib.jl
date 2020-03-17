@@ -1,4 +1,6 @@
 """
+    MHLib
+
 `MHLib` - A Toolbox for Metaheuristics and Hybrid Optimization Methods.
 """
 module MHLib
@@ -13,6 +15,8 @@ export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
 #----------------------------- Solution ------------------------------
 
 """
+    Solution
+
 An abstract solution to an optimization problem.
 
 Concrete subtypes need to implement:
@@ -158,6 +162,8 @@ end
 export VectorSolution, copy!, len
 
 """
+    VectorSolution
+
 An abstract solution encoded by a vector of length `N` and type `T`.
 
 Concrete subtypes need to implement:
@@ -186,6 +192,8 @@ export BoolVectorSolution, initialize!, k_random_flips!, k_flip_neighborhood_sea
 
 
 """
+    BoolVectorSolution
+
 An abstract solution encoded by a fixed-length boolean vector.
 """
 abstract type BoolVectorSolution{N} <: VectorSolution{N,Bool} end
