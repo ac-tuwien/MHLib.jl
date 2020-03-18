@@ -11,13 +11,12 @@ using StatsBase
 using Random
 using MHLib
 using MHLib.Schedulers
+import MHLib.ALNSs: get_number_to_destroy
 
 import Base: copy, copy!, show
 import MHLib: calc_objective, flip_variable!
 
-export MAXSATInstance, MAXSATSolution,
-# for testing
-destroy!, repair!, destroy_test!, repair_test!
+export MAXSATInstance, MAXSATSolution, destroy!, repair!
 
 
 """
@@ -172,7 +171,7 @@ Selected positions are stored with the solution in list self.destroyed.
 function destroy!(sol::MAXSATSolution, par::Int, result::Result)
     x = sol.x
     # TODO: num = min(ALNS.get_number_to_destroy(length(x)) * par, length(x))
-    num = min(10 * par, length(x))
+    num = min(get_number_to_destroy(length(x)) * par, length(x))
     sol.destroyed = sample(1:length(x), num, replace=false)
     invalidate!(sol)
 end
@@ -188,26 +187,6 @@ function repair!(sol::MAXSATSolution, par::Int, result::Result)
     x = sol.x
     for p in sol.destroyed
         x[p] = rand(0:1)
-    end
-    sol.destroyed = []
-    invalidate!(sol)
-end
-
-# TODO: Delete
-function destroy_test!(sol::MAXSATSolution, par::Int, result::Result)
-    k = rand(1:length(sol.x))
-    l = rand(1:length(sol.x))
-    left = min(l, k)
-    right = max(l, k)
-    sol.destroyed = [i for i in left:right]
-    invalidate!(sol)
-end
-
-function repair_test!(sol::MAXSATSolution, par::Int, result::Result)
-    @assert !(length(sol.destroyed) == 0)
-    x = sol.x
-    for p in sol.destroyed
-        x[p] = 1
     end
     sol.destroyed = []
     invalidate!(sol)

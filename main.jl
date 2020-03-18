@@ -29,8 +29,8 @@ function maxsat()
     println(sol)
 
     alns = ALNS(sol, [MHMethod("construct", construct!, 0)],
-        [MHMethod("destroy", destroy!, 2), MHMethod("destroy_test", destroy_test!, 2)],
-        [MHMethod("repair", repair!, 0), MHMethod("repair_test", repair_test!, 0)])
+        [MHMethod("destroy", destroy!, 1)],
+        [MHMethod("repair", repair!, 0)])
     run!(alns)
     main_results(alns.scheduler)
 

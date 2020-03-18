@@ -6,18 +6,21 @@ using MHLib.Schedulers
 using StatsBase
 using ArgParse
 
-export ALNS, run!
+export ALNS, run!, get_number_to_destroy
+
+#=
+TODO:
+- own_settings
+- log_scores
+- metropolis_criterion
+=#
+
 
 @add_arg_table! settings_cfg begin
     "--mh_alns_segment_size"
         help = "ALNS segment size"
         arg_type = Int
         default = 100
-    "--mh_alns_gamma"
-        help = "ALNS reaction factor for updating the method weights"
-        arg_type = Float64
-        default = 0.1
-#=
     "--mh_alns_dest_min_abs"
         help = "ALNS minimum number of elements to destroy"
         arg_type = Int
@@ -26,11 +29,42 @@ export ALNS, run!
         help = "ALNS maximum number of elements to destroy"
         arg_type = Int
         default = 100
-    "--mh_alns_dest_ratio"
-        help = "ALNS ratio of elements to destroy"
+    "--mh_alns_dest_min_ratio"
+        help = "ALNS minimum ratio of elements to destroy"
         arg_type = Float64
         default = 0.1
-=#
+    "--mh_alns_dest_max_ratio"
+        help = "ALNS maximum ratio of elements to destroy"
+        arg_type = Float64
+        default = 0.35
+    "--mh_alns_gamma"
+        help = "ALNS reaction factor for updating the method weights"
+        arg_type = Float64
+        default = 0.1
+    "--mh_alns_sigma1"
+        help = "ALNS score for new global best solution"
+        arg_type = Int
+        default = 10
+    "--mh_alns_sigma2"
+        help = "ALNS score for better than current solution"
+        arg_type = Int
+        default = 9
+    "--mh_alns_sigma3"
+        help = "ALNS score for worse accepted solution"
+        arg_type = Int
+        default = 3
+    "--mh_alns_init_temp_factor"
+        help = "ALNS factor for determining initial temperature"
+        arg_type = Float64
+        default = 0.0
+    "--mh_alns_temp_dec_factor"
+        help = "ALNS factor for decreasing the temperature"
+        arg_type = Float64
+        default = 0.99975
+    "--mh_alns_logscores"
+        help = "ALNS write out log information on scores"
+        arg_type = Bool
+        default = true
 end
 
 
@@ -114,6 +148,34 @@ function select_method_pair(alns::ALNS)
 end
 
 """
+    get_number_to_destroy(num_elements, own_settings, dest_min_abs, dest_min_ratio,
+        dest_max_abs, dest_max_ratio)
+
+Randomly sample the number of elements to destroy in the destroy operator based on the parameter settings.
+"""
+function get_number_to_destroy(num_elements::Int, own_settings=settings, dest_min_abs::Union{Float64, Nothing}=nothing,
+    dest_min_ratio::Union{Float64, Nothing}=nothing, dest_max_abs::Union{Float64, Nothing}=nothing,
+    dest_max_ratio::Union{Float64, Nothing}=nothing)
+
+    if dest_min_abs == nothing
+        dest_min_abs = own_settings[:mh_alns_dest_min_abs]
+    end
+    if dest_min_ratio == nothing
+        dest_min_ratio = own_settings[:mh_alns_dest_min_ratio]
+    end
+    if dest_max_abs == nothing
+        dest_max_abs = own_settings[:mh_alns_dest_max_abs]
+    end
+    if dest_max_ratio == nothing
+        dest_max_ratio = own_settings[:mh_alns_dest_max_ratio]
+    end
+    a = max(dest_min_abs, Int(floor(dest_min_ratio * num_elements)))
+    b = min(dest_max_abs, Int(floor(dest_max_ratio * num_elements)))
+    return b >= a ? rand(a:b+1) : b+1
+end
+
+
+"""
     update_operator_weights!(alns)
 
 Update operator weights at segment ends and re-initialize scores
@@ -148,19 +210,19 @@ function update_after_destroy_and_repair_performed!(alns::ALNS, destroy::MHMetho
     repair_data.applied += 1
     score = 0
     if is_better(sol_new, sol_incumbent)
-        #TODO: score = self.own_settings.mh_alns_sigma1
-        score = 1
+        # print('better than incumbent')
+        score = settings[:mh_alns_sigma1]
         copy!(sol_incumbent, sol_new)
         copy!(sol, sol_new)
     elseif is_better(sol_new, sol)
-        #TODO: score = self.own_settings.mh_alns_sigma2
-        score = 1
+        # print('better than current')
+        score = settings[:mh_alns_sigma2]
         copy!(sol, sol_new)
     #= TODO
-    elif sol.is_better(sol_new) and self.metropolis_criterion(sol_new, sol):
-        score = self.own_settings.mh_alns_sigma3
+    elseif is_better(sol, sol_new) && metropolis_criterion(alns, sol_new, sol)
+        score = settings[:mh_alns_sigma3]
         # print('accepted although worse')
-        sol.copy_from(sol_new)
+        copy!(sol, sol_new)
     =#
     elseif sol_new != sol
         copy!(sol_new, sol)

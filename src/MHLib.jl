@@ -7,8 +7,10 @@ using Random
 using Base: copy, copy!
 
 export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
-    is_better, is_worse, is_better_obj, is_worse_obj, dist, check
+    is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
 
+    # ALNSs
+    get_number_to_destroy
 
 #----------------------------- Solution ------------------------------
 

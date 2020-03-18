@@ -32,18 +32,27 @@ export Result, MHMethod, MHMethodStatistics, Scheduler, perform_method!,
                "-1: iteration 1,2,5,10,20,..."
         arg_type = Int
         default = 0
+    "--mh_tciter"
+        help = "maximum number of iterations without improvement (<0: turned off)"
+        arg_type = Int
+        default = -1
+    "--mh_ttime"
+        help = "time limit [s] (<0: turned off)"
+        arg_type = Int
+        default = -1
+    "--mh_tctime"
+        help = "maximum time [s] without improvement (<0: turned off)"
+        arg_type = Int
+        default = -1
+    "--mh_tobj"
+        help = "objective value at which should be terminated when reached (<0: turned off)"
+        arg_type = Float64
+        default = -1.0
+    "--mh_checkit"
+        help = "call check() for each solution after each method application"
+        arg_type = Bool
+        default = false
 end
-#= TODO
-parser = get_settings_parser()
-parser.add_argument("--mh_titer", type=int, default=100, help='maximum number of iterations (<0: turned off)')
-parser.add_argument("--mh_tciter", type=int, default=-1,
-                    help='maximum number of iterations without improvement (<0: turned off)')
-parser.add_argument("--mh_ttime", type=int, default=-1, help='time limit [s] (<0: turned off)')
-parser.add_argument("--mh_tctime", type=int, default=-1, help='maximum time [s] without improvement (<0: turned off)')
-parser.add_argument("--mh_tobj", type=float, default=-1,
-                    help='objective value at which should be terminated when reached (<0: turned off)')
-add_bool_arg(parser, "mh_checkit", default=false, help='call check() for each solution after each method application')
-=#
 
 
 """
@@ -250,13 +259,11 @@ Check termination conditions and return true when to terminate.
 """
 function check_termination(s::Scheduler)::Bool
     t = time()
-    if 0 <= settings[:mh_titer] <= s.iteration
-            # TODO or \
-            #0 <= self.own_settings.mh_tciter <= self.iteration - self.incumbent_iteration or \
-            #0 <= self.own_settings.mh_ttime <= t - self.time_start or \
-            #0 <= self.own_settings.mh_tctime <= t - self.incumbent_time or \
-            #0 <= self.own_settings.mh_tobj and not self.incumbent.is_worse_obj(self.incumbent.obj(),
-            #                                                                   self.own_settings.mh_tobj):
+    if 0 <= settings[:mh_titer] <= s.iteration ||
+        0 <= settings[:mh_tciter] <= s.iteration - s.incumbent_iteration ||
+        0 <= settings[:mh_ttime] <= t - s.time_start ||
+        0 <= settings[:mh_tctime] <= t - s.incumbent_time ||
+        0 <= settings[:mh_tobj] && !is_worse_obj(s.incumbent, obj(s.incumbent), settings[:mh_tobj])
         return true
     end
     false
@@ -402,7 +409,7 @@ Update statistics, incumbent and check termination condition after having perfor
 """
 function update_stats_for_method_pair!(scheduler::Scheduler, destroy::MHMethod,
      repair::MHMethod, sol::Solution, res::Result, obj_old, t_destroy::Float64, t_repair::Float64)
-     #=
+     #= TODO
      if __debug__ and self.own_settings.mh_checkit:
          sol.check()
      =#
