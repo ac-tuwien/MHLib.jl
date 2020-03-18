@@ -4,7 +4,6 @@
 module MHLib
 
 using Random
-using StatsBase
 using Base: copy, copy!
 
 export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,

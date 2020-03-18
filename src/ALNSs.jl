@@ -3,6 +3,7 @@ module ALNSs
 
 using MHLib
 using MHLib.Schedulers
+using StatsBase
 using ArgParse
 
 export ALNS, run!
@@ -11,11 +12,11 @@ export ALNS, run!
     "--mh_alns_segment_size"
         help = "ALNS segment size"
         arg_type = Int
-        default = 0 # indicates that there are no segments
+        default = 100
     "--mh_alns_gamma"
         help = "ALNS reaction factor for updating the method weights"
         arg_type = Float64
-        default = 0.0 # indicates that there is no reaction
+        default = 0.1
 #=
     "--mh_alns_dest_min_abs"
         help = "ALNS minimum number of elements to destroy"
@@ -47,7 +48,7 @@ mutable struct ScoreData
     applied::Int64
 end
 
-ScoreData() = new(1.0, 0, 0)
+ScoreData() = ScoreData(1.0, 0, 0)
 
 
 """
@@ -96,13 +97,8 @@ end
 Randomly select a method from the given list with probabilities proportional to the given weights.
 If weights is nothing, uniform probability is used.
 """
-function select_method(meths::Vector{MHMethod}, weights::Union{Vector{Float64}, Nothing}=nothing)
-    # when can weights be nothing??
-    if weights == nothing
-        return meths[rand(1:length(meths))]
-    else
-        return sample(meths, Weights(weights))
-    end
+function select_method(meths::Vector{MHMethod}, weights::Vector{Float64})
+    return sample(meths, Weights(weights))
 end
 
 
@@ -112,8 +108,8 @@ end
 Select a destroy and repair method pair according to current weights.
 """
 function select_method_pair(alns::ALNS)
-    destroy = select_method(alns.meths_de, [alns.score_data[m.name]].weight for m in alns.meths_de)
-    repair = select_method(alns.meths_re, [alns.score_data[m.name]].weight for m in alns.meths_re)
+    destroy = select_method(alns.meths_de, [alns.score_data[m.name].weight for m in alns.meths_de])
+    repair = select_method(alns.meths_re, [alns.score_data[m.name].weight for m in alns.meths_re])
     return destroy, repair
 end
 
@@ -125,11 +121,11 @@ Update operator weights at segment ends and re-initialize scores
 function update_operator_weights!(alns::ALNS)
     if alns.scheduler.iteration == alns.next_segment
         # TODO: log_scores()
-        alns.next_segment = alns.scheduler.iteration + settings_cfg["mh_alns_segment_size"]
-        gamma = settings_cfg["mh_alns_gamma"]
+        alns.next_segment = alns.scheduler.iteration + settings[:mh_alns_segment_size]
+        gamma = settings[:mh_alns_gamma]
         for m in vcat(alns.meths_de, alns.meths_re)
             data = alns.score_data[m.name]
-            if data.applied
+            if data.applied > 0
                 data.weight = data.weight * (1 - gamma) + gamma * data.score / data.applied
                 data.score = 0
                 data.applied = 0
@@ -180,7 +176,7 @@ end
 Perform adaptive large neighborhood search (ALNS) on a given solution.
 """
 function alns!(alns::ALNS, sol::Solution)
-    alns.next_segment = alns.scheduler.iteration + settings_cfg["mh_alns_segment_size"]
+    alns.next_segment = alns.scheduler.iteration + settings[:mh_alns_segment_size]
     sol_incumbent = copy(sol)
     sol_new = copy(sol)
     while true
@@ -191,7 +187,7 @@ function alns!(alns::ALNS, sol::Solution)
             copy!(sol, sol_incumbent)
             return
         end
-        update_operator_weights(alns)
+        update_operator_weights!(alns)
     end
 end
 

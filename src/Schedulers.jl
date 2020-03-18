@@ -16,7 +16,7 @@ using MHLib
 export Result, MHMethod, MHMethodStatistics, Scheduler, perform_method!,
     next_method, update_incumbent!, check_termination, perform_sequentially!,
     main_results, delayed_success_update!, log_iteration, log_iteration_header,
-    construct!, local_improve!, shaking!
+    construct!, local_improve!, shaking!, perform_method_pair!
 
 @add_arg_table! settings_cfg begin
     "--mh_titer"
@@ -389,7 +389,7 @@ function perform_method_pair!(scheduler::Scheduler, destroy::MHMethod, repair::M
     t_destroyed = time()
     repair.func(sol, repair.par, res)
     t_end = time()
-    update_stats_for_method_pair(scheduler, destroy, repair, sol, res, obj_old,
+    update_stats_for_method_pair!(scheduler, destroy, repair, sol, res, obj_old,
                                       t_destroyed - t_start, t_end - t_destroyed)
     return res
 end
@@ -424,13 +424,13 @@ function update_stats_for_method_pair!(scheduler::Scheduler, destroy::MHMethod,
      scheduler.iteration += 1
      new_incumbent = update_incumbent!(scheduler, sol, time() - scheduler.time_start)
      terminate = check_termination(scheduler)
-     log_iteration(scheduler, destroy.name+'+'+repair.name, obj_old, sol, new_incumbent, terminate, res.log_info)
+     log_iteration(scheduler, destroy.name * "+" * repair.name, obj_old, sol, new_incumbent, terminate, res.log_info)
      if terminate
-         scheduler.run_time = time - scheduler.start_time
+         scheduler.run_time = time() - scheduler.time_start
          res.terminate = true
      end
 end
-    
+
 #=
     @staticmethod
     def sdiv(x, y):
