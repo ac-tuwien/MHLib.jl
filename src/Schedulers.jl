@@ -1,4 +1,5 @@
-#=Schedulers
+#=
+    Schedulers
 
 General scheduler for realizing (G)VNS, GRASP, IG and similar metaheuristics.
 
@@ -56,6 +57,8 @@ end
 
 
 """
+    Result
+
 Data in conjunction with a method application's result.
 
 Attributes
@@ -73,6 +76,8 @@ Result() = Result(true, false, "")
 
 
 """
+    MHMethod
+
 A method to be applied to a solution by the scheduler.
 
 Attributes
@@ -88,6 +93,8 @@ end
 
 
 """
+    MHMethodStatistics
+
 Struct that collects data on the applications of a `MHMethod`.
 
 Attributes
@@ -111,6 +118,8 @@ MHMethodStatistics() = MHMethodStatistics(0,0.0,0,0.0,0.0)
 
 
 """
+    Scheduler
+
 Struct for metaheuristics that work by iteratively applying certain methods/operations.
 
 Attributes
@@ -349,7 +358,11 @@ function is_logarithmic_number(x::Int)::Bool
 end
 
 
-"""Writes iteration log info.
+"""
+    log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::Solution,
+        new_incumbent::Bool, in_any_case::Bool, log_info::String="")
+
+Writes iteration log info.
 
 A line is written if in_any_case is set or in dependence of
 `settings[:mh_lfreq]` and `settings[:mh_lnewinc]`.
