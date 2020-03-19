@@ -21,6 +21,7 @@ export ALNS, run!, get_number_to_destroy
 TODO:
 - own_settings
 - log_scores
+- argument and control flow in run! for iterations until equilibrium
 =#
 
 @add_arg_table! settings_cfg begin
@@ -67,12 +68,13 @@ TODO:
     "--mh_alns_temp_dec_factor"
         help = "ALNS factor for decreasing the temperature"
         arg_type = Float64
-        default = 0.98
+        default = 0.99
     "--mh_alns_logscores"
         help = "ALNS write out log information on scores"
         arg_type = Bool
         default = true
 end
+
 
 """
 Weight of a method and all data relevant to calculate the score and update the weight.
@@ -89,6 +91,7 @@ mutable struct ScoreData
 end
 
 ScoreData() = ScoreData(1.0, 0, 0)
+
 
 """
 An adaptive large neighborhood search (ALNS).
@@ -112,6 +115,7 @@ mutable struct ALNS
     next_segment::Int64
 end
 
+
 """
     ALNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMethod},
         meths_re::Vector{MHMethod}, consider_initial_sol::Bool=false)
@@ -131,6 +135,7 @@ function ALNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMeth
     ALNS(Scheduler(sol, [meths_ch; meths_de; meths_re]), meths_ch, meths_de, meths_re, score_data, temperature, 0)
 end
 
+
 """
     select_method(meths::Vector{MHMethod}, weights::Vector{Float64})
 
@@ -140,6 +145,7 @@ If weights is nothing, uniform probability is used.
 function select_method(meths::Vector{MHMethod}, weights::Vector{Float64})
     return sample(meths, Weights(weights))
 end
+
 
 """
     select_method_pair(alns::ALNS)
@@ -152,6 +158,7 @@ function select_method_pair(alns::ALNS)
     return destroy, repair
 end
 
+
 """
     metropolis_criterion(alns::ALNS, sol_new::Solution, sol_current::Solution)
 
@@ -163,6 +170,17 @@ function metropolis_criterion(alns::ALNS, sol_new::Solution, sol_current::Soluti
     end
     return rand() <= exp(-abs(obj(sol_new) - obj(sol_current)) / alns.temperature)
 end
+
+
+"""
+    cool_down(alns::ALNS)
+
+Apply geometric cooling.
+"""
+function cool_down(alns::ALNS)
+    alns.temperature *= settings[:mh_alns_temp_dec_factor]
+end
+
 
 """
     get_number_to_destroy(num_elements::Int, own_settings=settings, dest_min_abs::Union{Float64, Nothing}=nothing,
@@ -192,6 +210,7 @@ function get_number_to_destroy(num_elements::Int, own_settings=settings, dest_mi
     return b >= a ? rand(a:b+1) : b+1
 end
 
+
 """
     update_weights!(alns::ALNS)
 
@@ -202,7 +221,8 @@ function update_weights!(alns::ALNS)
     if alns.scheduler.iteration == alns.next_segment
         # TODO: log_scores()
         # update temperature
-        alns.temperature *= settings[:mh_alns_temp_dec_factor]
+        # TODO: own argument for iterations until equilibrium
+        cool_down(alns)
         # update operator weights
         alns.next_segment = alns.scheduler.iteration + settings[:mh_alns_segment_size]
         gamma = settings[:mh_alns_gamma]
@@ -216,6 +236,7 @@ function update_weights!(alns::ALNS)
         end
     end
 end
+
 
 """
     update_after_destroy_and_repair_performed!(alns::ALNS, destroy::MHMethod, repair::MHMethod,
@@ -250,6 +271,7 @@ function update_after_destroy_and_repair_performed!(alns::ALNS, destroy::MHMetho
     repair_data.score += score
 end
 
+
 """
     alns!(alns::ALNS, sol::Solution)
 
@@ -270,6 +292,7 @@ function alns!(alns::ALNS, sol::Solution)
         update_weights!(alns)
     end
 end
+
 
 """
     run!(alns::ALNS)
