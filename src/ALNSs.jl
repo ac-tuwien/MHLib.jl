@@ -21,7 +21,6 @@ export ALNS, run!, get_number_to_destroy
 TODO:
 - own_settings
 - log_scores
-- argument and control flow in run! for iterations until equilibrium
 =#
 
 @add_arg_table! settings_cfg begin
@@ -173,11 +172,11 @@ end
 
 
 """
-    cool_down(alns::ALNS)
+    cool_down!(alns::ALNS)
 
 Apply geometric cooling.
 """
-function cool_down(alns::ALNS)
+function cool_down!(alns::ALNS)
     alns.temperature *= settings[:mh_alns_temp_dec_factor]
 end
 
@@ -212,17 +211,13 @@ end
 
 
 """
-    update_weights!(alns::ALNS)
+    update_operator_weights!(alns::ALNS)
 
-Update operator weights at segment ends and re-initialize scores. Moreover,
-decreases temperature by the specified factor from the arguments (mh_alns_temp_dec_factor).
+Update operator weights at segment ends and re-initialize scores.
 """
-function update_weights!(alns::ALNS)
+function update_operator_weights!(alns::ALNS)
     if alns.scheduler.iteration == alns.next_segment
         # TODO: log_scores()
-        # update temperature
-        # TODO: own argument for iterations until equilibrium
-        cool_down(alns)
         # update operator weights
         alns.next_segment = alns.scheduler.iteration + settings[:mh_alns_segment_size]
         gamma = settings[:mh_alns_gamma]
@@ -289,7 +284,8 @@ function alns!(alns::ALNS, sol::Solution)
             copy!(sol, sol_incumbent)
             return
         end
-        update_weights!(alns)
+        update_operator_weights!(alns)
+        cool_down!(alns)
     end
 end
 
