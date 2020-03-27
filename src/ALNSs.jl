@@ -1,4 +1,4 @@
-#=
+"""
     ALNSs
 
 A adaptive large neighborhood search which can also be used for plain large neighborhood
@@ -7,7 +7,7 @@ search.
 It extends the more general scheduler module/class by distinguishing between construction
 heuristics, destroy methods and repair methods. Moreover it contain score_data which
 tracks the success of methods and a next_segment attribute.
-=#
+"""
 module ALNSs
 
 using MHLib

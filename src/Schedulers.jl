@@ -88,7 +88,7 @@ Attributes
 struct MHMethod
     name::String
     func::Function
-    par::Int
+    par::Any
 end
 
 
