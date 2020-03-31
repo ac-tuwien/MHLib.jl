@@ -206,7 +206,7 @@ function get_number_to_destroy(num_elements::Int, own_settings=settings, dest_mi
     end
     a = max(dest_min_abs, Int(floor(dest_min_ratio * num_elements)))
     b = min(dest_max_abs, Int(floor(dest_max_ratio * num_elements)))
-    return b >= a ? rand(a:b+1) : b+1
+    return b >= a ? rand(a:b) : b+1
 end
 
 
