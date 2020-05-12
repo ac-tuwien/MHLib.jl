@@ -3,6 +3,7 @@ using MHLib
 using MHLib.Schedulers
 using MHLib.GVNSs
 using MHLib.OneMax
+using MHLib.LCS
 using Random
 
 @testset "MHLib.jl" begin
@@ -47,4 +48,12 @@ end
     main_results(gvns.scheduler)
     check(sol)
     @test obj(sol) >= 0
+end
+
+@testset "LCS.jl" begin
+    inst = LCSInstance(10, 3, Alphabet(4))
+    println(inst)
+    sol = LCSSolution(inst)
+    @test obj(sol) == 0
+    LCSEnvironment(inst)
 end

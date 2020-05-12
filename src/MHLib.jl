@@ -309,9 +309,11 @@ end
 include("settings.jl")
 include("Schedulers.jl")
 include("GVNSs.jl")
+include("MCTSs.jl")
 
 include("demos/OneMax.jl")
 include("demos/MAXSAT.jl")
+include("demos/LCS.jl")
 
 
 end # module
