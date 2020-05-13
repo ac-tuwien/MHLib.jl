@@ -92,7 +92,8 @@ end
 """
     update_p(inst, p, c)
 
-Update position vector p to refer to positions after the next occurrence of letter c in each string.
+Update position vector p to refer to positions after the next occurrence of letter c in
+each string.
 
 Letter c must occur in each string s[i] from positions p[i] onward.
 """
@@ -113,6 +114,9 @@ function get_sigma_valid(inst::LCSInstance, p::Vector)
     sigma_valid = ones(Bool, inst.sigma)
     for c in 1:inst.sigma
         for i in 1:inst.m
+            if p[i] == inst.n+1  # end of sequence reached
+                return zeros(Bool, inst.sigma)
+            end
             if inst.count[i, p[i], c] == 0
                 sigma_valid[c] = false
                 break
@@ -197,24 +201,20 @@ end
 
 function step!(env::LCSEnvironment, action::Int)
     done = false
-    for i in 1:env.inst.m
-        j = env.inst.succ[i, env.state.p[i], action]
-        env.state.p[i] = j+1
-        if j == 0
-            done = true
-            env.state.p[i] = 0
-        else
-            env.state.p[i] = j+1
-        end
-    end
-    println("step: ", action, " to ", env.state.s, " ", done)
-    if done
-        reward = env.state.s.obj_val
-    else
+    inst = env.inst
+    state = env.state
+    append!(env.state.s, action)
+    update_p(inst, state.p, action)
+    sigma_valid = get_sigma_valid(inst, state.p)
+    not_done = any(sigma_valid)
+    println("step: ", action, " to ", state.s, " ", not_done)
+    if not_done
         reward = 0
-        append!(env.state.s, action)
+        return Observation((inst.n+1) .- state.p, sigma_valid), reward, false
+    else
+        reward = state.s.obj_val
+        return Observation(zeros(Float32, inst.m), sigma_valid), reward, true
     end
-    return get_obs(env), reward, done
 end
 
 

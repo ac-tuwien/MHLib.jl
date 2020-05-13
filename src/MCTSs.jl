@@ -76,7 +76,7 @@ mutable struct MCTS
     c_puct::Float32
 end
 
-MCTS() = MCTS(100, 5)
+MCTS() = MCTS(1000, 5)
 
 
 """
