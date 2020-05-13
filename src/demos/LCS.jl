@@ -55,7 +55,7 @@ function LCSInstance(n::Int, m::Int, sigma::Alphabet)
 end
 
 """
-    create_random_seqs(lcs, sigma)
+    create_random_seqs(inst, sigma)
 
 Randomly re-initialize the sequences in the given LCS problem instance.
 """
@@ -87,6 +87,39 @@ function determine_aux_data_structures(inst::LCSInstance)
             end
         end
     end
+end
+
+"""
+    update_p(inst, p, c)
+
+Update position vector p to refer to positions after the next occurrence of letter c in each string.
+
+Letter c must occur in each string s[i] from positions p[i] onward.
+"""
+function update_p(inst::LCSInstance, p::Vector, c)
+    for i in 1:inst.m
+        j = inst.succ[i, p[i], c]
+        @assert j > 0
+        p[i] = j + 1
+    end
+end
+
+"""
+    get_sigma_valid(inst, p)
+
+Return sigma_valid, i.e., binary vector indicating valid actions.
+"""
+function get_sigma_valid(inst::LCSInstance, p::Vector)
+    sigma_valid = ones(Bool, inst.sigma)
+    for c in 1:inst.sigma
+        for i in 1:inst.m
+            if inst.count[i, p[i], c] == 0
+                sigma_valid[c] = false
+                break
+            end
+        end
+    end
+    return sigma_valid
 end
 
 
@@ -138,6 +171,9 @@ struct LCSState <: State
     s::LCSSolution
 end
 
+copy!(state::LCSState, state1::LCSState) =
+    begin state.p[:] = state1.p; copy!(state.s, state1.s) end
+
 
 mutable struct LCSEnvironment <: Environment
     inst::LCSInstance
@@ -146,23 +182,32 @@ mutable struct LCSEnvironment <: Environment
         new(inst, LCSState(ones(Int, inst.m), LCSSolution(inst)))
 end
 
-action_space_size(env::LCSEnvironment) = env.inst.m
+action_space_size(env::LCSEnvironment) = env.inst.sigma
 
 get_state(env::LCSEnvironment) = env.state
 
-set_state!(env::LCSEnvironment, state::LCSState) = (env.state = state)
+set_state!(env::LCSEnvironment, state::LCSState) = copy!(env.state, state)
 
-get_obs(env::LCSEnvironment) =
-    Observation((env.inst.n+1) .- env.state.p, ones(Bool, env.inst.m))
+function get_obs(env::LCSEnvironment)
+    inst = env.inst
+    p = env.state.p
+    sigma_valid = get_sigma_valid(inst, p)
+    Observation((inst.n+1) .- p, sigma_valid)
+end
 
 function step!(env::LCSEnvironment, action::Int)
     done = false
     for i in 1:env.inst.m
-        env.state.p[i] = env.inst.succ[i, env.state.p[i], action]
-        if env.state.p[i] == 0
+        j = env.inst.succ[i, env.state.p[i], action]
+        env.state.p[i] = j+1
+        if j == 0
             done = true
+            env.state.p[i] = 0
+        else
+            env.state.p[i] = j+1
         end
     end
+    println("step: ", action, " to ", env.state.s, " ", done)
     if done
         reward = env.state.s.obj_val
     else
@@ -175,6 +220,7 @@ end
 
 
 function mcts()
+    Random.seed!(43)
     inst = LCSInstance(10, 3, Alphabet(4))
     println(inst)
     env = LCSEnvironment(inst)

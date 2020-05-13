@@ -76,7 +76,7 @@ mutable struct MCTS
     c_puct::Float32
 end
 
-MCTS() = MCTS(100, 0.1)
+MCTS() = MCTS(100, 5)
 
 
 """
@@ -118,14 +118,14 @@ mutable struct Node{TEnv <: Environment, TState <: State}
     obs::Observation
 end
 
-function Node{TEnv, TState}(mcts::MCTS, env::TEnv, action::Int, state::TState,
+function Node(mcts::MCTS, env::TEnv, action::Int, state::TState,
     obs::Observation, done::Bool, reward, parent::Union{Node, Nothing}) where
     {TEnv <: Environment, TState <: State}
-    m = action_space_size(env)
+    sigma = action_space_size(env)
     return Node{TEnv, TState}(
             mcts, env, action, false, parent,
-            Vector{Union{Node, Nothing}}(nothing, m),
-            m, zeros(Float32, m), zeros(Float32, m), zeros(Float32, m),
+            Vector{Union{Node, Nothing}}(nothing, sigma),
+            sigma, zeros(Float32, sigma), zeros(Float32, sigma), zeros(Float32, sigma),
             copy(obs.valid_actions), reward, done, deepcopy(state), obs)
 end
 
@@ -166,13 +166,13 @@ function get_child(node::Node, action::Int)::Node
         set_state!(node.env, node.state)
         obs, reward, done = step!(node.env, action)
         next_state = get_state(node.env)
-        node.children[action] = Node{typeof(node.env), typeof(next_state)}(node.mcts, node.env, action, next_state,
+        node.children[action] = Node(node.mcts, node.env, action, next_state,
                                      obs, done, reward, node)
     end
     return node.children[action]
 end
 
-function backup(node::Node, value::Float32)
+function backup(node::Node, value)
     current = node
     while current.parent != nothing
         N!(current, N(current) + 1)
@@ -183,7 +183,8 @@ end
 
 
 function compute_priors_and_value(mcts::MCTS, obs::Observation, action_space_size::Int)
-    return rand(action_space_size), rand(Float32)
+    # return rand(action_space_size), rand(Float32)
+    return fill(0.5, action_space_size), 0.5
 end
 
 
@@ -192,13 +193,12 @@ function compute_action(mcts::MCTS, node::Node)
         leaf = select_leaf(node)
         if leaf.done
             value = leaf.reward
-            println("Leaf reached: ", leaf.state)
         else
-            child_priors, value_estimate = compute_priors_and_value(mcts, leaf.obs,
+            child_priors, value = compute_priors_and_value(mcts, leaf.obs,
                 node.action_space_size)
             expand(leaf, child_priors)
-            backup(leaf, value_estimate)
         end
+        backup(leaf, value)
     end
     return argmax(node.child_N)
 end
@@ -206,12 +206,8 @@ end
 function run!(mcts::MCTS, env::Environment)
     root_state = get_state(env)
     root_obs = get_obs(env)
-    TEnv = typeof(env)
-    TState = typeof(root_state)
-    root_parent = Node{TEnv, TState}(mcts, env, 1, root_state, root_obs, false,
-        0.0f0, nothing)
-    root = Node{TEnv, TState}(mcts, env, 1, root_state, root_obs, false,
-        0.0f0, root_parent)
+    root_parent = Node(mcts, env, 1, root_state, root_obs, false, 0, nothing)
+    root = Node(mcts, env, 1, root_state, root_obs, false, 0, root_parent)
     compute_action(mcts, root)
 end
 
