@@ -108,7 +108,7 @@ mutable struct Node{TEnv <: Environment, TState <: State}
     parent::Union{Node, Nothing}
     children::Vector{Union{Node, Nothing}}
     action_space_size::Int
-    child_Q::Vector{Float32}
+    child_W::Vector{Float32}
     child_P::Vector{Float32}
     child_N::Vector{Int32}
     valid_actions::Vector{Bool}
@@ -132,15 +132,15 @@ end
 N(node::Node) = node.parent.child_N[node.action]
 N!(node::Node, n) = (node.parent.child_N[node.action] = Int32(n))
 
-Q(node::Node) = node.parent.child_Q[node.action]
-Q!(node::Node, n) = (node.parent.child_Q[node.action] = Float32(n))
+W(node::Node) = node.parent.child_W[node.action]
+W!(node::Node, n) = (node.parent.child_W[node.action] = Float32(n))
 
-child_Q_rel(node::Node) = node.child_Q ./ (1 .+ node.child_N)
+child_Q(node::Node) = node.child_W ./ node.child_N
 
 child_U(node::Node) = sqrt(N(node)) .* node.child_P ./ (1 .+ node.child_N)
 
 function best_action(node::Node)::Int
-    child_score = child_Q_rel(node) + node.mcts.c_puct * child_U(node)
+    child_score = child_Q(node) + node.mcts.c_puct * child_U(node)
     masked_child_score = child_score
     masked_child_score[.~node.valid_actions] .= typemin(Float32)
     return argmax(masked_child_score)
@@ -176,7 +176,7 @@ function backup(node::Node, value)
     current = node
     while current.parent != nothing
         N!(current, N(current) + 1)
-        Q!(current, Q(current) + value)
+        W!(current, W(current) + value)
         current = current.parent
     end
 end
