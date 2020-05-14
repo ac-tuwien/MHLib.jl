@@ -1,4 +1,6 @@
 """
+    MAXSAT
+
 MAXSAT demo problem.
 
 The goal is to maximize the number of clauses satisfied in a boolean function given in

@@ -1,28 +1,43 @@
-#=
+"""
     MCTSs
 
-Monte Carlo Tree Search (MCTS).
+Monte Carlo Tree Search (MCTS) based on Prior Upper Confidence Bound (PUCT) strategy.
 
-This module realizes Monte Carlo Tree Search.
+This module realizes a Monte Carlo Tree Search.
 This implementation is inspired by
 https://github.com/ray-project/ray/blob/master/rllib/contrib/alpha_zero/core/mcts.py
-
-=#
+"""
 module MCTSs
 
+using ArgParse
 using MHLib
 
-export Environment, Node, State, MCTS, run!, action_space_size, step!
+export Environment, Node, State, MCTS, mcts!
+
+@add_arg_table! settings_cfg begin
+    "--mh_mcts_sims"
+        help = "MCTS number of simulations"
+        arg_type = Int
+        default = 1000
+end
+
+
+"""
+    State
+
+Abstract type for a state in the environment on which an optimization/learning agent acts.
+"""
+abstract type State end
 
 
 """
     Observation
 
-An observation at a state in the environment, from which predictions are made.
+Observation of a state in the environment, from which predictions are made.
 
 Attributes
 - values::Vector{Float32}: Observed values
-- valid_actions::Vector{Bool}: True for each action that is valid in the current state
+- valid_actions::Vector{Bool}: Boolean vector indicating valid actions
 """
 struct Observation
     values::Vector{Float32}
@@ -31,24 +46,16 @@ end
 
 
 """
-    State
-
-    Abstract type for a state in the environment.
-"""
-abstract type State end
-
-
-"""
     Environment
 
-Abstract type for an environment on which MCTS acts.
+Abstract type for an environment on which an optimization or learning agent acts.
 
-Must implement:
-- action_space_size(end)::Int: Size of action space
-- get_state(env)::State: Return current state
-- set_state!(env, state::State): Set state
-- get_obs(env)::Observation: Return current observation
-- step!(env, action): Perform action in environment and
+Abstract methods
+- `action_space_size(env)::Int`: Size of action space
+- `reset(env)::Observation`: Reset environment to initial state and return observation
+- `get_state(env)::State`: Return current state
+- `set_state!(env, state::State)`: Set state
+- `step!(env, action)`: Perform action in environment and
     return new observation, reward and a Bool indicating end of episode
 """
 abstract type Environment end
@@ -56,28 +63,31 @@ abstract type Environment end
 action_space_size(env::Environment)::Int =
     error("abstract action_space_size(env) called")
 
+reset!(env::Environment)::Observation = error("abstract reset!(env) called")
+
 get_state(env::Environment)::State = error("abstract get_state(env) called")
 
-set_state!(env::Environment, state::State) = error("abstract set_state(env) called")
-
-get_obs(env::Environment)::Observation = error("abstract get_obs(env) called")
+set_state!(env::Environment, state::State) = error("abstract set_state!(env) called")
 
 step!(env::Environment, action::Int)::(Observation, Float32, Bool) =
     error("abstract step!(env, action) called")
 
 
+#--------------------------------------------------------------------------------
+
 """
     MCTS
 
 Monte Carlo Tree Search.
+
+TODO: Parameters should be provided by settings.jl.
 """
 mutable struct MCTS
     num_sims::Int
     c_puct::Float32
 end
 
-MCTS() = MCTS(1000, 5)
-
+MCTS() = MCTS(settings[:mh_mcts_sims], 5)
 
 """
     Node
@@ -92,7 +102,7 @@ Attributes
 - `parent`: Reference to parent node or Nothing
 - `children`: Vector of references to child nodes or Nothing
 - `action_space_size`: Size of action space
-- `Q`: Total values of child nodes
+- `W`: Total values of child nodes
 - `P`: Priors of child nodes
 - `N`: Number of visits of child nodes
 - `reward`: Reward received at this node
@@ -181,21 +191,59 @@ function backup(node::Node, value)
     end
 end
 
+"""
+    naive_rollout!(leaf)
 
-function compute_priors_and_value(mcts::MCTS, obs::Observation, action_space_size::Int)
-    # return rand(action_space_size), rand(Float32)
-    return fill(0.5, action_space_size), 0.5
+Do a naive rollout always taking random actions until the episode is done, return reward.
+
+The episode is not done in the current leaf, i.e., at least one action can be performed.
+"""
+function naive_rollout!(leaf::Node)
+    value = leaf.reward
+    env = leaf.env
+    set_state!(env, leaf.state)
+    done = false
+    obs = leaf.obs
+    sigma = length(obs.valid_actions)
+    while !done
+        action = rand(Vector(1:sigma)[obs.valid_actions])
+        obs, reward, done = step!(env, action)
+        value += reward
+    end
+    return value
 end
 
 
-function compute_action(mcts::MCTS, node::Node)
+"""
+    compute_priors_and_value(mcts, obs)
+
+Evaluate observed state and return priors P(s,a) for all actions and est. state value Q(s).
+
+So far only constant values 0.5 are returned.
+This method is supposed to be extended with e.g. a neural network or some problem specific
+heuristic.
+"""
+function compute_priors_and_value(mcts::MCTS, obs::Observation)
+    sigma = length(obs.valid_actions)
+    # return rand(action_space_size), rand(Float32)
+    return fill(0.5, sigma), 0.5
+end
+
+"""
+    compute_action!(mcts, node)
+
+Perform MCTS by running episodes, considering the given node as root.
+Finally return best action from root, which is the subnode most often visited.
+"""
+function compute_action!(mcts::MCTS, node::Node)
     for i in 1:mcts.num_sims
         leaf = select_leaf(node)
         if leaf.done
             value = leaf.reward
         else
-            child_priors, value = compute_priors_and_value(mcts, leaf.obs,
-                node.action_space_size)
+            # evaluate leaf node and expand
+            child_priors, value = compute_priors_and_value(mcts, leaf.obs)
+            value = naive_rollout!(leaf)
             expand(leaf, child_priors)
         end
         backup(leaf, value)
@@ -203,14 +251,20 @@ function compute_action(mcts::MCTS, node::Node)
     return argmax(node.child_N)
 end
 
-function run!(mcts::MCTS, env::Environment)
+"""
+    run!(mcts, env)
+
+Perform MCTS.
+
+Create root node, perform simulations and return best action from root.
+"""
+function mcts!(mcts::MCTS, env::Environment)
+    root_obs = reset!(env)
     root_state = get_state(env)
-    root_obs = get_obs(env)
     root_parent = Node(mcts, env, 1, root_state, root_obs, false, 0, nothing)
     root = Node(mcts, env, 1, root_state, root_obs, false, 0, root_parent)
-    compute_action(mcts, root)
+    compute_action!(mcts, root)
 end
-
 
 
 end  # module

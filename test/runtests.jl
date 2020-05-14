@@ -1,12 +1,14 @@
 using Test
+using Random
 using MHLib
 using MHLib.Schedulers
 using MHLib.GVNSs
 using MHLib.OneMax
 using MHLib.LCS
-using Random
+using MHLib.MCTSs
 
-@testset "MHLib.jl" begin
+
+@testset "OneMaxSolution" begin
     parse_settings!(["--seed=1"])
     println(get_settings_as_string())
     s1 = OneMaxSolution{5}()
@@ -27,7 +29,7 @@ using Random
 end
 
 @testset "scheduler.jl" begin
-    parse_settings!(["--seed=1"])
+    Random.seed!(1)
     sol = OneMaxSolution{10}()
     println(sol)
     # methods = [MHMethod("con", construct!, 0),
@@ -50,10 +52,13 @@ end
     @test obj(sol) >= 0
 end
 
-@testset "LCS.jl" begin
-    inst = LCSInstance(10, 3, Alphabet(4))
+@testset "LCS_MCTS" begin
+    Random.seed!(1)
+    inst = LCSInstance(3, 10, 4)
     println(inst)
     sol = LCSSolution(inst)
     @test obj(sol) == 0
-    LCSEnvironment(inst)
+    env = LCSEnvironment(inst)
+    mcts = MCTS()
+    @test mcts!(mcts, env) == 3
 end
