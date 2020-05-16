@@ -54,6 +54,8 @@ end
 
 @testset "LCS_MCTS" begin
     Random.seed!(1)
+    inst = LCSInstance("data/rat-04_010_600.lcs")
+    @test length(inst.s[10]) == 600
     inst = LCSInstance(3, 10, 4)
     println(inst)
     sol = LCSSolution(inst)

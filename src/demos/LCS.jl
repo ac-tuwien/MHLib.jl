@@ -34,6 +34,17 @@ Type used for letters in the LCS problem.
 """
 const Alphabet = Int16
 
+const alphabets = Dict(4 => "ACGT", 20 => "ACDEFGHIKLMNPQRSTVWY")
+
+function get_alphabet(sigma)
+    if sigma in alphabets.keys
+        a = alphabets[sigma]
+        Dict{Char, Alphabet}(a[i] => Alphabet(i) for i in 1:sigma)
+    else
+        Dict{Char, Alphabet}()  # empty for unsupported alphabets
+    end
+end
+
 """
 A Longest Common Subsequence (LCS) problem instance.
 
@@ -41,10 +52,12 @@ The goal is to find a maximum length sequence that is a subsequence of all given
 strings.
 
 Attributes
-- `n`: length of each input string
 - `m`: number of input strings
+- `n`: maximum length of input strings
 - `sigma`: alphabet size, the alphabet is 1,...,sigma
-- `s`: array of m input strings of length n
+- `alphabet`: dictionary translating ASCII letters to numerical values in sequences
+    for supported alphabets
+- `s`: vector of m input sequences of length at most n
 - `succ[i, j, c]`: index of next occurrence of c in s[i] from position j onward
 - `count[i, j, c]`: number of further appearances of c in s[i] from position j onward
 """
@@ -52,7 +65,8 @@ struct LCSInstance
     m::Int
     n::Int
     sigma::Alphabet
-    S::Array{Alphabet, 2}
+    alphabet::Dict{Char, Alphabet}
+    s::Vector{Vector{Alphabet}}
     succ::Array{Int, 3}
     count::Array{Int, 3}
 end
@@ -63,8 +77,33 @@ end
 Create a random LCSInstance with m strings of length n from alphabet 1,...,sigma.
 """
 function LCSInstance(m::Int, n::Int, sigma)
-    @assert n > 0 && m > 0 && sigma >0
-    inst = LCSInstance(m, n, Alphabet(sigma), rand(Alphabet(1):Alphabet(sigma), (m, n)),
+    @assert n > 0 && m > 0 && sigma > 0
+    inst = LCSInstance(m, n, Alphabet(sigma), get_alphabet(sigma),
+        [rand(Alphabet(1):Alphabet(sigma), n) for i in 1:m],
+        zeros(Int, (m, n+1, sigma)), zeros(Int, (m, n+1, sigma)))
+    determine_aux_data_structures(inst)
+    return inst
+end
+
+"""
+    LCSInstance(file)
+
+Read LCS probem instance from file with given name.
+"""
+function LCSInstance(file::String)
+    local s, m, sigma, alphabet
+    open(file) do f
+        m, sigma = [parse(Int, x) for x in split(readline(f))]
+        alphabet = get_alphabet(sigma)
+        s = Vector{Vector{Alphabet}}(undef, m)
+        for i in 1:m
+            n_str, str = split(readline(f))
+            @assert length(str) == parse(Int,n_str)
+            s[i] = [alphabet[c] for c in str]
+        end
+    end
+    n = maximum(length(si) for si in s)
+    inst = LCSInstance(m, n, Alphabet(sigma), alphabet, s,
         zeros(Int, (m, n+1, sigma)), zeros(Int, (m, n+1, sigma)))
     determine_aux_data_structures(inst)
     return inst
@@ -76,12 +115,13 @@ end
 Randomly re-initialize the sequences in the given LCS problem instance.
 """
 function create_random_seqs!(inst::LCSInstance)
-    rand!(inst.S, one(Alphabet)::inst.sigma)
+    for i in 1:m
+        rand!(inst.s[i], one(Alphabet)::inst.sigma)
+    end
     determine_aux_data_structures(inst)
 end
 
-Base.show(io::IO, inst::LCSInstance) =
-    show(io, MIME"text/plain"(), inst.S)
+Base.show(io::IO, inst::LCSInstance) = show(io, MIME"text/plain"(), inst.s)
 
 """
     determine_aux_dta_structure(inst)
@@ -94,7 +134,7 @@ function determine_aux_data_structures(inst::LCSInstance)
             pos = 0
             count = 0
             for j in inst.n:-1:1
-                if inst.S[i, j] == c
+                if inst.s[i][j] == c
                     pos = j
                     count += 1
                 end
@@ -318,6 +358,7 @@ Test function that runs MCTS on a small LCS instance.
 function mcts_demo()
     parse_settings!(["--seed=1"])
     inst = LCSInstance(3, 10, 4)
+    inst = LCSInstance("data/rat-04_010_600.lcs")
     println(inst)
     env = LCSEnvironment(inst)
     mcts = MCTS()
