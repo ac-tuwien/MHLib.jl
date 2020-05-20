@@ -14,8 +14,9 @@ using MHLib
 
 import Base: copy, copy!, show
 import MHLib: calc_objective
-import MHLib.MCTSs: Environment, Observation, State, MCTS,
-    mcts!, get_state, set_state!, action_space_size, step!, reset!
+import MHLib.Environments: Environment, Observation, State, get_state, set_state!,
+    action_space_size, step!, reset!
+import MHLib.MCTSs: MCTS, mcts!
 
 export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo
 
@@ -161,50 +162,6 @@ function update_p(inst::LCSInstance, p::Vector, c)
     end
 end
 
-"""
-    get_sigma_valid(inst, p)
-
-Return sigma_valid, i.e., binary vector indicating valid actions.
-"""
-function get_sigma_valid(inst::LCSInstance, p::Vector)
-    sigma_valid = ones(Bool, inst.sigma)
-    for c in 1:inst.sigma
-        for i in 1:inst.m
-            if p[i] == inst.n+1  # end of sequence reached
-                return zeros(Bool, inst.sigma)
-            end
-            if inst.count[i, p[i], c] == 0
-                sigma_valid[c] = false
-                break
-            end
-        end
-    end
-    return sigma_valid
-end
-
-"""
-    get_observation_values(inst, p)
-
-Return observation values for the given positin vector.
-
-This is a vector consisting of:
-- for each sequence the length of the remaining sequence from p onward
-- for each letter its minimum number of occurrences over all remaining sequences
-"""
-function get_observation_values(inst, p)
-    values = fill(Float32(inst.n), inst.m + inst.sigma)
-    values[1:inst.m] = (inst.n + 1) .- p
-    counts = view(values, inst.m+1:inst.m+inst.sigma)
-    for i in 1:inst.m
-        for c in 1:inst.sigma
-            count = inst.count[i, p[i], c]
-            if count < counts[c]
-                counts[c] = count
-            end
-        end
-    end
-    return counts
-end
 
 #------------------------------------------------------------------------------
 
@@ -271,14 +228,41 @@ State in the LCSEnvironment.
 Attributes
 - `p`: position vector: the sequences are still relevant from this positions onward
 - `s`: current (partial) solution
+- `action_valid_mask`: boolean vector indicating valid further actions
 """
 struct LCSState <: State
     p::Vector{Int}
     s::LCSSolution
+    action_valid_mask::Vector{Bool}
 end
 
-copy!(state::LCSState, state1::LCSState) =
-    begin state.p[:] = state1.p; copy!(state.s, state1.s) end
+function copy!(state::LCSState, state1::LCSState)
+    state.p[:] = state1.p
+    copy!(state.s, state1.s)
+    state.action_valid_mask[:] = state1.action_valid_mask
+end
+
+"""
+    update_action_valid_mask(state, inst)
+
+Return action_valid_mask, i.e., binary vector indicating valid actions.
+"""
+function update_action_valid_mask(state::LCSState, inst::LCSInstance)
+    for c in 1:inst.sigma
+        if !state.action_valid_mask[c]
+            continue
+        end
+        for i in 1:inst.m
+            if state.p[i] == inst.n+1  # end of sequence reached
+                fill!(state.action_valid_mask, false)
+            end
+            if inst.count[i, state.p[i], c] == 0
+                state.action_valid_mask[c] = false
+                break
+            end
+        end
+    end
+end
 
 
 """
@@ -289,19 +273,34 @@ Environment for solving the LCS problem.
 Attributes
 - `inst`: `LCSInstance` to solve
 - `state`: current state
+- `seq_order`: order of sequences in current observation
+- `action_order`: oder of actions in current observation
 """
 mutable struct LCSEnvironment <: Environment
     inst::LCSInstance
     state::LCSState
-    LCSEnvironment(inst::LCSInstance) =
-        new(inst, LCSState(ones(Int, inst.m), LCSSolution(inst)))
+    seq_order::Vector{Int}
+    action_order::Vector{Int}
+
+    function LCSEnvironment(inst::LCSInstance)
+        p = ones(Int, inst.m)
+        state = LCSState(p, LCSSolution(inst), ones(Bool, inst.sigma))
+        update_action_valid_mask(state, inst)
+        new(inst, state, Vector{Int}(undef, 0), Vector{Int}(undef, 0))
+    end
 end
 
 action_space_size(env::LCSEnvironment) = env.inst.sigma
 
+observation_space_size(env::LCSEnvironment) =
+    env.inst.m + env.inst.sigma + env.inst.sigma * env.inst.m
+
 get_state(env::LCSEnvironment) = env.state
 
-set_state!(env::LCSEnvironment, state::LCSState) = copy!(env.state, state)
+function set_state!(env::LCSEnvironment, state::LCSState)::Observation
+    copy!(env.state, state)
+    return get_observation(env)
+end
 
 """
     reset!(env)
@@ -313,19 +312,20 @@ is created.
 The intention here is to learn a more general strategy that works not just on a single
 instance.
 """
-function reset!(env::LCSEnvironment)
+function reset!(env::LCSEnvironment)::Observation
     if settings[:lcs_always_new_seqs]
         create_random_seqs!(env.inst)
     end
-    env.state = LCSState(ones(env.inst.m), LCSSolution(env.inst))
-    sigma_valid = get_sigma_valid(env.inst, env.state.p)
-    Observation(get_observation_values(env.inst, env.state.p), sigma_valid)
+    p = ones(Int, env.inst.m)
+    env.state = LCSState(p, LCSSolution(env.inst), ones(Bool, env.inst.sigma))
+    update_action_valid_mask(env.state, env.inst)
+    get_observation(env)
 end
 
 """
     step!(env, action)
 
-Appends letter given by action to the solution string.
+Perform given action, i.e., append letter corresponding to action to solution string.
 
 The letter/action must always be valid, which is ensured by the valid_actions
 component in the observations.
@@ -334,19 +334,63 @@ function step!(env::LCSEnvironment, action::Int)
     done = false
     inst = env.inst
     state = env.state
-    append!(env.state.s, action)
-    update_p(inst, state.p, action)
-    sigma_valid = get_sigma_valid(inst, state.p)
-    not_done = any(sigma_valid)
-    println("step: ", action, " to ", state.s, " ", not_done)
+    c = env.action_order[action]
+    append!(env.state.s, c)
+    update_p(inst, state.p, c)
+    update_action_valid_mask(state, inst)
+    not_done = any(state.action_valid_mask)
+    println("step: ", c, " appended to ", state.s, " ", not_done)
     if not_done
         reward = 0
-        obs = Observation(get_observation_values(inst, state.p), sigma_valid)
+        obs = get_observation(env)
     else
         reward = state.s.obj_val
-        obs = Observation(zeros(Float32, inst.m+inst.sigma), sigma_valid)
+        obs = Observation(zeros(Float32, observation_space_size(env)),
+            ones(Bool, inst.sigma))
     end
     return obs, reward, !not_done
+end
+
+"""
+    get_observation(env)
+
+Return observation for the current state in the environment.
+
+This is a vector consisting of:
+- for each sequence the length of the remaining sequence from p onward sorted
+    in non-decreasing order
+- for each letter its minimum number of occurrences over all remaining sequences
+    sorted in non-decreasing order
+- for each letter the lengths of the remaining sequences after appending the letter
+    to the partial solution, sorted according to the sequence and letter orderings from
+    above
+"""
+function get_observation(env::LCSEnvironment)::Observation
+    m = env.inst.m
+    sigma = env.inst.sigma
+    p = env.state.p
+    s = env.inst.s
+    values = Vector{Float32}(undef, observation_space_size(env))
+    lengths = [length(s[i]) - p[i] + 1 for i in 1:m]
+    counts = fill(env.inst.n, sigma)
+    for i in 1:m
+        for c in 1:sigma
+            count = env.inst.count[i, p[i], c]
+            if count < counts[c]
+                counts[c] = count
+            end
+        end
+    end
+    env.seq_order = sortperm(lengths)
+    values[1:m] = lengths[env.seq_order]
+    env.action_order = sortperm(counts)
+    values[m+1:m+sigma] = counts[env.action_order]
+    idx = m + sigma + 1
+    for i in 1:m
+        for c in 1:sigma
+            values[idx] = length(s[i]) - env.inst.succ[i, p[i], c]
+    action_mask = env.state.action_valid_mask[env.action_order]
+    return Observation(values, action_mask)
 end
 
 
@@ -358,7 +402,7 @@ Test function that runs MCTS on a small LCS instance.
 function mcts_demo()
     parse_settings!(["--seed=1"])
     inst = LCSInstance(3, 10, 4)
-    inst = LCSInstance("data/rat-04_010_600.lcs")
+    # inst = LCSInstance("data/rat-04_010_600.lcs")
     println(inst)
     env = LCSEnvironment(inst)
     mcts = MCTS()

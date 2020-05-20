@@ -309,6 +309,7 @@ end
 include("settings.jl")
 include("Schedulers.jl")
 include("GVNSs.jl")
+include("Environments.jl")
 include("MCTSs.jl")
 
 include("demos/OneMax.jl")
