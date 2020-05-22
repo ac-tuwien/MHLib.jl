@@ -227,7 +227,8 @@ State in the LCSEnvironment.
 
 Attributes
 - `p`: position vector: the sequences are still relevant from this positions onward
-- `s`: current (partial) solution
+- `s`: current (partial) solution; TODO: now just for debugging, can be replaced later
+    by just the length of the solution (if necessary at all)
 - `action_valid_mask`: boolean vector indicating valid further actions
 """
 struct LCSState <: State
@@ -389,6 +390,8 @@ function get_observation(env::LCSEnvironment)::Observation
     for i in 1:m
         for c in 1:sigma
             values[idx] = length(s[i]) - env.inst.succ[i, p[i], c]
+        end
+    end
     action_mask = env.state.action_valid_mask[env.action_order]
     return Observation(values, action_mask)
 end

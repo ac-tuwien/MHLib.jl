@@ -66,8 +66,8 @@ mutable struct Node{TEnv <: Environment, TState <: State}
     env::TEnv
     action::Int
     is_expanded::Bool
-    parent::Union{Node, Nothing}
-    children::Vector{Union{Node, Nothing}}
+    parent::Union{Node{TEnv, TState}, Nothing}
+    children::Vector{Union{Node{TEnv, TState}, Nothing}}
     action_space_size::Int
     child_W::Vector{Float32}
     child_P::Vector{Float32}
@@ -177,7 +177,7 @@ heuristic.
 function compute_priors_and_value(mcts::MCTS, obs::Observation)
     sigma = length(obs.valid_actions)
     # return rand(action_space_size), rand(Float32)
-    return fill(0.5, sigma), 0.5
+    return fill(1.0/sigma, sigma), 0.5
 end
 
 """
