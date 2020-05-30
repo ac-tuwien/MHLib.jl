@@ -15,6 +15,7 @@ using MHLib
 import MHLib.Environments: Environment, Observation, State, get_state, set_state!, reset!,
     action_space_size, step!
 
+export MCTS, mcts!
 
 @add_arg_table! settings_cfg begin
     "--mh_mcts_sims"
