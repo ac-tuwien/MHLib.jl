@@ -20,7 +20,7 @@ branches:
   only:
   - master
   # - gh-pages # For building documentation
-  - /^testing-.*$/ # testing branches
+  - /^testing.*$/ # testing branches
   - /^v[0-9]+\.[0-9]+\.[0-9]+$/ # version tags
 
 cache:
