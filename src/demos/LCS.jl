@@ -29,9 +29,13 @@ export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo
 
 @add_arg_table! settings_cfg begin
     "--lcs_always_new_seqs"
-    help = "MCTS number of simulations"
-    arg_type = Bool
-    default = false
+        help = "LCS: Always create new strings when reset is called"
+        arg_type = Bool
+        default = false
+    "--lcs_reward_mode"
+        help = "LCS reward mode: direct or smallsteps"
+        arg_type = String
+        default = "direct"
 end
 
 
@@ -376,11 +380,24 @@ function step!(env::LCSEnvironment, action::Int)
     update_action_valid_mask(state, inst)
     not_done = any(state.action_valid_mask)
     # println("step: ", c, " appended to ", state.s, " ", not_done)
+    reward_mode = settings[:lcs_reward_mode]
     if not_done
-        reward = 0
+        if reward_mode === "direct"
+            reward = 0.0
+        elseif reward_mode === "simplesteps"
+            reward = 0.05
+        else
+            error("Invalid reward_mode $reward_mode")
+        end
         obs = get_observation(env)
     else
-        reward = state.s.obj_val
+        if reward_mode === "direct"
+            reward = state.s.obj_val
+        elseif reward_mode === "simplesteps"
+            reward = -1.0
+        else
+            error("Invalid reward_mode $reward_mode")
+        end
         obs = Observation(
             zeros(Float32, observation_space_size(env)),
             ones(Bool, inst.sigma),
@@ -440,7 +457,7 @@ end
 Test function that runs MCTS on a small LCS instance.
 """
 function mcts_demo()
-    parse_settings!(["--seed=1", "--mh_mcts_num_sims=100", "--mh_mcts_c_puct=50"])
+    parse_settings!(["--seed=1", "--mh_mcts_num_sims=100", "--mh_mcts_c_uct=50"])
     inst = LCSInstance(3, 8, 4)
     # inst = LCSInstance("data/rat-04_010_600.lcs")
     println(inst)
@@ -454,7 +471,7 @@ end
 
 
 function test()
-    parse_settings!(["--seed=1", "--mh_mcts_num_sims=100", "--mh_mcts_c_puct=1"])
+    parse_settings!(["--seed=1", "--mh_mcts_num_sims=100", "--mh_mcts_c_uct=1"])
     inst = LCSInstance(3, 8, 4)
     # inst = LCSInstance("data/rat-04_010_600.lcs")
     println(inst)

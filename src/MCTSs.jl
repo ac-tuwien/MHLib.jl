@@ -23,14 +23,14 @@ export MCTS, mcts!
         help = "MCTS number of simulations"
         arg_type = Int
         default = 100
-    "--mh_mcts_c_puct"
-        help = "MCTS c_puct"
+    "--mh_mcts_c_uct"
+        help = "MCTS c_uct coefficient"
         arg_type = Float64
         default = 1.0
     "--mh_mcts_tree_policy"
-        help = "Tree Policy to apply: UCB (default) or PUCT"
+        help = "MCTS tree Policy to apply: UCB or PUCT"
         arg_type = String
-        default = "PUCT"
+        default = "UCB"
 end
 
 
@@ -55,11 +55,12 @@ Monte Carlo Tree Search.
 """
 mutable struct MCTS
     num_sims::Int
-    c_puct::Float64
+    c_uct::Float64
     tree_policy::String
 end
 
-MCTS() = MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_puct], settings[:mh_mcts_tree_policy])
+MCTS() = MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
+    settings[:mh_mcts_tree_policy])
 
 """
     Node
@@ -141,14 +142,14 @@ child_U(node::Node) = sqrt(N(node)) .* node.child_P ./ (1 .+ node.child_N)
 
 function best_action(node::Node)::Int
     child_score = nothing
-    if node.mcts.tree_policy == "PUCT"
-        child_score = child_Q(node) + node.mcts.c_puct * child_U(node)
-    elseif node.mcts.tree_policy == "UCB"
-        temp = 2 * log(sum(N(node)))
-        child_score = child_Q(node) .+ 2 .* node.mcts.c_puct .* sqrt(temp ./ N(node))
-    else error("Tree Policy not correctly defined!")
+    if node.mcts.tree_policy === "PUCT"
+        child_score = child_Q(node) + node.mcts.c_uct * child_U(node)
+    elseif node.mcts.tree_policy === "UCB"
+        child_score = child_Q(node) .+ 2 .* node.mcts.c_uct .*
+            sqrt.(2 * log(N(node)) ./ (node.child_N .+ 1))
+    else
+        error("Invalid tree policy " + node.mcts.tree_policy)
     end
-
     masked_child_score = child_score
     masked_child_score[.~node.valid_actions] .= typemin(Float32)
     return argmax_rand(masked_child_score)
@@ -180,7 +181,7 @@ function get_child(node::Node, action::Int) :: Node
     return node.children[action]
 end
 
-function backpropagate(node::Node, value)
+function backup(node::Node, value)
     current = node
     while current.parent != nothing
         N!(current, N(current) + 1)
@@ -249,7 +250,7 @@ function compute_action!(mcts::MCTS, node::Node) :: Integer
             value = rollout!(leaf)
             expand(leaf, child_priors)
         end
-        backpropagate(leaf, value)
+        backup(leaf, value)
     end
     return argmax_rand(node.child_N)
 end
