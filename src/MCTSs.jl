@@ -30,7 +30,7 @@ export MCTS, mcts!
     "--mh_mcts_tree_policy"
         help = "Tree Policy to apply: UCB (default) or PUCT"
         arg_type = String
-        default = "UCB"
+        default = "PUCT"
 end
 
 

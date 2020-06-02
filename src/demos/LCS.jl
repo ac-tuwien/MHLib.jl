@@ -370,7 +370,7 @@ function step!(env::LCSEnvironment, action::Int)
     done = false
     inst = env.inst
     state = env.state
-    c = env.action_order[action]
+    c = action  # env.action_order[action]
     append!(env.state.s, c)
     update_p(inst, state.p, c)
     update_action_valid_mask(state, inst)
@@ -421,15 +421,15 @@ function get_observation(env::LCSEnvironment)::Observation
     end
     env.seq_order = sortperm(lengths)
     values[1:m] = lengths[env.seq_order]
-    env.action_order = sortperm(counts)
-    values[m+1:m+sigma] = counts[env.action_order]
+    # env.action_order = sortperm(counts)
+    values[m+1:m+sigma] = counts  # [env.action_order]
     idx = m + sigma + 1
     for i = 1:m
         for c = 1:sigma
             values[idx] = length(s[i]) - env.inst.succ[i, p[i], c]
         end
     end
-    action_mask = env.state.action_valid_mask[env.action_order]
+    action_mask = env.state.action_valid_mask  # [env.action_order]
     return Observation(values, action_mask)
 end
 
@@ -440,7 +440,7 @@ end
 Test function that runs MCTS on a small LCS instance.
 """
 function mcts_demo()
-    parse_settings!(["--seed=1", "--mh_mcts_num_sims=10000", "--mh_mcts_c_puct=50"])
+    parse_settings!(["--seed=1", "--mh_mcts_num_sims=100", "--mh_mcts_c_puct=50"])
     inst = LCSInstance(3, 8, 4)
     # inst = LCSInstance("data/rat-04_010_600.lcs")
     println(inst)
