@@ -16,6 +16,7 @@ using StatsBase
 import MHLib.Environments: Environment, Observation, State, get_state, set_state!, reset!,
     action_space_size, step!
 
+export MCTS, mcts!
 
 @add_arg_table! settings_cfg begin
     "--mh_mcts_num_sims"
@@ -32,6 +33,20 @@ import MHLib.Environments: Environment, Observation, State, get_state, set_state
         default = "UCB"
 end
 
+
+"""
+    argmax_rand(vector)
+
+Return index of maximum value in vector and in case of ties make a random selection.
+"""
+function argmax_rand(a::Vector)
+    indices = findall(a.==maximum(a))
+    if length(indices) > 1
+        rand(indices)
+    else
+        indices[1]
+    end
+end
 
 """
     MCTS
@@ -120,7 +135,7 @@ N!(node::Node, n) = (node.parent.child_N[node.action] = Int32(n))
 W(node::Node) = node.parent.child_W[node.action]
 W!(node::Node, n) = (node.parent.child_W[node.action] = Float32(n))
 
-child_Q(node::Node) = node.child_W ./ node.child_N
+child_Q(node::Node) = node.child_W ./ (1 .+ node.child_N)
 
 child_U(node::Node) = sqrt(N(node)) .* node.child_P ./ (1 .+ node.child_N)
 
@@ -136,7 +151,7 @@ function best_action(node::Node)::Int
 
     masked_child_score = child_score
     masked_child_score[.~node.valid_actions] .= typemin(Float32)
-    return argmax(masked_child_score)
+    return argmax_rand(masked_child_score)
 end
 
 function select_leaf(node::Node)::Node
@@ -236,7 +251,7 @@ function compute_action!(mcts::MCTS, node::Node) :: Integer
         end
         backpropagate(leaf, value)
     end
-    return argmax(node.child_N)
+    return argmax_rand(node.child_N)
 end
 
 """
