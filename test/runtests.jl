@@ -4,6 +4,7 @@ using MHLib
 using MHLib.Schedulers
 using MHLib.GVNSs
 using MHLib.OneMax
+using MHLib.MAXSAT
 using MHLib.LCS
 using MHLib.MCTSs
 
@@ -11,9 +12,9 @@ using MHLib.MCTSs
 @testset "OneMaxSolution" begin
     parse_settings!(["--seed=1"])
     println(get_settings_as_string())
-    s1 = OneMaxSolution{5}()
+    s1 = OneMaxSolution(5)
     initialize!(s1)
-    s2 = OneMaxSolution{5}()
+    s2 = OneMaxSolution(5)
     initialize!(s2)
     s3 = copy(s1)
     initialize!(s3)
@@ -29,8 +30,33 @@ using MHLib.MCTSs
 end
 
 @testset "scheduler.jl" begin
-    Random.seed!(1)
-    sol = OneMaxSolution{10}()
+    parse_settings!(["--seed=1"])
+    sol = OneMaxSolution(10)
+    println(sol)
+    # methods = [MHMethod("con", construct!, 0),
+    #     MHMethod("li1", local_improve!, 1),
+    #     MHMethod("sh1", shaking!, 1),
+    #     MHMethod("sh2", shaking!, 2),
+    #     MHMethod("sh3", shaking!, 3)]
+    # sched = Scheduler(sol, methods)
+    # for m in next_method(methods)
+    #     perform_method!(sched, m, sol)
+    #     println(sol)
+    # end
+    gvns = GVNS(sol, [MHMethod("con", construct!, 0)],
+        [MHMethod("li1", local_improve!, 1)],
+        [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
+            MHMethod("sh3", shaking!, 3)],)
+    run!(gvns)
+    main_results(gvns.scheduler)
+    check(sol)
+    @test obj(sol) >= 0
+end
+
+@testset "MAXSAT.jl" begin
+    parse_settings!(["--seed=1"])
+    inst = MAXSATInstance("../data/maxsat-simple.cnf")
+    sol = MAXSATSolution(inst)
     println(sol)
     # methods = [MHMethod("con", construct!, 0),
     #     MHMethod("li1", local_improve!, 1),
@@ -53,14 +79,15 @@ end
 end
 
 @testset "LCS_MCTS" begin
+    # inst = LCSInstance("../data/rat-04_010_600.lcs")
+    # @test length(inst.s[10]) == 600
+    parse_settings!(["--seed=1"])
     Random.seed!(1)
-    inst = LCSInstance("../data/rat-04_010_600.lcs")
-    @test length(inst.s[10]) == 600
     inst = LCSInstance(3, 10, 4)
     println(inst)
     sol = LCSSolution(inst)
     @test obj(sol) == 0
     env = LCSEnvironment(inst)
-    mcts = MCTS()
-    @test mcts!(mcts, env) == 3
+    mcts = MCTS{LCSEnvironment}(env)
+    @test perform_mcts!(mcts) == 2
 end

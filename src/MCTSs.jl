@@ -16,7 +16,7 @@ using StatsBase
 import MHLib.Environments: Environment, Observation, State, get_state, set_state!, reset!,
     action_space_size, step!
 
-export MCTS, mcts!
+export MCTS, perform_mcts!, get_child
 
 @add_arg_table! settings_cfg begin
     "--mh_mcts_num_sims"
@@ -48,19 +48,6 @@ function argmax_rand(a::Vector)
     end
 end
 
-"""
-    MCTS
-
-Monte Carlo Tree Search.
-"""
-mutable struct MCTS
-    num_sims::Int
-    c_uct::Float64
-    tree_policy::String
-end
-
-MCTS() = MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
-    settings[:mh_mcts_tree_policy])
 
 """
     Node
@@ -68,7 +55,6 @@ MCTS() = MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
 A node of the MCTS tree.
 
 Attributes
-- `mcts`: MCTS instance
 - `env`: Environment on which the MCTS shall be performed
 - `action`: Action performed to go to this state
 - `is_expanded`: Indicates if this node is already expanded or not
@@ -84,13 +70,11 @@ Attributes
 - `state`: State corresponding to this node
 - `obs`: Observation at the state of this node
 """
-mutable struct Node{TEnv <: Environment, TState <: State}
-    mcts::MCTS
-    env::TEnv
+mutable struct Node{TState <: State}
     action::Int
     is_expanded::Bool
-    parent::Union{Node{TEnv, TState}, Nothing}
-    children::Vector{Union{Node{TEnv, TState}, Nothing}}
+    parent::Union{Node{TState}, Nothing}
+    children::Vector{Union{Node{TState}, Nothing}}
     action_space_size::Int
     child_W::Vector{Float32}
     child_P::Vector{Float32}
@@ -102,20 +86,32 @@ mutable struct Node{TEnv <: Environment, TState <: State}
     obs::Observation
 end
 
-function Node(mcts::MCTS, env::TEnv, action::Int, state::TState,
-    obs::Observation, done::Bool, reward, parent::Union{Node, Nothing}) where
-    {TEnv <: Environment, TState <: State}
+
+"""
+    MCTS
+
+Monte Carlo Tree Search.
+"""
+mutable struct MCTS{TEnv <: Environment}
+    num_sims::Int
+    c_uct::Float64
+    tree_policy::String
+
+    env::TEnv
+    root::Node
+end
+
+
+function Node{TState}(env::Environment, action::Int, state::TState, obs::Observation,
+    done::Bool, reward, parent::Union{Node, Nothing}) where {TState <: State}
     sigma = action_space_size(env)
-    return Node{TEnv, TState}(
-            mcts, env, action, false, parent,
-            Vector{Union{Node, Nothing}}(nothing, sigma),
+    return Node{TState}(action, false, parent, Vector{Union{Node, Nothing}}(nothing, sigma),
             sigma, zeros(Float32, sigma), zeros(Float32, sigma), zeros(Float32, sigma),
             copy(obs.valid_actions), reward, done, deepcopy(state), obs)
 end
 
-
 function Base.string(node::Node)
-    res = "** Current Node:"
+    res = "Node:"
     res = res * "\n  action = $(node.action)"
     res = res * "\n  child_N: " * Base.string(node.child_N)
     res = res * "\n  child_W: " * Base.string(node.child_W)
@@ -128,8 +124,6 @@ function Base.string(node::Node)
     return res
 end
 
-
-
 N(node::Node) = node.parent.child_N[node.action]
 N!(node::Node, n) = (node.parent.child_N[node.action] = Int32(n))
 
@@ -140,26 +134,26 @@ child_Q(node::Node) = node.child_W ./ (1 .+ node.child_N)
 
 child_U(node::Node) = sqrt(N(node)) .* node.child_P ./ (1 .+ node.child_N)
 
-function best_action(node::Node)::Int
+function best_action(mcts::MCTS, node::Node)::Int
     child_score = nothing
-    if node.mcts.tree_policy === "PUCT"
+    if mcts.tree_policy === "PUCT"
         child_score = child_Q(node) + node.mcts.c_uct * child_U(node)
-    elseif node.mcts.tree_policy === "UCB"
-        child_score = child_Q(node) .+ 2 .* node.mcts.c_uct .*
+    elseif mcts.tree_policy === "UCB"
+        child_score = child_Q(node) .+ 2 .* mcts.c_uct .*
             sqrt.(2 * log(N(node)) ./ (node.child_N .+ 1))
     else
-        error("Invalid tree policy " + node.mcts.tree_policy)
+        error("Invalid tree policy " + mcts.tree_policy)
     end
     masked_child_score = child_score
     masked_child_score[.~node.valid_actions] .= typemin(Float32)
     return argmax_rand(masked_child_score)
 end
 
-function select_leaf(node::Node)::Node
+function select_leaf(mcts::MCTS, node::Node)::Node
     current_node = node
     while current_node.is_expanded
-        action = best_action(current_node)
-        current_node = get_child(current_node, action)
+        action = best_action(mcts, current_node)
+        current_node = get_child(mcts, current_node, action)
     end
     return current_node
 end
@@ -169,14 +163,14 @@ function expand(node::Node, child_P)
     node.child_P = child_P
 end
 
-function get_child(node::Node, action::Int) :: Node
-    @assert 1 <= action <= action_space_size(node.env)
+function get_child(mcts::MCTS, node::Node, action::Int) :: Node
+    @assert 1 <= action <= action_space_size(mcts.env)
     if node.children[action] == nothing
-        set_state!(node.env, node.state)
-        obs, reward, done = step!(node.env, action)
-        next_state = get_state(node.env)
-        node.children[action] = Node(node.mcts, node.env, action, next_state,
-                                     obs, done, reward, node)
+        set_state!(mcts.env, node.state)
+        obs, reward, done = step!(mcts.env, action)
+        next_state = get_state(mcts.env)
+        node.children[action] = Node{typeof(node.state)}(mcts.env, action, next_state,
+            obs, done, reward, node)
     end
     return node.children[action]
 end
@@ -190,19 +184,17 @@ function backup(node::Node, value)
     end
 end
 
-
-
 """
-    rollout!(leaf)
+    rollout!(mcts, leaf)
 
 Do a rollout always taking random actions according to the prior probabilities
 until the episode is done, return reward.
 
 The episode is not done in the current leaf, i.e., at least one action can be performed.
 """
-function rollout!(leaf::Node)
+function rollout!(mcts::MCTS, leaf::Node)
     value = leaf.reward
-    env = leaf.env
+    env = mcts.env
     set_state!(env, leaf.state)
     done = false
     obs = leaf.obs
@@ -219,6 +211,21 @@ end
 
 
 """
+    MCTS(env)
+
+Create MCTS, i.e., root node and reset environment
+"""
+function MCTS{TEnv}(env::TEnv) where {TEnv <: Environment}
+    root_obs = reset!(env)
+    root_state = get_state(env)
+    TState = typeof(root_state)
+    root_parent = Node{TState}(env, 1, root_state, root_obs, false, 0, nothing)
+    root = Node{TState}(env, 1, root_state, root_obs, false, 0, root_parent)
+    MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
+        settings[:mh_mcts_tree_policy], env, root)
+end
+
+"""
     compute_priors_and_value(mcts, obs)
 
 Evaluate observed state and return priors P(s,a) for all actions and est. state value Q(s).
@@ -230,57 +237,33 @@ heuristic.
 function compute_priors_and_value(mcts::MCTS, obs::Observation)
     sigma = length(obs.valid_actions)
     # return rand(action_space_size), rand(Float32)
-    return fill(1.0/sigma, sigma), 0.5
+    return fill(1.0 / sigma, sigma), 0.5
 end
 
 """
-    compute_action!(mcts, node)
+    perform_MCTS!(mcts)
 
-Perform MCTS by running episodes, considering the given node as root.
+Perform MCTS by running episodes from the current root node.
+
 Finally return best action from root, which is the subnode most often visited.
 """
-function compute_action!(mcts::MCTS, node::Node) :: Integer
+function perform_mcts!(mcts::MCTS) :: Integer
     for i in 1:mcts.num_sims
-        leaf = select_leaf(node)
+        leaf = select_leaf(mcts, mcts.root)
         if leaf.done
             value = leaf.reward
         else
             # evaluate leaf node and expand
             child_priors, value = compute_priors_and_value(mcts, leaf.obs)
-            value = rollout!(leaf)
+            value = rollout!(mcts, leaf)
             expand(leaf, child_priors)
         end
         backup(leaf, value)
     end
-    return argmax_rand(node.child_N)
+    println(mcts.root.child_N)
+    return argmax_rand(mcts.root.child_N)
 end
 
-"""
-    mcts!(mcts, env)
-
-Perform MCTS.
-
-Create root node, perform simulations and return all performed actions as Array.
-"""
-function mcts!(mcts::MCTS, env::Environment)
-    root_obs = reset!(env)
-    root_state = get_state(env)
-    root_parent = Node(mcts, env, 1, root_state, root_obs, false, 0, nothing)
-
-    root = Node(mcts, env, 1, root_state, root_obs, false, 0, root_parent)
-    actions = Int[]
-
-# println(string(root))
-
-    while (!root.done)
-        append!(actions, compute_action!(mcts, root))
-println(string(root))
-        root = get_child(root, actions[length(actions)])
-println(actions)
-    end
-
-    return actions
-end
 
 
 end  # module

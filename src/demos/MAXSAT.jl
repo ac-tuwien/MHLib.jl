@@ -8,7 +8,6 @@ conjunctive normal form.
 """
 module MAXSAT
 
-using StaticArrays
 using Random
 using MHLib
 using MHLib.Schedulers
@@ -36,7 +35,8 @@ Attributes
     indices of the clauses in which the variable appears;
     needed for efficient incremental evaluation
 """
-struct MAXSATInstance n::Int
+struct MAXSATInstance
+    n::Int
     m::Int
     clauses::Vector{Vector{Int}}
     variable_usage::Vector{Vector{Int}}
@@ -81,13 +81,15 @@ end
 
 
 """
+    MAXSATSolution
+
 A concrete solution type to solve the MAXSAT problem.
 """
-mutable struct MAXSATSolution{N} <: BoolVectorSolution{N}
+mutable struct MAXSATSolution <: BoolVectorSolution
     inst::MAXSATInstance
     obj_val::Int
     obj_val_valid::Bool
-    x::MVector{N,Bool}
+    x::Vector{Bool}
 end
 
 """
@@ -96,7 +98,7 @@ end
 Create a solution object for the given `MAXSATInstance`.
 """
 MAXSATSolution(inst::MAXSATInstance) =
-    MAXSATSolution{inst.n}(inst, -1, false, MVector{inst.n, Bool}(undef))
+    MAXSATSolution(inst, -1, false, Vector{Bool}(undef, inst.n))
 
 
 function copy!(s1::S, s2::S) where {S <: MAXSATSolution}
@@ -108,7 +110,7 @@ end
 
 
 copy(s::MAXSATSolution) =
-    MAXSATSolution{s.inst.n}(s.inst, -1, false, Base.copy(s.x[:]))
+    MAXSATSolution(s.inst, -1, false, Base.copy(s.x[:]))
 
 
 Base.show(io::IO, s::MAXSATSolution) =
