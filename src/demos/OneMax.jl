@@ -23,15 +23,17 @@ end
 
 
 """
+    OneMaxSolution
+    
 A concrete solution type to solve the MAXSAT problem.
 """
-mutable struct OneMaxSolution{N} <: BoolVectorSolution{N}
+mutable struct OneMaxSolution <: BoolVectorSolution
     obj_val::Int
     obj_val_valid::Bool
     x::Vector{Bool}
-    OneMaxSolution{N}() where {N} = new{N}(-1, false, Vector{Bool}(undef, N))
-    OneMaxSolution{N}(s::OneMaxSolution{N}) where {N} =
-        new{N}(s.obj_val, s.obj_val_valid, copy(s.x))
+    OneMaxSolution(n) = new(-1, false, Vector{Bool}(undef, n))
+    OneMaxSolution(s::OneMaxSolution) =
+        new(s.obj_val, s.obj_val_valid, copy(s.x))
 end
 
 

@@ -6,7 +6,7 @@
 module MHLib
 
 using Random
-using Base: copy, copy!
+using Base: copy, copy!, length
 
 export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check
@@ -159,26 +159,26 @@ end
 
 #----------------------------- VectorSolution ------------------------------
 
-export VectorSolution, copy!, len
+export VectorSolution, copy!, length
 
 """
     VectorSolution
 
-An abstract solution encoded by a vector of length `N` and type `T`.
+An abstract solution encoded by a vector of type `T`.
 
 Concrete subtypes need to implement:
 - all requirements of the supertype `Solution`
 - `x::AbstractVector`: vector representing the solution
 """
-abstract type VectorSolution{N,T} <: Solution end
+abstract type VectorSolution{T} <: Solution end
 
 
 """
-    len(::VectorSolution)
+    length(::VectorSolution)
 
 Length of the solution vector.
 """
-len(s::VectorSolution) = length(s.x)
+Base.length(s::VectorSolution) = length(s.x)
 
 
 is_equal(s1::VectorSolution, s2::VectorSolution) =
@@ -196,7 +196,7 @@ export BoolVectorSolution, initialize!, k_random_flips!, k_flip_neighborhood_sea
 
 An abstract solution encoded by a fixed-length boolean vector.
 """
-abstract type BoolVectorSolution{N} <: VectorSolution{N,Bool} end
+abstract type BoolVectorSolution <: VectorSolution{Bool} end
 
 
 """
@@ -222,7 +222,7 @@ Perform k random flips and call invalidate.
 """
 function k_random_flips!(s::BoolVectorSolution, k::Int)
     for i in 1:k
-        p = rand(1:len(s))
+        p = rand(1:length(s))
         s.x[p] = !s.x[p]
     end
     invalidate!(s)
