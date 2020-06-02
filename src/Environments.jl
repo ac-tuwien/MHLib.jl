@@ -17,6 +17,8 @@ Abstract type for a state in the environment on which an optimization/learning a
 """
 abstract type State end
 
+string(state::State) = error("abstract string(state) called")
+
 
 """
     Observation
@@ -60,5 +62,7 @@ set_state!(env::Environment, state::State)::Obseration =
 
 step!(env::Environment, action::Int)::(Observation, Float32, Bool) =
     error("abstract step!(env, action) called")
+
+
 
 end  # module

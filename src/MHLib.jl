@@ -42,6 +42,9 @@ to_maximize(::Type) = true
 to_maximize(s::Solution) = to_maximize(typeof(s))
 
 
+print(s::Solution) = error("abstract string(s) called")
+
+
 """
     obj(::Solution)
 

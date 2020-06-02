@@ -14,17 +14,24 @@ using MHLib
 
 import Base: copy, copy!, show
 import MHLib: calc_objective
-import MHLib.Environments: Environment, Observation, State, get_state, set_state!,
-    action_space_size, step!, reset!
+import MHLib.Environments:
+    Environment,
+    Observation,
+    State,
+    get_state,
+    set_state!,
+    action_space_size,
+    step!,
+    reset!
 import MHLib.MCTSs: MCTS, mcts!
 
 export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo
 
 @add_arg_table! settings_cfg begin
     "--lcs_always_new_seqs"
-        help = "MCTS number of simulations"
-        arg_type = Bool
-        default = false
+    help = "MCTS number of simulations"
+    arg_type = Bool
+    default = false
 end
 
 
@@ -40,9 +47,9 @@ const alphabets = Dict(4 => "ACGT", 20 => "ACDEFGHIKLMNPQRSTVWY")
 function get_alphabet(sigma)
     if sigma in alphabets.keys
         a = alphabets[sigma]
-        Dict{Char, Alphabet}(a[i] => Alphabet(i) for i in 1:sigma)
+        Dict{Char,Alphabet}(a[i] => Alphabet(i) for i = 1:sigma)
     else
-        Dict{Char, Alphabet}()  # empty for unsupported alphabets
+        Dict{Char,Alphabet}()  # empty for unsupported alphabets
     end
 end
 
@@ -66,10 +73,10 @@ struct LCSInstance
     m::Int
     n::Int
     sigma::Alphabet
-    alphabet::Dict{Char, Alphabet}
+    alphabet::Dict{Char,Alphabet}
     s::Vector{Vector{Alphabet}}
-    succ::Array{Int, 3}
-    count::Array{Int, 3}
+    succ::Array{Int,3}
+    count::Array{Int,3}
 end
 
 """
@@ -79,9 +86,15 @@ Create a random LCSInstance with m strings of length n from alphabet 1,...,sigma
 """
 function LCSInstance(m::Int, n::Int, sigma)
     @assert n > 0 && m > 0 && sigma > 0
-    inst = LCSInstance(m, n, Alphabet(sigma), get_alphabet(sigma),
-        [rand(Alphabet(1):Alphabet(sigma), n) for i in 1:m],
-        zeros(Int, (m, n+1, sigma)), zeros(Int, (m, n+1, sigma)))
+    inst = LCSInstance(
+        m,
+        n,
+        Alphabet(sigma),
+        get_alphabet(sigma),
+        [rand(Alphabet(1):Alphabet(sigma), n) for i = 1:m],
+        zeros(Int, (m, n + 1, sigma)),
+        zeros(Int, (m, n + 1, sigma)),
+    )
     determine_aux_data_structures(inst)
     return inst
 end
@@ -97,15 +110,22 @@ function LCSInstance(file::String)
         m, sigma = [parse(Int, x) for x in split(readline(f))]
         alphabet = get_alphabet(sigma)
         s = Vector{Vector{Alphabet}}(undef, m)
-        for i in 1:m
+        for i = 1:m
             n_str, str = split(readline(f))
-            @assert length(str) == parse(Int,n_str)
+            @assert length(str) == parse(Int, n_str)
             s[i] = [alphabet[c] for c in str]
         end
     end
     n = maximum(length(si) for si in s)
-    inst = LCSInstance(m, n, Alphabet(sigma), alphabet, s,
-        zeros(Int, (m, n+1, sigma)), zeros(Int, (m, n+1, sigma)))
+    inst = LCSInstance(
+        m,
+        n,
+        Alphabet(sigma),
+        alphabet,
+        s,
+        zeros(Int, (m, n + 1, sigma)),
+        zeros(Int, (m, n + 1, sigma)),
+    )
     determine_aux_data_structures(inst)
     return inst
 end
@@ -116,7 +136,7 @@ end
 Randomly re-initialize the sequences in the given LCS problem instance.
 """
 function create_random_seqs!(inst::LCSInstance)
-    for i in 1:m
+    for i = 1:m
         rand!(inst.s[i], one(Alphabet)::inst.sigma)
     end
     determine_aux_data_structures(inst)
@@ -130,11 +150,11 @@ Base.show(io::IO, inst::LCSInstance) = show(io, MIME"text/plain"(), inst.s)
 Determine auxiliary data structures succ and count.
 """
 function determine_aux_data_structures(inst::LCSInstance)
-    for i in 1:inst.m
-        for c in 1:inst.sigma
+    for i = 1:inst.m
+        for c = 1:inst.sigma
             pos = 0
             count = 0
-            for j in inst.n:-1:1
+            for j = inst.n:-1:1
                 if inst.s[i][j] == c
                     pos = j
                     count += 1
@@ -155,7 +175,7 @@ each string.
 Letter c must occur in each string s[i] from positions p[i] onward.
 """
 function update_p(inst::LCSInstance, p::Vector, c)
-    for i in 1:inst.m
+    for i = 1:inst.m
         j = inst.succ[i, p[i], c]
         @assert j > 0
         p[i] = j + 1
@@ -181,6 +201,15 @@ mutable struct LCSSolution <: Solution
     obj_val_valid::Bool
     s::Vector{Alphabet}
 end
+
+
+function Base.string(sol::LCSSolution)
+    res = "LCSSolution:"
+    res = res * "\n  obj_val: " * string(sol.obj_val)
+    res = res * "\n  s:" * string(sol.s)
+    return (res)
+end
+
 
 """
     LCSSolution(inst)
@@ -217,7 +246,7 @@ calc_objective(sol::LCSSolution)::Int = sol.obj_val
 
 Append letter c to solution.
 """
-append!(sol::LCSSolution, c) = sol.s[sol.obj_val += 1] = c
+append!(sol::LCSSolution, c) = sol.s[sol.obj_val+=1] = c
 
 
 """
@@ -237,6 +266,12 @@ struct LCSState <: State
     action_valid_mask::Vector{Bool}
 end
 
+function Base.string(state::LCSState)
+    res = "State:"
+    res = res * "\n  " * Base.string(state.p)
+    return res
+end
+
 function copy!(state::LCSState, state1::LCSState)
     state.p[:] = state1.p
     copy!(state.s, state1.s)
@@ -249,12 +284,12 @@ end
 Return action_valid_mask, i.e., binary vector indicating valid actions.
 """
 function update_action_valid_mask(state::LCSState, inst::LCSInstance)
-    for c in 1:inst.sigma
+    for c = 1:inst.sigma
         if !state.action_valid_mask[c]
             continue
         end
-        for i in 1:inst.m
-            if state.p[i] == inst.n+1  # end of sequence reached
+        for i = 1:inst.m
+            if state.p[i] == inst.n + 1  # end of sequence reached
                 fill!(state.action_valid_mask, false)
             end
             if inst.count[i, state.p[i], c] == 0
@@ -275,7 +310,7 @@ Attributes
 - `inst`: `LCSInstance` to solve
 - `state`: current state
 - `seq_order`: order of sequences in current observation
-- `action_order`: oder of actions in current observation
+- `action_order`: order of actions in current observation
 """
 mutable struct LCSEnvironment <: Environment
     inst::LCSInstance
@@ -340,14 +375,16 @@ function step!(env::LCSEnvironment, action::Int)
     update_p(inst, state.p, c)
     update_action_valid_mask(state, inst)
     not_done = any(state.action_valid_mask)
-    println("step: ", c, " appended to ", state.s, " ", not_done)
+    # println("step: ", c, " appended to ", state.s, " ", not_done)
     if not_done
         reward = 0
         obs = get_observation(env)
     else
         reward = state.s.obj_val
-        obs = Observation(zeros(Float32, observation_space_size(env)),
-            ones(Bool, inst.sigma))
+        obs = Observation(
+            zeros(Float32, observation_space_size(env)),
+            ones(Bool, inst.sigma),
+        )
     end
     return obs, reward, !not_done
 end
@@ -372,10 +409,10 @@ function get_observation(env::LCSEnvironment)::Observation
     p = env.state.p
     s = env.inst.s
     values = Vector{Float32}(undef, observation_space_size(env))
-    lengths = [length(s[i]) - p[i] + 1 for i in 1:m]
+    lengths = [length(s[i]) - p[i] + 1 for i = 1:m]
     counts = fill(env.inst.n, sigma)
-    for i in 1:m
-        for c in 1:sigma
+    for i = 1:m
+        for c = 1:sigma
             count = env.inst.count[i, p[i], c]
             if count < counts[c]
                 counts[c] = count
@@ -387,8 +424,8 @@ function get_observation(env::LCSEnvironment)::Observation
     env.action_order = sortperm(counts)
     values[m+1:m+sigma] = counts[env.action_order]
     idx = m + sigma + 1
-    for i in 1:m
-        for c in 1:sigma
+    for i = 1:m
+        for c = 1:sigma
             values[idx] = length(s[i]) - env.inst.succ[i, p[i], c]
         end
     end
@@ -403,13 +440,28 @@ end
 Test function that runs MCTS on a small LCS instance.
 """
 function mcts_demo()
-    parse_settings!(["--seed=1"])
-    inst = LCSInstance(3, 10, 4)
+    parse_settings!(["--seed=1", "--mh_mcts_num_sims=10000", "--mh_mcts_c_puct=50"])
+    inst = LCSInstance(3, 8, 4)
     # inst = LCSInstance("data/rat-04_010_600.lcs")
     println(inst)
     env = LCSEnvironment(inst)
     mcts = MCTS()
-    mcts!(mcts, env)
+    println("Anzahl der Iterationen: ", mcts.num_sims)
+    actions = mcts!(mcts, env)
+    println(actions)
+end
+
+
+
+function test()
+    parse_settings!(["--seed=1", "--mh_mcts_num_sims=100", "--mh_mcts_c_puct=1"])
+    inst = LCSInstance(3, 8, 4)
+    # inst = LCSInstance("data/rat-04_010_600.lcs")
+    println(inst)
+    env = LCSEnvironment(inst)
+    mcts = MCTS()
+
+    append!(actions, compute_action!(mcts, root))
 end
 
 end  # module

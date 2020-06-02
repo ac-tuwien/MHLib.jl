@@ -11,20 +11,25 @@ module MCTSs
 
 using ArgParse
 using MHLib
+using StatsBase
 
 import MHLib.Environments: Environment, Observation, State, get_state, set_state!, reset!,
     action_space_size, step!
 
 
 @add_arg_table! settings_cfg begin
-    "--mh_mcts_sims"
+    "--mh_mcts_num_sims"
         help = "MCTS number of simulations"
         arg_type = Int
-        default = 1000
+        default = 100
     "--mh_mcts_c_puct"
         help = "MCTS c_puct"
         arg_type = Float64
         default = 1.0
+    "--mh_mcts_tree_policy"
+        help = "Tree Policy to apply: UCB (default) or PUCT"
+        arg_type = String
+        default = "UCB"
 end
 
 
@@ -36,9 +41,10 @@ Monte Carlo Tree Search.
 mutable struct MCTS
     num_sims::Int
     c_puct::Float64
+    tree_policy::String
 end
 
-MCTS() = MCTS(settings[:mh_mcts_sims], settings[:mh_mcts_c_puct])
+MCTS() = MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_puct], settings[:mh_mcts_tree_policy])
 
 """
     Node
@@ -53,9 +59,10 @@ Attributes
 - `parent`: Reference to parent node or Nothing
 - `children`: Vector of references to child nodes or Nothing
 - `action_space_size`: Size of action space
-- `W`: Total values of child nodes
-- `P`: Priors of child nodes
-- `N`: Number of visits of child nodes
+- `child_W`: Total values of child nodes
+- `child_P`: Priors of child nodes
+- `child_N`: Number of visits of child nodes
+- `valid_actions`: Array indicating if an action ist valid (true) or not (false)
 - `reward`: Reward received at this node
 - `done`: Indicates end of episode
 - `state`: State corresponding to this node
@@ -90,6 +97,23 @@ function Node(mcts::MCTS, env::TEnv, action::Int, state::TState,
             copy(obs.valid_actions), reward, done, deepcopy(state), obs)
 end
 
+
+function Base.string(node::Node)
+    res = "** Current Node:"
+    res = res * "\n  action = $(node.action)"
+    res = res * "\n  child_N: " * Base.string(node.child_N)
+    res = res * "\n  child_W: " * Base.string(node.child_W)
+    res = res * "\n  child_Q: " * Base.string(child_Q(node))
+    res = res * "\n  child_P: " * Base.string(node.child_P)
+    res = res * "\n  valid_actions:" * Base.string(node.valid_actions)
+    res = res * "\n  reward: " * Base.string(node.reward)
+    res = res * "\n  done: " * Base.string(node.done)
+    res = res * "\n" * string(node.state)
+    return res
+end
+
+
+
 N(node::Node) = node.parent.child_N[node.action]
 N!(node::Node, n) = (node.parent.child_N[node.action] = Int32(n))
 
@@ -101,7 +125,15 @@ child_Q(node::Node) = node.child_W ./ node.child_N
 child_U(node::Node) = sqrt(N(node)) .* node.child_P ./ (1 .+ node.child_N)
 
 function best_action(node::Node)::Int
-    child_score = child_Q(node) + node.mcts.c_puct * child_U(node)
+    child_score = nothing
+    if node.mcts.tree_policy == "PUCT"
+        child_score = child_Q(node) + node.mcts.c_puct * child_U(node)
+    elseif node.mcts.tree_policy == "UCB"
+        temp = 2 * log(sum(N(node)))
+        child_score = child_Q(node) .+ 2 .* node.mcts.c_puct .* sqrt(temp ./ N(node))
+    else error("Tree Policy not correctly defined!")
+    end
+
     masked_child_score = child_score
     masked_child_score[.~node.valid_actions] .= typemin(Float32)
     return argmax(masked_child_score)
@@ -121,7 +153,7 @@ function expand(node::Node, child_P)
     node.child_P = child_P
 end
 
-function get_child(node::Node, action::Int)::Node
+function get_child(node::Node, action::Int) :: Node
     @assert 1 <= action <= action_space_size(node.env)
     if node.children[action] == nothing
         set_state!(node.env, node.state)
@@ -133,7 +165,7 @@ function get_child(node::Node, action::Int)::Node
     return node.children[action]
 end
 
-function backup(node::Node, value)
+function backpropagate(node::Node, value)
     current = node
     while current.parent != nothing
         N!(current, N(current) + 1)
@@ -142,14 +174,17 @@ function backup(node::Node, value)
     end
 end
 
-"""
-    naive_rollout!(leaf)
 
-Do a naive rollout always taking random actions until the episode is done, return reward.
+
+"""
+    rollout!(leaf)
+
+Do a rollout always taking random actions according to the prior probabilities
+until the episode is done, return reward.
 
 The episode is not done in the current leaf, i.e., at least one action can be performed.
 """
-function naive_rollout!(leaf::Node)
+function rollout!(leaf::Node)
     value = leaf.reward
     env = leaf.env
     set_state!(env, leaf.state)
@@ -157,7 +192,9 @@ function naive_rollout!(leaf::Node)
     obs = leaf.obs
     sigma = length(obs.valid_actions)
     while !done
-        action = rand(Vector(1:sigma)[obs.valid_actions])
+        # Sample one action
+        action = StatsBase.sample(Vector(1:sigma)[obs.valid_actions],
+            Weights(leaf.child_P[obs.valid_actions]))
         obs, reward, done = step!(env, action)
         value += reward
     end
@@ -186,7 +223,7 @@ end
 Perform MCTS by running episodes, considering the given node as root.
 Finally return best action from root, which is the subnode most often visited.
 """
-function compute_action!(mcts::MCTS, node::Node)
+function compute_action!(mcts::MCTS, node::Node) :: Integer
     for i in 1:mcts.num_sims
         leaf = select_leaf(node)
         if leaf.done
@@ -194,27 +231,39 @@ function compute_action!(mcts::MCTS, node::Node)
         else
             # evaluate leaf node and expand
             child_priors, value = compute_priors_and_value(mcts, leaf.obs)
-            value = naive_rollout!(leaf)
+            value = rollout!(leaf)
             expand(leaf, child_priors)
         end
-        backup(leaf, value)
+        backpropagate(leaf, value)
     end
     return argmax(node.child_N)
 end
 
 """
-    run!(mcts, env)
+    mcts!(mcts, env)
 
 Perform MCTS.
 
-Create root node, perform simulations and return best action from root.
+Create root node, perform simulations and return all performed actions as Array.
 """
 function mcts!(mcts::MCTS, env::Environment)
     root_obs = reset!(env)
     root_state = get_state(env)
     root_parent = Node(mcts, env, 1, root_state, root_obs, false, 0, nothing)
+
     root = Node(mcts, env, 1, root_state, root_obs, false, 0, root_parent)
-    compute_action!(mcts, root)
+    actions = Int[]
+
+# println(string(root))
+
+    while (!root.done)
+        append!(actions, compute_action!(mcts, root))
+println(string(root))
+        root = get_child(root, actions[length(actions)])
+println(actions)
+    end
+
+    return actions
 end
 
 
