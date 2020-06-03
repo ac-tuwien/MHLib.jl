@@ -79,8 +79,8 @@ end
 end
 
 @testset "LCS_MCTS" begin
-    # inst = LCSInstance("../data/rat-04_010_600.lcs")
-    # @test length(inst.s[10]) == 600
+    inst = LCSInstance("../data/test-04_003_050.lcs")
+    @test length(inst.s[1]) == 50
     parse_settings!(["--seed=1"])
     Random.seed!(1)
     inst = LCSInstance(3, 10, 4)
@@ -89,5 +89,5 @@ end
     @test obj(sol) == 0
     env = LCSEnvironment(inst)
     mcts = MCTS{LCSEnvironment}(env)
-    @test perform_mcts!(mcts) == 2
+    @test perform_mcts!(mcts) == 3
 end
