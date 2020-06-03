@@ -158,11 +158,11 @@ function best_action(node::Node, tree_policy::String, c_uct)::Int
     return argmax_rand(masked_child_score)
 end
 
-function select_leaf(mcts::MCTS, node::Node)::Node
+function select_leaf(node::Node, env::Environment, tree_policy::String, c_uct)::Node
     current_node = node
     while current_node.is_expanded
-        action = best_action(current_node, mcts.tree_policy, mcts.c_uct)
-        current_node = get_child(mcts.env, current_node, action)
+        action = best_action(current_node, tree_policy, c_uct)
+        current_node = get_child(env, current_node, action)
     end
     return current_node
 end
@@ -258,7 +258,7 @@ Finally return best action from root, which is the subnode most often visited.
 """
 function perform_mcts!(mcts::MCTS) :: Integer
     for i in 1:mcts.num_sims
-        leaf = select_leaf(mcts, mcts.root)
+        leaf = select_leaf(mcts.root, mcts.env, mcts.tree_policy, mcts.c_uct)
         if !leaf.done
             # evaluate leaf node and expand
             child_priors, V = compute_priors_and_value(mcts, leaf.obs)
