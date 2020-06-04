@@ -50,7 +50,6 @@ class Node:
         self.parent.child_total_value[self.action] = value
 
     def child_Q(self):
-        # TODO (weak todo) add "softmax" version of the Q-value
         return self.child_total_value / (1 + self.child_number_visits)
 
     def child_U(self):

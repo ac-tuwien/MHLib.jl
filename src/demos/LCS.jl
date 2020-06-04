@@ -12,7 +12,7 @@ using Random
 using ArgParse
 using MHLib
 
-import Base: copy, copy!, show
+import Base: copy, copy!, show, append!
 import MHLib: calc_objective
 import MHLib.Environments:
     Environment,
@@ -23,7 +23,7 @@ import MHLib.Environments:
     action_space_size,
     step!,
     reset!
-import MHLib.MCTSs: MCTS, mcts!
+import MHLib.MCTSs: MCTS, perform_mcts!, get_child
 
 export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo
 
@@ -35,7 +35,7 @@ export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo
     "--lcs_reward_mode"
         help = "LCS reward mode: direct or smallsteps"
         arg_type = String
-        default = "direct"
+        default = "smallsteps"
 end
 
 
@@ -384,7 +384,7 @@ function step!(env::LCSEnvironment, action::Int)
     if not_done
         if reward_mode === "direct"
             reward = 0.0
-        elseif reward_mode === "simplesteps"
+        elseif reward_mode === "smallsteps"
             reward = 0.05
         else
             error("Invalid reward_mode $reward_mode")
@@ -393,7 +393,7 @@ function step!(env::LCSEnvironment, action::Int)
     else
         if reward_mode === "direct"
             reward = state.s.obj_val
-        elseif reward_mode === "simplesteps"
+        elseif reward_mode === "smallsteps"
             reward = -1.0
         else
             error("Invalid reward_mode $reward_mode")
@@ -452,11 +452,33 @@ end
 
 
 """
+    iterate_mcts!(env)
+
+Iteratively perform MCTS, taking in each iteration the action with the most visits.
+"""
+function iterate_mcts!(mcts::MCTS)
+    actions = Int[]
+    # println(string(root))
+
+    while (!mcts.root.done)
+        action = perform_mcts!(mcts)
+        append!(actions, action)
+        println(string(mcts.root))
+        mcts.root = get_child(mcts.env, mcts.root, actions[length(actions)])
+        println(actions)
+    end
+
+    return actions
+end
+
+
+"""
     mcts_demo()
 
 Test function that runs MCTS on a small LCS instance.
 """
 function mcts_demo()
+<<<<<<< HEAD
     parse_settings!(["--seed=1", "--mh_mcts_num_sims=300", "--mh_mcts_c_uct=60",
         "--mh_mcts_tree_policy=UCB"])
     inst = LCSInstance(3, 8, 4)
@@ -470,19 +492,33 @@ function mcts_demo()
     actions = mcts!(mcts, env)
     println("Lösung: ", string(actions))
     println("Lösungslänge: ", length(actions))
+=======
+    parse_settings!(["--seed=0", "--mh_mcts_num_sims=100", "--mh_mcts_c_uct=1.5",
+        "--mh_mcts_tree_policy=PUCT"])
+    # inst = LCSInstance(3, 8, 4)
+    inst = LCSInstance("data/test-04_003_050.lcs")
+    # inst = LCSInstance("data/rat-04_010_600.lcs")
+    println(inst)
+    env = LCSEnvironment(inst)
+    mcts = MCTS{LCSEnvironment}(env)
+    println("Anzahl der Iterationen: ", mcts.num_sims)
+    actions = iterate_mcts!(mcts)
+    println("Solution: ", length(actions), ' ', actions)
+>>>>>>> c98f05680cecf779292e4993841141b78da36ea5
 end
 
 
 
 function test()
-    parse_settings!(["--seed=1", "--mh_mcts_num_sims=100", "--mh_mcts_c_uct=1"])
-    inst = LCSInstance(3, 8, 4)
+    parse_settings!(["--seed=1", "--mh_mcts_num_sims=100", "--mh_mcts_c_uct=1.5"])
+    # inst = LCSInstance(3, 8, 4)
+    inst = LCSInstance("data/test-04_003_050.lcs")
     # inst = LCSInstance("data/rat-04_010_600.lcs")
     println(inst)
     env = LCSEnvironment(inst)
-    mcts = MCTS()
-
-    append!(actions, compute_action!(mcts, root))
+    mcts = MCTS{LCSEnvironment}(env)
+    action = compute_action!(mcts, root)
+    append!(actions, )
 end
 
 end  # module
