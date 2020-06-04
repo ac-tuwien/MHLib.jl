@@ -457,15 +457,19 @@ end
 Test function that runs MCTS on a small LCS instance.
 """
 function mcts_demo()
-    parse_settings!(["--seed=1", "--mh_mcts_num_sims=100", "--mh_mcts_c_uct=50"])
+    parse_settings!(["--seed=1", "--mh_mcts_num_sims=300", "--mh_mcts_c_uct=60",
+        "--mh_mcts_tree_policy=UCB"])
     inst = LCSInstance(3, 8, 4)
-    # inst = LCSInstance("data/rat-04_010_600.lcs")
+    inst = LCSInstance(3, 30, 4)
+    inst = LCSInstance("data/rat-04_010_600.lcs")
+    inst = LCSInstance("data/rat-20_020_600.lcs")
     println(inst)
     env = LCSEnvironment(inst)
     mcts = MCTS()
-    println("Anzahl der Iterationen: ", mcts.num_sims)
+    println("\nAnzahl der Iterationen: ", mcts.num_sims)
     actions = mcts!(mcts, env)
-    println(actions)
+    println("Lösung: ", string(actions))
+    println("Lösungslänge: ", length(actions))
 end
 
 

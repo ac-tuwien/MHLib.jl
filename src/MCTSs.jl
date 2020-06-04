@@ -272,11 +272,14 @@ function mcts!(mcts::MCTS, env::Environment)
 
 # println(string(root))
 
+    i = 0
+
     while (!root.done)
+print(i += 1, " ")
         append!(actions, compute_action!(mcts, root))
-println(string(root))
+# println(string(root))
         root = get_child(root, actions[length(actions)])
-println(actions)
+# println(actions)
     end
 
     return actions
