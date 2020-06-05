@@ -27,11 +27,13 @@ Observation of a state in the environment, from which predictions are made.
 
 Attributes
 - values::Vector{Float32}: Observed values
-- valid_actions::Vector{Bool}: Boolean vector indicating valid actions
+- action_mask::Vector{Bool}: Boolean vector indicating valid actions
+- priors::Vector{Float32}: Problem-specific heuristic priors; zero-length if not used
 """
 struct Observation
     values::Vector{Float32}
-    valid_actions::Vector{Bool}
+    action_mask::Vector{Bool}
+    priors::Vector{Float32}
 end
 
 
@@ -62,7 +64,5 @@ set_state!(env::Environment, state::State)::Obseration =
 
 step!(env::Environment, action::Int)::(Observation, Float32, Bool) =
     error("abstract step!(env, action) called")
-
-
 
 end  # module

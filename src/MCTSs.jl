@@ -30,7 +30,7 @@ export MCTS, perform_mcts!, get_child, set_function!
     "--mh_mcts_tree_policy"
         help = "MCTS tree Policy to apply: UCB or PUCT"
         arg_type = String
-        default = "UCB"
+        default = "PUCT"
     "--mh_mcts_gamma"
         help = "MCTS discout factor for rewards"
         arg_type = Float64
@@ -67,7 +67,7 @@ Attributes
 - `child_W`: Total values of child nodes
 - `child_P`: Priors of child nodes
 - `child_N`: Number of visits of child nodes
-- `valid_actions`: Array indicating if an action ist valid (true) or not (false)
+- `action_mask`: Array indicating if an action ist valid (true) or not (false)
 - `reward`: Reward received at this node
 - `V`: Predicted value for non-terminal nodes and 0 for terminal nodes
 - `done`: Indicates end of episode
@@ -82,7 +82,7 @@ mutable struct Node{TState <: State}
     child_W::Vector{Float32}
     child_P::Vector{Float32}
     child_N::Vector{Int32}
-    valid_actions::Vector{Bool}
+    action_mask::Vector{Bool}
     reward::Float32
     V::Float32
     done::Bool
@@ -107,46 +107,6 @@ mutable struct MCTS{TEnv <: Environment}
     env::TEnv
     root::Node
     best_solution::Vector{Int}
-    default_policy::Function
-end
-
-
-
-function compute_priors_random(mcts::MCTS, obs::Observation)
-    n_actions = length(obs.valid_actions)
-    # return fill(1.0 / n_actions, n_actions)
-    return fill(1.0, n_actions)
-end
-
-
-"""
-    MCTS(env)
-
-Create MCTS, i.e., root node and reset environment
-"""
-function MCTS{TEnv}(env::TEnv) where {TEnv <: Environment}
-    root_obs = reset!(env)
-    root_state = get_state(env)
-    TState = typeof(root_state)
-    root_parent = Node{TState}(env, 1, root_state, root_obs, false, 0, nothing)
-    root = Node{TState}(env, 1, root_state, root_obs, false, 0, root_parent)
-    MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
-        settings[:mh_mcts_tree_policy], settings[:mh_mcts_gamma], env, root, Int[],
-        compute_priors_random)
-end
-
-
-"""
-    setFunction!(mcts, default_policy)
-
-Sets the default_policy of the MCTS to the given default_policy.
-Default: compute_priors_random: uniform distributed priors
-default_policy must have two arguments: An MCTS object and an Observation object
-TODO: Argumente von default_policy prüfen
-"""
-
-function set_function!(mcts::MCTS, default_policy::Function)
-    mcts.default_policy = default_policy
 end
 
 
@@ -155,7 +115,7 @@ function Node{TState}(env::Environment, action::Int, state::TState, obs::Observa
     n_actions = action_space_size(env)
     return Node{TState}(action, false, parent, Vector{Union{Node, Nothing}}(nothing,
         n_actions), zeros(Float32, n_actions), zeros(Float32, n_actions),
-        zeros(Float32, n_actions), copy(obs.valid_actions), reward, 0, done,
+        zeros(Float32, n_actions), copy(obs.action_mask), reward, 0, done,
         deepcopy(state), obs)
 end
 
@@ -166,7 +126,7 @@ function Base.string(node::Node)
     res = res * "\n  child_W: " * Base.string(node.child_W)
     res = res * "\n  child_Q: " * Base.string(child_Q(node))
     res = res * "\n  child_P: " * Base.string(node.child_P)
-    res = res * "\n  valid_actions:" * Base.string(node.valid_actions)
+    res = res * "\n  action_mask:" * Base.string(node.action_mask)
     res = res * "\n  reward: " * Base.string(node.reward)
     res = res * "\n  V: " * Base.string(node.V)
     res = res * "\n  done: " * Base.string(node.done)
@@ -195,7 +155,7 @@ function best_action(node::Node, tree_policy::String, c_uct)::Int
         error("Invalid tree policy " * tree_policy)
     end
     masked_child_score = child_score
-    masked_child_score[.~node.valid_actions] .= typemin(Float32)
+    masked_child_score[.~node.action_mask] .= typemin(Float32)
     return argmax_rand(masked_child_score)
 end
 
@@ -235,8 +195,24 @@ function backup(node::Node, gamma)
     end
 end
 
+
 """
-    naive_rollout!(mcts, leaf)
+    MCTS(env)
+
+Create MCTS, i.e., root node and reset environment
+"""
+function MCTS{TEnv}(env::TEnv) where {TEnv <: Environment}
+    root_obs = reset!(env)
+    root_state = get_state(env)
+    TState = typeof(root_state)
+    root_parent = Node{TState}(env, 1, root_state, root_obs, false, 0, nothing)
+    root = Node{TState}(env, 1, root_state, root_obs, false, 0, root_parent)
+    MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
+        settings[:mh_mcts_tree_policy], settings[:mh_mcts_gamma], env, root, Int[])
+end
+
+"""
+    rollout!(mcts, leaf)
 
 Do a naive rollout always taking random actions until the episode is done, return reward.
 
@@ -248,15 +224,18 @@ function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false)
     set_state!(env, leaf.state)
     done = false
     obs = leaf.obs
-    n_actions = length(obs.valid_actions)
+    n_actions = length(obs.action_mask)
     child_priors = leaf.child_P
     solution = Int[]
 
     while !done
-        # Sample one action according to the current priors
-        action = StatsBase.sample(Vector(1:n_actions)[obs.valid_actions],
-            Weights(child_priors[obs.valid_actions]))
-        # action = rand(Vector(1:n_actions)[obs.valid_actions])
+        if length(obs.priors) > 0
+            # Sample one action according to the current priors
+            action = StatsBase.sample(Vector(1:n_actions)[obs.action_mask],
+                Weights(child_priors[obs.action_mask]))
+        else
+            action = rand(Vector(1:n_actions)[obs.action_mask])
+        end
 
         if trace
             println("rollout!: child_priors: ", string(child_priors), " Action: ", action)
@@ -267,11 +246,6 @@ function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false)
         obs, reward, done = step!(env, action)
         append!(solution, action)
         value += reward
-
-        # If not done, recompute the priors according to the current observation
-        if !done
-            child_priors, V = compute_priors_and_value(mcts, obs)
-        end
     end
     # TODO should be rebplaced by generic reward check
     if length(solution)+length(leaf.state.s) > length(mcts.best_solution)
@@ -280,20 +254,6 @@ function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false)
     return value
 end
 
-
-"""
-    compute_priors_and_value(mcts, obs)
-
-Evaluate observed state and return priors P(s,a) for all actions and est. state value Q(s).
-
-So far only constant values 0.5 are returned.
-This method is supposed to be extended with e.g. a neural network or some problem specific
-heuristic.
-"""
-function compute_priors_and_value(mcts::MCTS, obs::Observation)
-    priors = mcts.default_policy(mcts, obs)
-    return priors, 0.5
-end
 
 """
     perform_MCTS!(mcts)
@@ -306,11 +266,11 @@ function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Integer
     for i in 1:mcts.num_sims
         leaf = select_leaf(mcts.root, mcts.env, mcts.tree_policy, mcts.c_uct)
         if !leaf.done
-            # Compute priors for the first time
-            child_priors, V = compute_priors_and_value(mcts, leaf.obs)
-
-
-            leaf.child_P = child_priors   # TODO: Must be set!?
+            # child_priors, V = compute_priors_and_value(mcts, leaf.obs)
+            child_priors = leaf.obs.priors
+            if length(child_priors) == 0
+                child_priors = leaf.action_mask / sum(leaf.action_mask)
+            end
 
             # evaluate leaf node and expand
             V = rollout!(mcts, leaf; trace = trace)

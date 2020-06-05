@@ -23,7 +23,7 @@ import MHLib.Environments:
     action_space_size,
     step!,
     reset!
-import MHLib.MCTSs: MCTS, perform_mcts!, get_child, set_function!
+import MHLib.MCTSs: MCTS, perform_mcts!, get_child
 
 export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo
 
@@ -36,6 +36,10 @@ export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo
         help = "LCS reward mode: direct or smallsteps"
         arg_type = String
         default = "smallsteps"
+    "--lcs_prior_heuristic"
+        help = "LCS-specific heuristic prior function: none or UB1"
+        arg_type = String
+        default = "none"
 end
 
 
@@ -309,12 +313,14 @@ Environment for solving the LCS problem.
 
 Attributes
 - `inst`: `LCSInstance` to solve
+- `prior_heuristic`: Heuristic function to be used to determine priors
 - `state`: current state
 - `seq_order`: order of sequences in current observation
 - `action_order`: order of actions in current observation
 """
 mutable struct LCSEnvironment <: Environment
     inst::LCSInstance
+    prior_heuristic::String
     state::LCSState
     seq_order::Vector{Int}
     action_order::Vector{Int}
@@ -323,7 +329,7 @@ mutable struct LCSEnvironment <: Environment
         p = ones(Int, inst.m)
         state = LCSState(p, [], ones(Bool, inst.sigma))
         update_action_mask(state, inst)
-        new(inst, state, [], [])
+        new(inst, settings[:lcs_prior_heuristic], state, [], [])
     end
 end
 
@@ -364,7 +370,7 @@ end
 
 Perform given action, i.e., append letter corresponding to action to solution string.
 
-The letter/action must always be valid, which is ensured by the valid_actions
+The letter/action must always be valid, which is ensured by the action_mask
 component in the observations.
 """
 function step!(env::LCSEnvironment, action::Int)
@@ -398,9 +404,30 @@ function step!(env::LCSEnvironment, action::Int)
         obs = Observation(
             zeros(Float32, observation_space_size(env)),
             ones(Bool, inst.sigma),
+            Float32[]
         )
     end
     return obs, reward, !not_done
+end
+
+"""
+    remaining_letter_counts(p)
+
+Return vector indicating for each letter of the alphabet the minimum number of appearances
+in the remaining strings from positions p onward.
+"""
+function remaining_letter_counts(env::LCSEnvironment, p::Vector{Int})
+    sigma = env.inst.sigma
+    counts = fill(env.inst.n, sigma)
+    for i = 1:env.inst.m
+        for c = 1:sigma
+            count = env.inst.count[i, p[i], c]
+            if count < counts[c]
+                counts[c] = count
+            end
+        end
+    end
+    return counts
 end
 
 """
@@ -424,17 +451,9 @@ function get_observation(env::LCSEnvironment)::Observation
     s = env.inst.s
     values = Vector{Float32}(undef, observation_space_size(env))
     lengths = [length(s[i]) - p[i] + 1 for i = 1:m]
-    counts = fill(env.inst.n, sigma)
-    for i = 1:m
-        for c = 1:sigma
-            count = env.inst.count[i, p[i], c]
-            if count < counts[c]
-                counts[c] = count
-            end
-        end
-    end
     env.seq_order = sortperm(lengths)
     values[1:m] = lengths[env.seq_order]
+    counts = remaining_letter_counts(env, p)
     # env.action_order = sortperm(counts)
     values[m+1:m+sigma] = counts  # [env.action_order]
     idx = m + sigma + 1
@@ -444,9 +463,30 @@ function get_observation(env::LCSEnvironment)::Observation
         end
     end
     action_mask = env.state.action_mask  # [env.action_order]
-    return Observation(values, action_mask)
+
+    # determine priors
+    if env.prior_heuristic === "none"
+        priors = Float32[]
+    elseif env.prior_heuristic === "UB1"
+        priors = zeros(Float32, sigma)
+        for c = 1:sigma
+            if action_mask[c]
+                p_after_adding_c = [env.inst.succ[i, p[i], c] + 1 for i in 1:m]
+                priors[c] = 1 + sum(remaining_letter_counts(env, p_after_adding_c))
+                # TODO: Rethink the additive value 1 in above formulat - it is
+                # here for now just to avoid prior value 0 for actions that still
+                # can be performed (but lead to a terminal state)
+            end
+        end
+        priors = priors / sum(priors)
+    else
+        error("Invalid parameter lcs_prior_heuristic: $(env.prior_heuristic)")
+    end
+    return Observation(values, action_mask, priors)
 end
 
+
+# -------------------- Temporary, just for testing --------------------------
 
 """
     iterate_mcts!(env)
@@ -472,35 +512,24 @@ function iterate_mcts!(mcts::MCTS; trace::Bool = false, trace_rollout::Bool = fa
 end
 
 
-
-# HEURISTIC FUNCTIONS
-
-function take_first(mcts::MCTS, obs::Observation)
-    n_actions = length(obs.valid_actions)
-    # return fill(1.0 / n_actions, n_actions)
-    return [10.0^(n_actions - i) for i in 1:n_actions]
-end
-
-
-
 """
     mcts_demo()
 
 Test function that runs MCTS on a small LCS instance.
 """
 function mcts_demo()
-    parse_settings!(["--seed=0", "--mh_mcts_num_sims=1000", "--mh_mcts_c_uct=1",
-        "--mh_mcts_tree_policy=UCB"])
-    # parse_settings!(["--seed=0", "--mh_mcts_num_sims=10000", "--mh_mcts_c_uct=0.5",
-    #     "--mh_mcts_tree_policy=PUCT", "--lcs_reward_mode=smallsteps"])
-    inst = LCSInstance(3, 8, 4)  # Mit UCB, c_uct = 1, seed = 160569761 kommt [3] heraus (!)
-    # inst = LCSInstance("data/test-04_003_050.lcs")
+    parse_settings!(["--seed=0",
+        "--mh_mcts_num_sims=1000",
+        "--lcs_reward_mode=smallsteps",
+        "--mh_mcts_c_uct=0.5",
+        "--mh_mcts_tree_policy=PUCT",
+        "--lcs_prior_heuristic=UB1"])
+    # inst = LCSInstance(3, 8, 4)  # Mit UCB, c_uct = 1, seed = 160569761 kommt [3] heraus (!)
+    inst = LCSInstance("data/test-04_003_050.lcs")
     # inst = LCSInstance("data/rat-04_010_600.lcs")
     println(inst)
     env = LCSEnvironment(inst)
     mcts = MCTS{LCSEnvironment}(env)
-    set_function!(mcts, take_first)
-    println("Default Policy: ", string(mcts.default_policy))
     println("Seed: ", settings[:seed])
     println("Number of iterations: ", mcts.num_sims, " c_uct: ", mcts.c_uct)
 
