@@ -23,7 +23,7 @@ import MHLib.Environments:
     action_space_size,
     step!,
     reset!
-import MHLib.MCTSs: MCTS, perform_mcts!, get_child
+import MHLib.MCTSs: MCTS, perform_mcts!, get_child, set_function!
 
 export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo
 
@@ -455,21 +455,35 @@ end
     iterate_mcts!(env)
 
 Iteratively perform MCTS, taking in each iteration the action with the most visits.
+TODO: trace = true druckt den kompletten Node-Output jeder Iteration aus, fürs debuggen.
 """
-function iterate_mcts!(mcts::MCTS)
+function iterate_mcts!(mcts::MCTS; trace::Bool = false, trace_rollout::Bool = false)
     actions = Int[]
     # println(string(root))
 
     while (!mcts.root.done)
-        action = perform_mcts!(mcts)
+        action = perform_mcts!(mcts; trace = trace_rollout)
         append!(actions, action)
-        println(string(mcts.root))
+        if trace
+            println(string(mcts.root))
+        end
         mcts.root = get_child(mcts.env, mcts.root, actions[length(actions)])
-        println(actions)
+        println("Actions taken so far: ", string(actions))
     end
 
     return actions
 end
+
+
+
+# HEURISTIC FUNCTIONS
+
+function take_first(mcts::MCTS, obs::Observation)
+    n_actions = length(obs.valid_actions)
+    # return fill(1.0 / n_actions, n_actions)
+    return [10.0^(n_actions - i) for i in 1:n_actions]
+end
+
 
 
 """
@@ -478,47 +492,24 @@ end
 Test function that runs MCTS on a small LCS instance.
 """
 function mcts_demo()
-<<<<<<< HEAD
-    parse_settings!(["--seed=1", "--mh_mcts_num_sims=300", "--mh_mcts_c_uct=60",
+    parse_settings!(["--seed=0", "--mh_mcts_num_sims=1000", "--mh_mcts_c_uct=1",
         "--mh_mcts_tree_policy=UCB"])
-    inst = LCSInstance(3, 8, 4)
-    inst = LCSInstance(3, 30, 4)
-    inst = LCSInstance("data/rat-04_010_600.lcs")
-    inst = LCSInstance("data/rat-20_020_600.lcs")
-    println(inst)
-    env = LCSEnvironment(inst)
-    mcts = MCTS()
-    println("\nAnzahl der Iterationen: ", mcts.num_sims)
-    actions = mcts!(mcts, env)
-    println("Lösung: ", string(actions))
-    println("Lösungslänge: ", length(actions))
-=======
-    parse_settings!(["--seed=0", "--mh_mcts_num_sims=100", "--mh_mcts_c_uct=1.5",
-        "--mh_mcts_tree_policy=PUCT"])
-    # inst = LCSInstance(3, 8, 4)
-    inst = LCSInstance("data/test-04_003_050.lcs")
+    inst = LCSInstance(3, 8, 4)  # Mit UCB, c_uct = 1, seed = 160569761 kommt [3] heraus (!)
+    # inst = LCSInstance("data/test-04_003_050.lcs")
     # inst = LCSInstance("data/rat-04_010_600.lcs")
     println(inst)
     env = LCSEnvironment(inst)
     mcts = MCTS{LCSEnvironment}(env)
+    set_function!(mcts, take_first)
+    println("Default Policy: ", string(mcts.default_policy))
+    println("Seed: ", settings[:seed])
     println("Anzahl der Iterationen: ", mcts.num_sims)
-    actions = iterate_mcts!(mcts)
+
+    # trace ... Sollen die Root-Nodes gedruckt werden?
+    # trace_rollout ... Sollen die Rollouts gedruckt werden?
+    actions = iterate_mcts!(mcts, trace = false, trace_rollout = false)
     println("Solution: ", length(actions), ' ', actions)
->>>>>>> c98f05680cecf779292e4993841141b78da36ea5
 end
 
-
-
-function test()
-    parse_settings!(["--seed=1", "--mh_mcts_num_sims=100", "--mh_mcts_c_uct=1.5"])
-    # inst = LCSInstance(3, 8, 4)
-    inst = LCSInstance("data/test-04_003_050.lcs")
-    # inst = LCSInstance("data/rat-04_010_600.lcs")
-    println(inst)
-    env = LCSEnvironment(inst)
-    mcts = MCTS{LCSEnvironment}(env)
-    action = compute_action!(mcts, root)
-    append!(actions, )
-end
 
 end  # module

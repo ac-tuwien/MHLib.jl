@@ -16,7 +16,7 @@ using StatsBase
 import MHLib.Environments: Environment, Observation, State, get_state, set_state!, reset!,
     action_space_size, step!
 
-export MCTS, perform_mcts!, get_child
+export MCTS, perform_mcts!, get_child, set_function!
 
 @add_arg_table! settings_cfg begin
     "--mh_mcts_num_sims"
@@ -32,7 +32,7 @@ export MCTS, perform_mcts!, get_child
         arg_type = String
         default = "UCB"
     "--mh_mcts_gamma"
-        help = "MCTS discout factor  for rewards"
+        help = "MCTS discout factor for rewards"
         arg_type = Float64
         default = 1.0
 end
@@ -106,6 +106,38 @@ mutable struct MCTS{TEnv <: Environment}
 
     env::TEnv
     root::Node
+    default_policy::Function
+end
+
+
+"""
+    MCTS(env)
+
+Create MCTS, i.e., root node and reset environment
+"""
+function MCTS{TEnv}(env::TEnv) where {TEnv <: Environment}
+    root_obs = reset!(env)
+    root_state = get_state(env)
+    TState = typeof(root_state)
+    root_parent = Node{TState}(env, 1, root_state, root_obs, false, 0, nothing)
+    root = Node{TState}(env, 1, root_state, root_obs, false, 0, root_parent)
+    MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
+        settings[:mh_mcts_tree_policy], settings[:mh_mcts_gamma], env, root,
+        compute_priors_random)
+end
+
+
+"""
+    setFunction!(mcts, default_policy)
+
+Sets the default_policy of the MCTS to the given default_policy.
+Default: compute_priors_random: uniform distributed priors
+default_policy must have two arguments: An MCTS object and an Observation object
+TODO: Argumente von default_policy prüfen
+"""
+
+function set_function!(mcts::MCTS, default_policy::Function)
+    mcts.default_policy = default_policy
 end
 
 
@@ -202,38 +234,52 @@ until the episode is done, return reward.
 
 The episode is not done in the current leaf, i.e., at least one action can be performed.
 """
-function rollout!(mcts::MCTS, leaf::Node)
+function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false)
     value = leaf.reward
     env = mcts.env
     set_state!(env, leaf.state)
     done = false
     obs = leaf.obs
     sigma = length(obs.valid_actions)
+    child_priors = leaf.child_P
+
     while !done
-        # Sample one action
+        # Sample one action according to the current priors
         action = StatsBase.sample(Vector(1:sigma)[obs.valid_actions],
-            Weights(leaf.child_P[obs.valid_actions]))
+            Weights(child_priors[obs.valid_actions]))
+
+if trace
+println("rollout!: child_priors: ", string(child_priors), " Action: ", action)
+println("    ", env.state)
+end
+
+        # Apply a step with the given action
         obs, reward, done = step!(env, action)
         value += reward
+
+        # If not done, recompute the priors according to the current observation
+        if !done
+            child_priors, V = compute_priors_and_value(mcts, obs)
+        end
     end
     return value
 end
 
 
-"""
-    MCTS(env)
 
-Create MCTS, i.e., root node and reset environment
 """
-function MCTS{TEnv}(env::TEnv) where {TEnv <: Environment}
-    root_obs = reset!(env)
-    root_state = get_state(env)
-    TState = typeof(root_state)
-    root_parent = Node{TState}(env, 1, root_state, root_obs, false, 0, nothing)
-    root = Node{TState}(env, 1, root_state, root_obs, false, 0, root_parent)
-    MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
-        settings[:mh_mcts_tree_policy], settings[:mh_mcts_gamma], env, root)
+    compute_priors_and_value_random(mcts, obs)
+
+Compute
+
+"""
+
+function compute_priors_random(mcts::MCTS, obs::Observation)
+    n_actions = length(obs.valid_actions)
+    # return fill(1.0 / n_actions, n_actions)
+    return fill(1.0, n_actions)
 end
+
 
 """
     compute_priors_and_value(mcts, obs)
@@ -245,8 +291,8 @@ This method is supposed to be extended with e.g. a neural network or some proble
 heuristic.
 """
 function compute_priors_and_value(mcts::MCTS, obs::Observation)
-    n_actions = length(obs.valid_actions)
-    return fill(1.0 / n_actions, n_actions), 0.5
+    priors = mcts.default_policy(mcts, obs)
+    return priors, 0.5
 end
 
 """
@@ -256,20 +302,22 @@ Perform MCTS by running episodes from the current root node.
 
 Finally return best action from root, which is the subnode most often visited.
 """
-function perform_mcts!(mcts::MCTS) :: Integer
+function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Integer
     for i in 1:mcts.num_sims
         leaf = select_leaf(mcts.root, mcts.env, mcts.tree_policy, mcts.c_uct)
         if !leaf.done
-            # evaluate leaf node and expand
+            # Compute priors for the first time
             child_priors, V = compute_priors_and_value(mcts, leaf.obs)
-            V = rollout!(mcts, leaf)
+            leaf.child_P = child_priors   # TODO: Must be set!?
+
+            # evaluate leaf node and expand
+            V = rollout!(mcts, leaf; trace = trace)
             leaf.V = V
             expand(leaf, child_priors)
         end
         backup(leaf, mcts.gamma)
     end
-<<<<<<< HEAD
-    return argmax_rand(node.child_N)
+    return argmax_rand(mcts.root.child_N)
 end
 
 """
@@ -300,10 +348,6 @@ print(i += 1, " ")
     end
 
     return actions
-=======
-    println(mcts.root.child_N)
-    return argmax_rand(mcts.root.child_N)
->>>>>>> c98f05680cecf779292e4993841141b78da36ea5
 end
 
 
