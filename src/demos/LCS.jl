@@ -262,42 +262,39 @@ Attributes
 - `p`: position vector: the sequences are still relevant from this positions onward
 - `s`: current (partial) solution; TODO: now just for debugging, can be replaced later
     by just the length of the solution (if necessary at all)
-- `action_valid_mask`: boolean vector indicating valid further actions
+- `action_mask`: boolean vector indicating valid further actions
 """
 struct LCSState <: State
     p::Vector{Int}
-    s::LCSSolution
-    action_valid_mask::Vector{Bool}
+    s::Vector{Int}
+    action_mask::Vector{Bool}
 end
 
-function Base.string(state::LCSState)
-    res = "State:"
-    res = res * "\n  " * Base.string(state.p)
-    return res
-end
+Base.string(state::LCSState) =
+    "State:" * "\n  " * Base.string(state.p)
 
 function copy!(state::LCSState, state1::LCSState)
     state.p[:] = state1.p
     copy!(state.s, state1.s)
-    state.action_valid_mask[:] = state1.action_valid_mask
+    state.action_mask[:] = state1.action_mask
 end
 
 """
-    update_action_valid_mask(state, inst)
+    update_action_mask(state, inst)
 
-Return action_valid_mask, i.e., binary vector indicating valid actions.
+Return action_mask, i.e., binary vector indicating valid actions.
 """
-function update_action_valid_mask(state::LCSState, inst::LCSInstance)
+function update_action_mask(state::LCSState, inst::LCSInstance)
     for c = 1:inst.sigma
-        if !state.action_valid_mask[c]
+        if !state.action_mask[c]
             continue
         end
         for i = 1:inst.m
             if state.p[i] == inst.n + 1  # end of sequence reached
-                fill!(state.action_valid_mask, false)
+                fill!(state.action_mask, false)
             end
             if inst.count[i, state.p[i], c] == 0
-                state.action_valid_mask[c] = false
+                state.action_mask[c] = false
                 break
             end
         end
@@ -324,9 +321,9 @@ mutable struct LCSEnvironment <: Environment
 
     function LCSEnvironment(inst::LCSInstance)
         p = ones(Int, inst.m)
-        state = LCSState(p, LCSSolution(inst), ones(Bool, inst.sigma))
-        update_action_valid_mask(state, inst)
-        new(inst, state, Vector{Int}(undef, 0), Vector{Int}(undef, 0))
+        state = LCSState(p, [], ones(Bool, inst.sigma))
+        update_action_mask(state, inst)
+        new(inst, state, [], [])
     end
 end
 
@@ -357,8 +354,8 @@ function reset!(env::LCSEnvironment)::Observation
         create_random_seqs!(env.inst)
     end
     p = ones(Int, env.inst.m)
-    env.state = LCSState(p, LCSSolution(env.inst), ones(Bool, env.inst.sigma))
-    update_action_valid_mask(env.state, env.inst)
+    env.state = LCSState(p, [], ones(Bool, env.inst.sigma))
+    update_action_mask(env.state, env.inst)
     get_observation(env)
 end
 
@@ -377,8 +374,8 @@ function step!(env::LCSEnvironment, action::Int)
     c = action  # env.action_order[action]
     append!(env.state.s, c)
     update_p(inst, state.p, c)
-    update_action_valid_mask(state, inst)
-    not_done = any(state.action_valid_mask)
+    update_action_mask(state, inst)
+    not_done = any(state.action_mask)
     # println("step: ", c, " appended to ", state.s, " ", not_done)
     reward_mode = settings[:lcs_reward_mode]
     if not_done
@@ -446,7 +443,7 @@ function get_observation(env::LCSEnvironment)::Observation
             values[idx] = length(s[i]) - env.inst.succ[i, p[i], c]
         end
     end
-    action_mask = env.state.action_valid_mask  # [env.action_order]
+    action_mask = env.state.action_mask  # [env.action_order]
     return Observation(values, action_mask)
 end
 
@@ -462,6 +459,7 @@ function iterate_mcts!(mcts::MCTS; trace::Bool = false, trace_rollout::Bool = fa
     # println(string(root))
 
     while (!mcts.root.done)
+        println("\nIteration ", length(actions)+1)
         action = perform_mcts!(mcts; trace = trace_rollout)
         append!(actions, action)
         if trace
@@ -470,7 +468,6 @@ function iterate_mcts!(mcts::MCTS; trace::Bool = false, trace_rollout::Bool = fa
         mcts.root = get_child(mcts.env, mcts.root, actions[length(actions)])
         println("Actions taken so far: ", string(actions))
     end
-
     return actions
 end
 
@@ -494,6 +491,8 @@ Test function that runs MCTS on a small LCS instance.
 function mcts_demo()
     parse_settings!(["--seed=0", "--mh_mcts_num_sims=1000", "--mh_mcts_c_uct=1",
         "--mh_mcts_tree_policy=UCB"])
+    # parse_settings!(["--seed=0", "--mh_mcts_num_sims=10000", "--mh_mcts_c_uct=0.5",
+    #     "--mh_mcts_tree_policy=PUCT", "--lcs_reward_mode=smallsteps"])
     inst = LCSInstance(3, 8, 4)  # Mit UCB, c_uct = 1, seed = 160569761 kommt [3] heraus (!)
     # inst = LCSInstance("data/test-04_003_050.lcs")
     # inst = LCSInstance("data/rat-04_010_600.lcs")
@@ -503,12 +502,14 @@ function mcts_demo()
     set_function!(mcts, take_first)
     println("Default Policy: ", string(mcts.default_policy))
     println("Seed: ", settings[:seed])
-    println("Anzahl der Iterationen: ", mcts.num_sims)
+    println("Number of iterations: ", mcts.num_sims, " c_uct: ", mcts.c_uct)
 
     # trace ... Sollen die Root-Nodes gedruckt werden?
     # trace_rollout ... Sollen die Rollouts gedruckt werden?
     actions = iterate_mcts!(mcts, trace = false, trace_rollout = false)
     println("Solution: ", length(actions), ' ', actions)
+    println("Overall best solution encountered: ", length(mcts.best_solution), ' ',
+        mcts.best_solution)
 end
 
 

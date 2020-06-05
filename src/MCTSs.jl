@@ -106,7 +106,16 @@ mutable struct MCTS{TEnv <: Environment}
 
     env::TEnv
     root::Node
+    best_solution::Vector{Int}
     default_policy::Function
+end
+
+
+
+function compute_priors_random(mcts::MCTS, obs::Observation)
+    n_actions = length(obs.valid_actions)
+    # return fill(1.0 / n_actions, n_actions)
+    return fill(1.0, n_actions)
 end
 
 
@@ -122,7 +131,7 @@ function MCTS{TEnv}(env::TEnv) where {TEnv <: Environment}
     root_parent = Node{TState}(env, 1, root_state, root_obs, false, 0, nothing)
     root = Node{TState}(env, 1, root_state, root_obs, false, 0, root_parent)
     MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
-        settings[:mh_mcts_tree_policy], settings[:mh_mcts_gamma], env, root,
+        settings[:mh_mcts_tree_policy], settings[:mh_mcts_gamma], env, root, Int[],
         compute_priors_random)
 end
 
@@ -227,10 +236,9 @@ function backup(node::Node, gamma)
 end
 
 """
-    rollout!(mcts, leaf)
+    naive_rollout!(mcts, leaf)
 
-Do a rollout always taking random actions according to the prior probabilities
-until the episode is done, return reward.
+Do a naive rollout always taking random actions until the episode is done, return reward.
 
 The episode is not done in the current leaf, i.e., at least one action can be performed.
 """
@@ -240,21 +248,24 @@ function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false)
     set_state!(env, leaf.state)
     done = false
     obs = leaf.obs
-    sigma = length(obs.valid_actions)
+    n_actions = length(obs.valid_actions)
     child_priors = leaf.child_P
+    solution = Int[]
 
     while !done
         # Sample one action according to the current priors
-        action = StatsBase.sample(Vector(1:sigma)[obs.valid_actions],
+        action = StatsBase.sample(Vector(1:n_actions)[obs.valid_actions],
             Weights(child_priors[obs.valid_actions]))
+        # action = rand(Vector(1:n_actions)[obs.valid_actions])
 
-if trace
-println("rollout!: child_priors: ", string(child_priors), " Action: ", action)
-println("    ", env.state)
-end
+        if trace
+            println("rollout!: child_priors: ", string(child_priors), " Action: ", action)
+            println("    ", env.state)
+        end
 
         # Apply a step with the given action
         obs, reward, done = step!(env, action)
+        append!(solution, action)
         value += reward
 
         # If not done, recompute the priors according to the current observation
@@ -262,22 +273,11 @@ end
             child_priors, V = compute_priors_and_value(mcts, obs)
         end
     end
+    # TODO should be rebplaced by generic reward check
+    if length(solution)+length(leaf.state.s) > length(mcts.best_solution)
+        copy!(mcts.best_solution, [leaf.state.s; solution])
+    end
     return value
-end
-
-
-
-"""
-    compute_priors_and_value_random(mcts, obs)
-
-Compute
-
-"""
-
-function compute_priors_random(mcts::MCTS, obs::Observation)
-    n_actions = length(obs.valid_actions)
-    # return fill(1.0 / n_actions, n_actions)
-    return fill(1.0, n_actions)
 end
 
 
@@ -308,12 +308,20 @@ function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Integer
         if !leaf.done
             # Compute priors for the first time
             child_priors, V = compute_priors_and_value(mcts, leaf.obs)
+
+
             leaf.child_P = child_priors   # TODO: Must be set!?
 
             # evaluate leaf node and expand
             V = rollout!(mcts, leaf; trace = trace)
             leaf.V = V
             expand(leaf, child_priors)
+        else
+            # TODO should be rebplaced by generic reward check
+            solution = leaf.state.s
+            if length(solution) > length(mcts.best_solution)
+                copy!(mcts.best_solution, solution)
+            end
         end
         backup(leaf, mcts.gamma)
     end
