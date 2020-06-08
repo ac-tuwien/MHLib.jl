@@ -275,7 +275,7 @@ struct LCSState <: State
 end
 
 Base.string(state::LCSState) =
-    "State:" * "\n  " * Base.string(state.p)
+    "State:" * "\n  Position Vector: " * Base.string(state.p) * "\n  Partial Solution: " * Base.string(state.s)
 
 function copy!(state::LCSState, state1::LCSState)
     state.p[:] = state1.p
@@ -478,6 +478,9 @@ function get_observation(env::LCSEnvironment)::Observation
                 # can be performed (but lead to a terminal state)
             end
         end
+        # TODO: Rethink again
+        priors[action_mask] = priors[action_mask] .- (minimum(priors[action_mask]) - 1)
+        # priors[action_mask] = 10 .^ priors[action_mask]
         priors = priors / sum(priors)
     else
         error("Invalid parameter lcs_prior_heuristic: $(env.prior_heuristic)")
@@ -494,19 +497,23 @@ end
 Iteratively perform MCTS, taking in each iteration the action with the most visits.
 TODO: trace = true druckt den kompletten Node-Output jeder Iteration aus, fürs debuggen.
 """
-function iterate_mcts!(mcts::MCTS; trace::Bool = false, trace_rollout::Bool = false)
+function iterate_mcts!(mcts::MCTS; trace::Bool = false, trace_actions::Bool = false,
+    trace_rollout::Bool = false)
+
     actions = Int[]
     # println(string(root))
 
     while (!mcts.root.done)
-        println("\nIteration ", length(actions)+1)
         action = perform_mcts!(mcts; trace = trace_rollout)
         append!(actions, action)
         if trace
             println(string(mcts.root))
         end
         mcts.root = get_child(mcts.env, mcts.root, actions[length(actions)])
-        println("Actions taken so far: ", string(actions))
+        if trace_actions
+            println("\nIteration ", length(actions))
+            println("Actions taken so far: ", string(actions))
+        end
     end
     return actions
 end
@@ -531,11 +538,12 @@ function mcts_demo()
     env = LCSEnvironment(inst)
     mcts = MCTS{LCSEnvironment}(env)
     println("Seed: ", settings[:seed])
-    println("Number of iterations: ", mcts.num_sims, " c_uct: ", mcts.c_uct)
+    println("Number of iterations: ", mcts.num_sims, ", c_uct: ", mcts.c_uct)
 
     # trace ... Sollen die Root-Nodes gedruckt werden?
     # trace_rollout ... Sollen die Rollouts gedruckt werden?
-    actions = iterate_mcts!(mcts, trace = false, trace_rollout = false)
+    # trace_actions ... Sollen die Aktionen gedruckt werden?
+    actions = iterate_mcts!(mcts, trace = false, trace_rollout = false, trace_actions = true)
     println("Solution: ", length(actions), ' ', actions)
     println("Overall best solution encountered: ", length(mcts.best_solution), ' ',
         mcts.best_solution)

@@ -130,7 +130,8 @@ function Base.string(node::Node)
     res = res * "\n  reward: " * Base.string(node.reward)
     res = res * "\n  V: " * Base.string(node.V)
     res = res * "\n  done: " * Base.string(node.done)
-    res = res * "\n" * string(node.state)
+    res = res * "\n" * Base.string(node.state)
+    res = res * "\n" * Base.string(node.obs)
     return res
 end
 
@@ -232,14 +233,16 @@ function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false)
         if length(obs.priors) > 0
             # Sample one action according to the current priors
             action = StatsBase.sample(Vector(1:n_actions)[obs.action_mask],
-                Weights(child_priors[obs.action_mask]))
+                # Weights(child_priors[obs.action_mask]))
+                Weights(obs.priors[obs.action_mask]))
         else
             action = rand(Vector(1:n_actions)[obs.action_mask])
         end
 
         if trace
-            println("rollout!: child_priors: ", string(child_priors), " Action: ", action)
-            println("    ", env.state)
+            println("rollout!: child_priors: ", string(child_priors), ", priors: ",
+                obs.priors, ", Action: ", action)
+            println(string(leaf))
         end
 
         # Apply a step with the given action
@@ -265,7 +268,9 @@ Finally return best action from root, which is the subnode most often visited.
 function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Integer
     for i in 1:mcts.num_sims
         leaf = select_leaf(mcts.root, mcts.env, mcts.tree_policy, mcts.c_uct)
+
         if !leaf.done
+# println("\n  Leaf Not Done")
             # child_priors, V = compute_priors_and_value(mcts, leaf.obs)
             child_priors = leaf.obs.priors
             if length(child_priors) == 0
