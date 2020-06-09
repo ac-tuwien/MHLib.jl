@@ -50,7 +50,7 @@ Abstract methods
 - `action_space_size(env)::Int`: Size of action space
 - `reset(env)::Observation`: Reset environment to initial state and return observation
 - `get_state(env)::State`: Return current state
-- `set_state!(env, state::State)`: Set state
+- `set_state!(env, state::State, obs::Observation)`: Set state of environment
 - `step!(env, action)`: Perform action in environment and
     return new observation, reward and a Bool indicating end of episode
 """
@@ -63,8 +63,8 @@ reset!(env::Environment)::Observation = error("abstract reset!(env) called")
 
 get_state(env::Environment)::State = error("abstract get_state(env) called")
 
-set_state!(env::Environment, state::State)::Obseration =
-    error("abstract set_state!(env) called")
+set_state!(env::Environment, state::State, obs::Observation) =
+    error("abstract set_state!(env, state, obs) called")
 
 step!(env::Environment, action::Int)::(Observation, Float32, Bool) =
     error("abstract step!(env, action) called")

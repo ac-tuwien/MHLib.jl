@@ -266,43 +266,19 @@ Attributes
 - `p`: position vector: the sequences are still relevant from this positions onward
 - `s`: current (partial) solution; TODO: now just for debugging, can be replaced later
     by just the length of the solution (if necessary at all)
-- `action_mask`: boolean vector indicating valid further actions
 """
 struct LCSState <: State
     p::Vector{Int}
     s::Vector{Int}
-    action_mask::Vector{Bool}
 end
 
 Base.string(state::LCSState) =
-    "State:" * "\n  Position Vector: " * Base.string(state.p) * "\n  Partial Solution: " * Base.string(state.s)
+    "State:" * "\n  Position Vector: " * Base.string(state.p) *
+    "\n  Partial Solution: " * Base.string(state.s)
 
 function copy!(state::LCSState, state1::LCSState)
     state.p[:] = state1.p
     copy!(state.s, state1.s)
-    state.action_mask[:] = state1.action_mask
-end
-
-"""
-    update_action_mask(state, inst)
-
-Return action_mask, i.e., binary vector indicating valid actions.
-"""
-function update_action_mask(state::LCSState, inst::LCSInstance)
-    for c = 1:inst.sigma
-        if !state.action_mask[c]
-            continue
-        end
-        for i = 1:inst.m
-            if state.p[i] == inst.n + 1  # end of sequence reached
-                fill!(state.action_mask, false)
-            end
-            if inst.count[i, state.p[i], c] == 0
-                state.action_mask[c] = false
-                break
-            end
-        end
-    end
 end
 
 
@@ -313,23 +289,26 @@ Environment for solving the LCS problem.
 
 Attributes
 - `inst`: `LCSInstance` to solve
-- `prior_heuristic`: Heuristic function to be used to determine priors
+- `prior_heuristic`: heuristic function to be used to determine priors
 - `state`: current state
+- `action_mask`: vector indicating currently valid actions
 - `seq_order`: order of sequences in current observation
 - `action_order`: order of actions in current observation
 """
 mutable struct LCSEnvironment <: Environment
     inst::LCSInstance
     prior_heuristic::String
+
     state::LCSState
+    action_mask::Vector{Bool}
     seq_order::Vector{Int}
     action_order::Vector{Int}
 
     function LCSEnvironment(inst::LCSInstance)
         p = ones(Int, inst.m)
-        state = LCSState(p, [], ones(Bool, inst.sigma))
-        update_action_mask(state, inst)
-        new(inst, settings[:lcs_prior_heuristic], state, [], [])
+        state = LCSState(p, Int[])
+        action_mask = ones(Bool, inst.sigma)
+        new(inst, settings[:lcs_prior_heuristic], state, action_mask, Int[], Int[])
     end
 end
 
@@ -340,9 +319,9 @@ observation_space_size(env::LCSEnvironment) =
 
 get_state(env::LCSEnvironment) = env.state
 
-function set_state!(env::LCSEnvironment, state::LCSState)::Observation
+function set_state!(env::LCSEnvironment, state::LCSState, obs::Observation)
     copy!(env.state, state)
-    return get_observation(env)
+    env.action_mask[:] = obs.action_mask
 end
 
 """
@@ -359,9 +338,9 @@ function reset!(env::LCSEnvironment)::Observation
     if settings[:lcs_always_new_seqs]
         create_random_seqs!(env.inst)
     end
-    p = ones(Int, env.inst.m)
-    env.state = LCSState(p, [], ones(Bool, env.inst.sigma))
-    update_action_mask(env.state, env.inst)
+    env.state = LCSState(ones(Int, env.inst.m), Int[])
+    fill!(env.action_mask, true)
+    update_action_mask(env)
     get_observation(env)
 end
 
@@ -380,8 +359,8 @@ function step!(env::LCSEnvironment, action::Int)
     c = action  # env.action_order[action]
     append!(env.state.s, c)
     update_p(inst, state.p, c)
-    update_action_mask(state, inst)
-    not_done = any(state.action_mask)
+    update_action_mask(env)
+    not_done = any(env.action_mask)
     # println("step: ", c, " appended to ", state.s, " ", not_done)
     reward_mode = settings[:lcs_reward_mode]
     if not_done
@@ -408,6 +387,30 @@ function step!(env::LCSEnvironment, action::Int)
         )
     end
     return obs, reward, !not_done
+end
+
+"""
+    update_action_mask(env)
+
+Return action_mask, i.e., binary vector indicating valid actions.
+"""
+function update_action_mask(env::LCSEnvironment)
+    inst = env.inst
+    state = env.state
+    for c = 1:inst.sigma
+        if !env.action_mask[c]
+            continue
+        end
+        for i = 1:inst.m
+            if state.p[i] == inst.n + 1  # end of sequence reached
+                fill!(env.action_mask, false)
+            end
+            if inst.count[i, state.p[i], c] == 0
+                env.action_mask[c] = false
+                break
+            end
+        end
+    end
 end
 
 """
@@ -462,7 +465,7 @@ function get_observation(env::LCSEnvironment)::Observation
             values[idx] = length(s[i]) - env.inst.succ[i, p[i], c]
         end
     end
-    action_mask = env.state.action_mask  # [env.action_order]
+    action_mask = copy(env.action_mask)  # [env.action_order]
 
     # determine priors
     if env.prior_heuristic === "none"
@@ -473,9 +476,6 @@ function get_observation(env::LCSEnvironment)::Observation
             if action_mask[c]
                 p_after_adding_c = [env.inst.succ[i, p[i], c] + 1 for i in 1:m]
                 priors[c] = 1 + sum(remaining_letter_counts(env, p_after_adding_c))
-                # TODO: Rethink the additive value 1 in above formulat - it is
-                # here for now just to avoid prior value 0 for actions that still
-                # can be performed (but lead to a terminal state)
             end
         end
         # TODO: Rethink again

@@ -63,11 +63,9 @@ Attributes
 - `is_expanded`: Indicates if this node is already expanded or not
 - `parent`: Reference to parent node or Nothing
 - `children`: Vector of references to child nodes or Nothing
-- `action_space_size`: Size of action space
 - `child_W`: Total values of child nodes
 - `child_P`: Priors of child nodes
 - `child_N`: Number of visits of child nodes
-- `action_mask`: Array indicating if an action ist valid (true) or not (false)
 - `reward`: Reward received at this node
 - `V`: Predicted value for non-terminal nodes and 0 for terminal nodes
 - `done`: Indicates end of episode
@@ -82,7 +80,6 @@ mutable struct Node{TState <: State}
     child_W::Vector{Float32}
     child_P::Vector{Float32}
     child_N::Vector{Int32}
-    action_mask::Vector{Bool}
     reward::Float32
     V::Float32
     done::Bool
@@ -115,8 +112,8 @@ function Node{TState}(env::Environment, action::Int, state::TState, obs::Observa
     n_actions = action_space_size(env)
     return Node{TState}(action, false, parent, Vector{Union{Node, Nothing}}(nothing,
         n_actions), zeros(Float32, n_actions), zeros(Float32, n_actions),
-        zeros(Float32, n_actions), copy(obs.action_mask), reward, 0, done,
-        deepcopy(state), obs)
+        zeros(Float32, n_actions), reward, 0, done,
+        deepcopy(state), deepcopy(obs))
 end
 
 function Base.string(node::Node)
@@ -126,7 +123,6 @@ function Base.string(node::Node)
     res = res * "\n  child_W: " * Base.string(node.child_W)
     res = res * "\n  child_Q: " * Base.string(child_Q(node))
     res = res * "\n  child_P: " * Base.string(node.child_P)
-    res = res * "\n  action_mask:" * Base.string(node.action_mask)
     res = res * "\n  reward: " * Base.string(node.reward)
     res = res * "\n  V: " * Base.string(node.V)
     res = res * "\n  done: " * Base.string(node.done)
@@ -156,7 +152,7 @@ function best_action(node::Node, tree_policy::String, c_uct)::Int
         error("Invalid tree policy " * tree_policy)
     end
     masked_child_score = child_score
-    masked_child_score[.~node.action_mask] .= typemin(Float32)
+    masked_child_score[.~node.obs.action_mask] .= typemin(Float32)
     return argmax_rand(masked_child_score)
 end
 
@@ -177,7 +173,7 @@ end
 function get_child(env::Environment, node::Node, action::Int) :: Node
     @assert 1 <= action <= action_space_size(env)
     if node.children[action] == nothing
-        set_state!(env, node.state)
+        set_state!(env, node.state, node.obs)
         obs, reward, done = step!(env, action)
         next_state = get_state(env)
         node.children[action] = Node{typeof(node.state)}(env, action, next_state,
@@ -222,7 +218,7 @@ The episode is not done in the current leaf, i.e., at least one action can be pe
 function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false)
     value = leaf.reward
     env = mcts.env
-    set_state!(env, leaf.state)
+    set_state!(env, leaf.state, leaf.obs)
     done = false
     obs = leaf.obs
     n_actions = length(obs.action_mask)
@@ -233,7 +229,6 @@ function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false)
         if length(obs.priors) > 0
             # Sample one action according to the current priors
             action = StatsBase.sample(Vector(1:n_actions)[obs.action_mask],
-                # Weights(child_priors[obs.action_mask]))
                 Weights(obs.priors[obs.action_mask]))
         else
             action = rand(Vector(1:n_actions)[obs.action_mask])
@@ -274,7 +269,7 @@ function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Integer
             # child_priors, V = compute_priors_and_value(mcts, leaf.obs)
             child_priors = leaf.obs.priors
             if length(child_priors) == 0
-                child_priors = leaf.action_mask / sum(leaf.action_mask)
+                child_priors = leaf.obs.action_mask / sum(leaf.obs.action_mask)
             end
 
             # evaluate leaf node and expand
