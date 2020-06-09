@@ -35,6 +35,14 @@ export MCTS, perform_mcts!, get_child, set_function!
         help = "MCTS discout factor for rewards"
         arg_type = Float64
         default = 1.0
+    "--mh_mcts_rollout_policy"
+        help = "Rollout Policy to apply: random (according to priors) or epsilon-greedy"
+        arg_type = String
+        default = "random"
+    "--mh_mcts_epsilon_greedy_epsilon"
+        help = "If epsilon-greedy is used, what value of epsilon in [0, 1] should be used?"
+        arg_type = Float64
+        default = 0.2
 end
 
 
@@ -93,7 +101,9 @@ end
 
 Monte Carlo Tree Search.
 
-- tree_policy: PUCT or UCB
+- tree_policy: PUCT or
+- rollout_policy: random (according to priors) or epsilon-greedy
+- epsilon: Value of epsilon in epsilon-greedy strategy
 """
 mutable struct MCTS{TEnv <: Environment}
     num_sims::Int
@@ -104,6 +114,9 @@ mutable struct MCTS{TEnv <: Environment}
     env::TEnv
     root::Node
     best_solution::Vector{Int}
+
+    rollout_policy::String
+    epsilon::Float64
 end
 
 
@@ -205,7 +218,8 @@ function MCTS{TEnv}(env::TEnv) where {TEnv <: Environment}
     root_parent = Node{TState}(env, 1, root_state, root_obs, false, 0, nothing)
     root = Node{TState}(env, 1, root_state, root_obs, false, 0, root_parent)
     MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
-        settings[:mh_mcts_tree_policy], settings[:mh_mcts_gamma], env, root, Int[])
+        settings[:mh_mcts_tree_policy], settings[:mh_mcts_gamma], env, root, Int[],
+        settings[:mh_mcts_rollout_policy], settings[:mh_mcts_epsilon_greedy_epsilon])
 end
 
 """
@@ -227,10 +241,27 @@ function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false)
 
     while !done
         if length(obs.priors) > 0
-            # Sample one action according to the current priors
-            action = StatsBase.sample(Vector(1:n_actions)[obs.action_mask],
-                Weights(obs.priors[obs.action_mask]))
+            if mcts.rollout_policy === "random"
+                # Sample one action according to the current priors
+                action = StatsBase.sample(Vector(1:n_actions)[obs.action_mask],
+                    Weights(obs.priors[obs.action_mask]))
+            elseif mcts.rollout_policy === "epsilon-greedy"
+                @assert 0 <= mcts.epsilon <= 1
+                if rand() < mcts.epsilon
+                    # Sample one action completely at random
+                    action = rand(Vector(1:n_actions)[obs.action_mask])
+                else
+                    # Take the action with one highest prior value
+                    masked_priors = obs.priors[:]
+                    masked_priors[.~obs.action_mask] .= typemin(Float32)
+                    action = argmax_rand(masked_priors)
+# println(string(masked_priors), " ", string(obs.priors), " Action: ", action)
+                end
+            else
+                error("Invalid mcts.rollout_policy " * mcts.rollout_policy)
+            end
         else
+            # Anyway the priors are uniform => espilon-greedy makes no sense
             action = rand(Vector(1:n_actions)[obs.action_mask])
         end
 
