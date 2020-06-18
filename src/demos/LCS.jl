@@ -340,7 +340,7 @@ function reset!(env::LCSEnvironment)::Observation
     end
     env.state = LCSState(ones(Int, env.inst.m), Int[])
     fill!(env.action_mask, true)
-    update_action_mask(env)
+    update_action_mask_and_p(env)
     get_observation(env)
 end
 
@@ -359,7 +359,7 @@ function step!(env::LCSEnvironment, action::Int)
     c = action  # env.action_order[action]
     append!(env.state.s, c)
     update_p(inst, state.p, c)
-    update_action_mask(env)
+    update_action_mask_and_p(env)
     not_done = any(env.action_mask)
     # println("step: ", c, " appended to ", state.s, " ", not_done)
     reward_mode = settings[:lcs_reward_mode]
@@ -390,11 +390,11 @@ function step!(env::LCSEnvironment, action::Int)
 end
 
 """
-    update_action_mask(env)
+    update_action_mask_and_p(env)
 
-Return action_mask, i.e., binary vector indicating valid actions.
+Update action_mask and possibly improve p by skipping exhausted letters.
 """
-function update_action_mask(env::LCSEnvironment)
+function update_action_mask_and_p(env::LCSEnvironment)
     inst = env.inst
     state = env.state
     for c = 1:inst.sigma
@@ -410,6 +410,11 @@ function update_action_mask(env::LCSEnvironment)
                 break
             end
         end
+    end
+    for i = 1:inst.m
+        si = inst.s[i]
+        while state.p[i] <= length(si) && !env.action_mask[state.p[i]]
+            state.p[i] += 1
     end
 end
 
