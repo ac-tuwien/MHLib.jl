@@ -413,8 +413,9 @@ function update_action_mask_and_p(env::LCSEnvironment)
     end
     for i = 1:inst.m
         si = inst.s[i]
-        while state.p[i] <= length(si) && !env.action_mask[state.p[i]]
+        while state.p[i] <= length(si) && !env.action_mask[si[state.p[i]]]
             state.p[i] += 1
+        end
     end
 end
 
