@@ -47,6 +47,9 @@ to_maximize(::Type) = true
 to_maximize(s::Solution) = to_maximize(typeof(s))
 
 
+print(s::Solution) = error("abstract string(s) called")
+
+
 """
     obj(::Solution)
 
@@ -315,9 +318,12 @@ include("settings.jl")
 include("Schedulers.jl")
 include("GVNSs.jl")
 include("ALNSs.jl")
+include("Environments.jl")
+include("MCTSs.jl")
 
 include("demos/OneMax.jl")
 include("demos/MAXSAT.jl")
+include("demos/LCS.jl")
 
 
 end # module

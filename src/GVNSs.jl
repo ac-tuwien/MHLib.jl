@@ -1,4 +1,4 @@
-#=
+"""
     GVNSs
 
 A general variable neighborhood search class which can also be used for plain local search,
@@ -6,7 +6,7 @@ VND, GRASP, IG etc.
 
 It extends the more general scheduler module/class by distinguishing between construction
 heuristics, local improvement methods and shaking methods.
-=#
+"""
 module GVNSs
 
 using MHLib

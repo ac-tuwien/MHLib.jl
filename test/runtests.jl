@@ -1,12 +1,15 @@
 using Test
+using Random
 using MHLib
 using MHLib.Schedulers
 using MHLib.GVNSs
 using MHLib.OneMax
 using MHLib.MAXSAT
-using Random
+using MHLib.LCS
+using MHLib.MCTSs
 
-@testset "MHLib.jl" begin
+
+@testset "OneMaxSolution" begin
     parse_settings!(["--seed=1"])
     println(get_settings_as_string())
     s1 = OneMaxSolution(5)
@@ -73,4 +76,18 @@ end
     main_results(gvns.scheduler)
     check(sol)
     @test obj(sol) >= 0
+end
+
+@testset "LCS_MCTS" begin
+    inst = LCSInstance("../data/test-04_003_050.lcs")
+    @test length(inst.s[1]) == 50
+    parse_settings!(["--seed=1"])
+    Random.seed!(1)
+    inst = LCSInstance(3, 10, 4)
+    println(inst)
+    sol = LCSSolution(inst)
+    @test obj(sol) == 0
+    env = LCSEnvironment(inst)
+    mcts = MCTS{LCSEnvironment}(env)
+    @test perform_mcts!(mcts) == 3
 end

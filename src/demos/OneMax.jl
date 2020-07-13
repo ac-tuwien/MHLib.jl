@@ -1,7 +1,10 @@
-#=
-OneMax Problem: Maximize the number of set bits in a binary string.
+"""
+    OneMax
+
+OneMax demo problem: Maximize the number of set bits in a binary string.
+
 This problem is just for simple demonstration/debugging purposes.
-=#
+"""
 module OneMax
 
 import Base: copy, copy!
