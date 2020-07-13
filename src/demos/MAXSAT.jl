@@ -9,11 +9,12 @@ module MAXSAT
 using Random
 using MHLib
 using MHLib.Schedulers
+import MHLib.ALNSs: get_number_to_destroy
 
 import Base: copy, copy!, show
 import MHLib: calc_objective, flip_variable!
 
-export MAXSATInstance, MAXSATSolution
+export MAXSATInstance, MAXSATSolution, destroy!, repair!
 
 
 """
@@ -88,6 +89,7 @@ mutable struct MAXSATSolution <: BoolVectorSolution
     obj_val::Int
     obj_val_valid::Bool
     x::Vector{Bool}
+    destroyed::Vector{Int64}
 end
 
 """
@@ -96,19 +98,19 @@ end
 Create a solution object for the given `MAXSATInstance`.
 """
 MAXSATSolution(inst::MAXSATInstance) =
-    MAXSATSolution(inst, -1, false, Vector{Bool}(undef, inst.n))
-
+    MAXSATSolution(inst, -1, false, Vector{Bool}(undef, inst.n, []))
 
 function copy!(s1::S, s2::S) where {S <: MAXSATSolution}
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
     s1.x[:] = s2.x
+    s1.destroyed[:] = s2.destroyed
 end
 
 
 copy(s::MAXSATSolution) =
-    MAXSATSolution(s.inst, -1, false, Base.copy(s.x[:]))
+    MAXSATSolution(s.inst, -1, false, Base.copy(s.x[:]), Base.copy(s.destroyed[:]))
 
 
 Base.show(io::IO, s::MAXSATSolution) =
@@ -157,32 +159,41 @@ function flip_variable!(s::MAXSATSolution, pos::Int)::Int
     return obj_val
 end
 
-#=
 
-function destroy(self, par, _result)
-    """Destroy operator for ALNS selects par*ALNS.get_number_to_destroy positions
-    uniformly at random for removal.
+"""
+    destroy(sol, par, result)
 
-    Selected positions are stored with the solution in list self.destroyed.
-    """
-    x = PyArray(self."x")
-    num = min(ALNS.get_number_to_destroy(length(x)) * par, length(x))
-    self.destroyed = sample(1:length(x), num, replace=false)
-    self.invalidate()
+Destroy operator for ALNS selects par*ALNS.get_number_to_destroy positions uniformly
+at random for removal.
+
+Selected positions are stored with the solution in list self.destroyed.
+"""
+function destroy!(sol::MAXSATSolution, par::Int, result::Result)
+    x = sol.x
+    # TODO: num = min(ALNS.get_number_to_destroy(length(x)) * par, length(x))
+    num = min(get_number_to_destroy(length(x)) * par, length(x))
+    sol.destroyed = sample(1:length(x), num, replace=false)
+    invalidate!(sol)
 end
 
-function repair(self, _par, _result)
-    """Repair operator for ALNS assigns new random values to all positions in self.destroyed."""
-    @assert !(self.destroyed === nothing)
-    x = PyArray(self."x")
-    for p in self.destroyed
+
+"""
+    repair!(sol, par, result)
+
+Repair operator for ALNS assigns new random values to all positions in sol.destroyed.
+"""
+function repair!(sol::MAXSATSolution, par::Int, result::Result)
+    @assert !(length(sol.destroyed) == 0)
+    x = sol.x
+    for p in sol.destroyed
         x[p] = rand(0:1)
     end
-    self.destroyed = nothing
-    self.invalidate()
+    sol.destroyed = []
+    invalidate!(sol)
 end
 
 
+#=
 function crossover(self, other)
     """ Perform uniform crossover as crossover."""
     return self.uniform_crossover(other)

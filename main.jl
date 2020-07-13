@@ -2,7 +2,8 @@
 
 using MHLib
 using MHLib.Schedulers
-using MHLib.GVNSs
+#using MHLib.GVNSs
+using MHLib.ALNSs
 import MHLib.OneMax: OneMaxSolution
 using MHLib.MAXSAT
 
@@ -26,11 +27,20 @@ function maxsat()
     inst = MAXSATInstance("data/maxsat-adv1.cnf")
     sol = MAXSATSolution(inst)
     println(sol)
+
+    alns = ALNS(sol, [MHMethod("construct", construct!, 0)],
+        [MHMethod("destroy", destroy!, 1)],
+        [MHMethod("repair", repair!, 0)])
+    run!(alns)
+    main_results(alns.scheduler)
+
+    #=
     gvns = GVNS(sol, [MHMethod("con", construct!, 0)],
         [MHMethod("li1", local_improve!, 1)],
         [MHMethod("sh$i", shaking!, i) for i in 1:5])
     run!(gvns)
     main_results(gvns.scheduler)
+    =#
     check(sol)
 end
 

@@ -9,8 +9,13 @@ using Random
 using Base: copy, copy!, length
 
 export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
-    is_better, is_worse, is_better_obj, is_worse_obj, dist, check
+    is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
 
+    # ALNSs
+    get_number_to_destroy,
+
+    # settings
+    settings, settings_cfg
 
 #----------------------------- Solution ------------------------------
 
@@ -309,6 +314,7 @@ end
 include("settings.jl")
 include("Schedulers.jl")
 include("GVNSs.jl")
+include("ALNSs.jl")
 
 include("demos/OneMax.jl")
 include("demos/MAXSAT.jl")

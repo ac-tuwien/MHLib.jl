@@ -17,7 +17,7 @@ using MHLib
 export Result, MHMethod, MHMethodStatistics, Scheduler, perform_method!,
     next_method, update_incumbent!, check_termination, perform_sequentially!,
     main_results, delayed_success_update!, log_iteration, log_iteration_header,
-    construct!, local_improve!, shaking!
+    construct!, local_improve!, shaking!, perform_method_pair!
 
 @add_arg_table! settings_cfg begin
     "--mh_titer"
@@ -33,18 +33,27 @@ export Result, MHMethod, MHMethodStatistics, Scheduler, perform_method!,
                "-1: iteration 1,2,5,10,20,..."
         arg_type = Int
         default = 0
+    "--mh_tciter"
+        help = "maximum number of iterations without improvement (<0: turned off)"
+        arg_type = Int
+        default = -1
+    "--mh_ttime"
+        help = "time limit [s] (<0: turned off)"
+        arg_type = Int
+        default = -1
+    "--mh_tctime"
+        help = "maximum time [s] without improvement (<0: turned off)"
+        arg_type = Int
+        default = -1
+    "--mh_tobj"
+        help = "objective value at which should be terminated when reached (<0: turned off)"
+        arg_type = Float64
+        default = -1.0
+    "--mh_checkit"
+        help = "call check() for each solution after each method application"
+        arg_type = Bool
+        default = false
 end
-#= TODO
-parser = get_settings_parser()
-parser.add_argument("--mh_titer", type=int, default=100, help='maximum number of iterations (<0: turned off)')
-parser.add_argument("--mh_tciter", type=int, default=-1,
-                    help='maximum number of iterations without improvement (<0: turned off)')
-parser.add_argument("--mh_ttime", type=int, default=-1, help='time limit [s] (<0: turned off)')
-parser.add_argument("--mh_tctime", type=int, default=-1, help='maximum time [s] without improvement (<0: turned off)')
-parser.add_argument("--mh_tobj", type=float, default=-1,
-                    help='objective value at which should be terminated when reached (<0: turned off)')
-add_bool_arg(parser, "mh_checkit", default=false, help='call check() for each solution after each method application')
-=#
 
 
 """
@@ -79,7 +88,7 @@ Attributes
 struct MHMethod
     name::String
     func::Function
-    par::Int
+    par::Any
 end
 
 
@@ -259,13 +268,11 @@ Check termination conditions and return true when to terminate.
 """
 function check_termination(s::Scheduler)::Bool
     t = time()
-    if 0 <= settings[:mh_titer] <= s.iteration
-            # TODO or \
-            #0 <= self.own_settings.mh_tciter <= self.iteration - self.incumbent_iteration or \
-            #0 <= self.own_settings.mh_ttime <= t - self.time_start or \
-            #0 <= self.own_settings.mh_tctime <= t - self.incumbent_time or \
-            #0 <= self.own_settings.mh_tobj and not self.incumbent.is_worse_obj(self.incumbent.obj(),
-            #                                                                   self.own_settings.mh_tobj):
+    if 0 <= settings[:mh_titer] <= s.iteration ||
+        0 <= settings[:mh_tciter] <= s.iteration - s.incumbent_iteration ||
+        0 <= settings[:mh_ttime] <= t - s.time_start ||
+        0 <= settings[:mh_tctime] <= t - s.incumbent_time ||
+        0 <= settings[:mh_tobj] && !is_worse_obj(s.incumbent, obj(s.incumbent), settings[:mh_tobj])
         return true
     end
     false
@@ -386,62 +393,65 @@ function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::
     end
 end
 
+"""
+    perform_method_pair!(scheduler, destroy, repair, sol)
+
+Performs a destroy/repair method pair on given solution and returns Results object.
+
+Also updates incumbent, iteration and the method's statistics in method_stats.
+Furthermore checks the termination condition and eventually sets terminate in the returned Results object.
+"""
+function perform_method_pair!(scheduler::Scheduler, destroy::MHMethod, repair::MHMethod, sol::Solution)
+    res = Result()
+    obj_old = obj(sol)
+    t_start = time()
+    destroy.func(sol, destroy.par, res)
+    t_destroyed = time()
+    repair.func(sol, repair.par, res)
+    t_end = time()
+    update_stats_for_method_pair!(scheduler, destroy, repair, sol, res, obj_old,
+                                      t_destroyed - t_start, t_end - t_destroyed)
+    return res
+end
+
+
+"""
+    update_stats_for_method_pair!(scheduler, destroy, repair, sol, res, obj_old, t_destroy, t_repair)
+
+Update statistics, incumbent and check termination condition after having performed a destroy+repair.
+"""
+function update_stats_for_method_pair!(scheduler::Scheduler, destroy::MHMethod,
+     repair::MHMethod, sol::Solution, res::Result, obj_old, t_destroy::Float64, t_repair::Float64)
+     #= TODO
+     if __debug__ and self.own_settings.mh_checkit:
+         sol.check()
+     =#
+     ms_destroy = scheduler.method_stats[destroy.name]
+     ms_destroy.applications += 1
+     ms_destroy.netto_time += t_destroy
+     ms_destroy.brutto_time += t_destroy
+     ms_repair = scheduler.method_stats[repair.name]
+     ms_repair.applications += 1
+     ms_repair.netto_time += t_repair
+     ms_repair.brutto_time += t_repair
+     obj_new = obj(sol)
+     if is_better_obj(sol, obj_new, obj_old)
+         ms_destroy.successes += 1
+         ms_destroy.obj_gain += obj_new - obj_old
+         ms_repair.successes += 1
+         ms_repair.obj_gain += obj_new - obj_old
+     end
+     scheduler.iteration += 1
+     new_incumbent = update_incumbent!(scheduler, sol, time() - scheduler.time_start)
+     terminate = check_termination(scheduler)
+     log_iteration(scheduler, destroy.name * "+" * repair.name, obj_old, sol, new_incumbent, terminate, res.log_info)
+     if terminate
+         scheduler.run_time = time() - scheduler.time_start
+         res.terminate = true
+     end
+end
 
 #=
-    def perform_method_pair(self, destroy: MHMethod, repair: MHMethod, sol: Solution) -> Result:
-        """Performs a destroy/repair method pair on given solution and returns Results object.
-
-        Also updates incumbent, iteration and the method's statistics in method_stats.
-        Furthermore checks the termination condition and eventually sets terminate in the returned Results object.
-
-        :param destroy: destroy destroy method to be performed
-        :param repair: repair destroy method to be performed
-        :param sol: solution to which the method is applied
-        :returns: Results object
-        """
-        res = Result()
-        obj_old = sol.obj()
-        t_start = time.process_time()
-        destroy.func(sol, destroy.par, res)
-        t_destroyed = time.process_time()
-        repair.func(sol, repair.par, res)
-        t_end = time.process_time()
-        self.update_stats_for_method_pair(destroy, repair, sol, res, obj_old,
-                                          t_destroyed - t_start, t_end - t_destroyed)
-        return res
-
-
-    def update_stats_for_method_pair(self, destroy: MHMethod, repair: MHMethod, sol: Solution, res: Result, obj_old: TObj,
-                                     t_destroy: float, t_repair: float):
-        """Update statistics, incumbent and check termination condition after having performed a destroy+repair."""
-        if __debug__ and self.own_settings.mh_checkit:
-            sol.check()
-        ms_destroy = self.method_stats[destroy.name]
-        ms_destroy.applications += 1
-        ms_destroy.netto_time += t_destroy
-        ms_destroy.brutto_time += t_destroy
-        ms_repair = self.method_stats[repair.name]
-        ms_repair.applications += 1
-        ms_repair.netto_time += t_repair
-        ms_repair.brutto_time += t_repair
-        obj_new = sol.obj()
-        if sol.is_better_obj(sol.obj(), obj_old):
-            ms_destroy.successes += 1
-            ms_destroy.obj_gain += obj_new - obj_old
-            ms_repair.successes += 1
-            ms_repair.obj_gain += obj_new - obj_old
-        self.iteration += 1
-        new_incumbent = self.update_incumbent(sol, time.process_time() - self.time_start)
-        terminate = self.check_termination()
-        self.log_iteration(destroy.name+'+'+repair.name, obj_old, sol, new_incumbent,
-                           terminate, res.log_info)
-        if terminate:
-            self.run_time = time.process_time() - self.time_start
-            res.terminate = true
-
-
-
-
     @staticmethod
     def sdiv(x, y):
         """Safe division: return x/y if y!=0 and nan otherwise."""
