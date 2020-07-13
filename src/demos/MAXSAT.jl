@@ -91,7 +91,7 @@ mutable struct MAXSATSolution <: BoolVectorSolution
     obj_val::Int
     obj_val_valid::Bool
     x::Vector{Bool}
-    destroyed::Vector{Int64}
+    destroyed::Vector{Int}
 end
 
 """
@@ -100,7 +100,7 @@ end
 Create a solution object for the given `MAXSATInstance`.
 """
 MAXSATSolution(inst::MAXSATInstance) =
-    MAXSATSolution(inst, -1, false, Vector{Bool}(undef, inst.n, []))
+    MAXSATSolution(inst, -1, false, Vector{Bool}(undef, inst.n), [])
 
 function copy!(s1::S, s2::S) where {S <: MAXSATSolution}
     s1.inst = s2.inst

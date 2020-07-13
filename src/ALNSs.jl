@@ -76,17 +76,19 @@ end
 
 
 """
+    ScoreData
+
 Weight of a method and all data relevant to calculate the score and update the weight.
 
 Attributes
-- weight: weight to be used for selecting methods
-- score: current score in current segment
-- applied: number of applications in current segment
+    - weight: weight to be used for selecting methods
+    - score: current score in current segment
+    - applied: number of applications in current segment
 """
 mutable struct ScoreData
     weight::Float64
-    score::Int64
-    applied::Int64
+    score::Int
+    applied::Int
 end
 
 ScoreData() = ScoreData(1.0, 0, 0)
@@ -96,13 +98,13 @@ ScoreData() = ScoreData(1.0, 0, 0)
 An adaptive large neighborhood search (ALNS).
 
 Attributes
-- scheduler: Scheduler object
-- meths_ch: list of construction heuristic methods
-- meths_de: list of destroy methods
-- methds_re: list of repair methods
-- score_data: dictionary which stores a ScoreData struct for each method
-- temperature: temperature for Metropolis criterion
-- next_segment: iteration number of next segment for updating operator weights
+    - scheduler: Scheduler object
+    - meths_ch: list of construction heuristic methods
+    - meths_de: list of destroy methods
+    - methds_re: list of repair methods
+    - score_data: dictionary which stores a ScoreData struct for each method
+    - temperature: temperature for Metropolis criterion
+    - next_segment: iteration number of next segment for updating operator weights
 """
 mutable struct ALNS
     scheduler::Scheduler
@@ -111,7 +113,7 @@ mutable struct ALNS
     meths_re::Vector{MHMethod}
     score_data::Dict{String, ScoreData}
     temperature::Float64
-    next_segment::Int64
+    next_segment::Int
 end
 
 
@@ -119,7 +121,7 @@ end
     ALNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMethod},
         meths_re::Vector{MHMethod}, consider_initial_sol::Bool=false)
 
-Create a ALNS
+Create an ALNS.
 
 Create a GVNS for the given solution with the given construction,
 and repair methods provided as Vector{MHMethod}.
@@ -131,15 +133,16 @@ function ALNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMeth
     # TODO own_settings
     temperature = obj(sol) * settings[:mh_alns_init_temp_factor] + 0.000000001
     score_data = Dict(m.name => ScoreData() for m in vcat(meths_de, meths_re))
-    ALNS(Scheduler(sol, [meths_ch; meths_de; meths_re]), meths_ch, meths_de, meths_re, score_data, temperature, 0)
+    ALNS(Scheduler(sol, [meths_ch; meths_de; meths_re]), meths_ch, meths_de, meths_re,
+        score_data, temperature, 0)
 end
 
 
 """
     select_method(meths::Vector{MHMethod}, weights::Vector{Float64})
 
-Randomly select a method from the given list with probabilities proportional to the given weights.
-If weights is nothing, uniform probability is used.
+Randomly select a method from the given list with probabilities proportional to the given
+weights. If weights is nothing, uniform probability is used.
 """
 function select_method(meths::Vector{MHMethod}, weights::Vector{Float64})
     return sample(meths, Weights(weights))
@@ -152,8 +155,10 @@ end
 Select a destroy and repair method pair according to current weights.
 """
 function select_method_pair(alns::ALNS)
-    destroy = select_method(alns.meths_de, [alns.score_data[m.name].weight for m in alns.meths_de])
-    repair = select_method(alns.meths_re, [alns.score_data[m.name].weight for m in alns.meths_re])
+    destroy = select_method(alns.meths_de, [alns.score_data[m.name].weight
+        for m in alns.meths_de])
+    repair = select_method(alns.meths_re, [alns.score_data[m.name].weight
+        for m in alns.meths_re])
     return destroy, repair
 end
 
@@ -161,7 +166,7 @@ end
 """
     metropolis_criterion(alns::ALNS, sol_new::Solution, sol_current::Solution)
 
-Apply Metropolis criterion as acceptance decision, return True when sol_new should be accepted.
+Apply Metropolis criterion, return True when sol_new should be accepted.
 """
 function metropolis_criterion(alns::ALNS, sol_new::Solution, sol_current::Solution)
     if is_better(sol_new, sol_current)
@@ -182,14 +187,19 @@ end
 
 
 """
-    get_number_to_destroy(num_elements::Int, own_settings=settings, dest_min_abs::Union{Float64, Nothing}=nothing,
-        dest_min_ratio::Union{Float64, Nothing}=nothing, dest_max_abs::Union{Float64, Nothing}=nothing,
+    get_number_to_destroy(num_elements::Int, own_settings=settings,
+        dest_min_abs::Union{Float64, Nothing}=nothing,
+        dest_min_ratio::Union{Float64, Nothing}=nothing,
+        dest_max_abs::Union{Float64, Nothing}=nothing,
         dest_max_ratio::Union{Float64, Nothing}=nothing)
 
-Randomly sample the number of elements to destroy in the destroy operator based on the parameter settings.
+Randomly sample the number of elements to destroy in the destroy operator based on the
+parameter settings.
 """
-function get_number_to_destroy(num_elements::Int, own_settings=settings, dest_min_abs::Union{Float64, Nothing}=nothing,
-    dest_min_ratio::Union{Float64, Nothing}=nothing, dest_max_abs::Union{Float64, Nothing}=nothing,
+function get_number_to_destroy(num_elements::Int, own_settings=settings,
+    dest_min_abs::Union{Float64, Nothing}=nothing,
+    dest_min_ratio::Union{Float64, Nothing}=nothing,
+    dest_max_abs::Union{Float64, Nothing}=nothing,
     dest_max_ratio::Union{Float64, Nothing}=nothing)
 
     if dest_min_abs == nothing
@@ -234,13 +244,14 @@ end
 
 
 """
-    update_after_destroy_and_repair_performed!(alns::ALNS, destroy::MHMethod, repair::MHMethod,
-        sol_new::Solution, sol_incumbent::Solution, sol::Solution)
+    update_after_destroy_and_repair_performed!(alns::ALNS, destroy::MHMethod,
+        repair::MHMethod, sol_new::Solution, sol_incumbent::Solution, sol::Solution)
 
-Update current solution, incumbent, and all operator score data according to performed destroy+repair.
+Update current solution, incumbent, and all operator score data according to performed
+destroy+repair.
 """
-function update_after_destroy_and_repair_performed!(alns::ALNS, destroy::MHMethod, repair::MHMethod,
-    sol_new::Solution, sol_incumbent::Solution, sol::Solution)
+function update_after_destroy_and_repair_performed!(alns::ALNS, destroy::MHMethod,
+    repair::MHMethod, sol_new::Solution, sol_incumbent::Solution, sol::Solution)
     destroy_data = alns.score_data[destroy.name]
     repair_data = alns.score_data[repair.name]
     destroy_data.applied += 1
@@ -279,7 +290,8 @@ function alns!(alns::ALNS, sol::Solution)
     while true
         destroy, repair = select_method_pair(alns)
         res = perform_method_pair!(alns.scheduler, destroy, repair, sol_new)
-        update_after_destroy_and_repair_performed!(alns, destroy, repair, sol_new, sol_incumbent, sol)
+        update_after_destroy_and_repair_performed!(alns, destroy, repair, sol_new,
+            sol_incumbent, sol)
         if res.terminate
             copy!(sol, sol_incumbent)
             return
@@ -293,7 +305,7 @@ end
 """
     run!(alns::ALNS)
 
-Performs the construction heuristics followed by the ALNS.
+Perform the construction heuristics followed by the ALNS.
 """
 function run!(alns::ALNS)
     sol = copy(alns.scheduler.incumbent)
