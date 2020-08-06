@@ -5,12 +5,12 @@ Managing global settings via decentralized specifications.
 using ArgParse
 using Random
 
-export settings_cfg, settings, parse_settings!, add_arg_table!,
+export settings, parse_settings!, add_arg_table!,
     get_settings_as_string, seed_random_generator, settings_new_default_value
 
 
 """
-ArgParseSettings used to add further arguments in modules.
+Standard ArgParseSettings always used.
 """
 const settings_cfg = ArgParseSettings()
 
@@ -42,16 +42,24 @@ end
 
 
 """
-    parse_settings!(;args=ARGS)
+    parse_settings!(settings_cfgs::Vector{ArgParseSettings}; args=ARGS)
 
-Parses the arguments and stores initializing settings correspondingly,
+Parses the arguments initializing the global `settings` correspondingly,
 and seed the random number generator if `settings[:seed] != 0`.
+In `settings_cfgs` a list of the ArgParseSettings of individual modules
+to be used in addition to the basic `settings_cfg` of this module has to be provided.
+`MHLib.all_settings_cfgs` can be used to include all settings of all modules.
 """
-function parse_settings!(args = ARGS)
+function parse_settings!(settings_cfgs::Vector{ArgParseSettings} = all_settings_cfgs,
+        args = ARGS)
     settings_cfg.fromfile_prefix_chars = Set('@')
     settings_cfg.autofix_names = true
-    s = parse_args(args, settings_cfg, as_symbols=true)
-    merge!(settings, s)
+    s = deepcopy(settings_cfg)
+    for cfg in settings_cfgs
+        import_settings!(s, cfg)
+    end
+    parsed_settings = parse_args(args, s, as_symbols=true)
+    merge!(settings, parsed_settings)
     seed_random_generator()
     settings
 end

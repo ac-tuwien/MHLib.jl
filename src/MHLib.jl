@@ -15,7 +15,7 @@ export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
     get_number_to_destroy,
 
     # settings
-    settings, settings_cfg
+    settings
 
 #----------------------------- Solution ------------------------------
 
@@ -324,6 +324,14 @@ include("MCTSs.jl")
 include("demos/OneMax.jl")
 include("demos/MAXSAT.jl")
 include("demos/LCS.jl")
+
+const all_settings_cfgs = [
+        Schedulers.settings_cfg,
+        ALNSs.settings_cfg,
+        MCTSs.settings_cfg,
+        OneMax.settings_cfg,
+        LCS.settings_cfg,
+    ]
 
 
 end # module
