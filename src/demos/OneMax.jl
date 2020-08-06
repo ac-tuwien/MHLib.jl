@@ -17,6 +17,8 @@ import MHLib: calc_objective
 export OneMaxSolution
 
 
+const settings_cfg = ArgParseSettings()
+
 @add_arg_table! settings_cfg begin
     "--onemax_n"
         help = "length of solution string in the problem"
@@ -27,7 +29,7 @@ end
 
 """
     OneMaxSolution
-    
+
 A concrete solution type to solve the MAXSAT problem.
 """
 mutable struct OneMaxSolution <: BoolVectorSolution

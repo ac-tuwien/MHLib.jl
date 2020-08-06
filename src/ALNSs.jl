@@ -23,6 +23,8 @@ TODO:
 - log_scores
 =#
 
+const settings_cfg = ArgParseSettings()
+
 @add_arg_table! settings_cfg begin
     "--mh_alns_segment_size"
         help = "ALNS segment size"

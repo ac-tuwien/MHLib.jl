@@ -11,7 +11,7 @@ using MHLib.LCS
 
 
 @testset "OneMaxSolution" begin
-    parse_settings!(["--seed=1"])
+    parse_settings!([MHLib.OneMax.settings_cfg], ["--seed=1"])
     println(get_settings_as_string())
     s1 = OneMaxSolution(5)
     initialize!(s1)
@@ -31,7 +31,8 @@ using MHLib.LCS
 end
 
 @testset "GVNS-OneMax.jl" begin
-    parse_settings!(["--seed=1"])
+    parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.OneMax.settings_cfg],
+        ["--seed=1"])
     sol = OneMaxSolution(10)
     println(sol)
     # methods = [MHMethod("con", construct!, 0),
@@ -55,7 +56,7 @@ end
 end
 
 @testset "GVNS-MAXSAT.jl" begin
-    parse_settings!(["--seed=1"])
+    parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1"])
     inst = MAXSATInstance("../data/maxsat-simple.cnf")
     sol = MAXSATSolution(inst)
     println(sol)
@@ -80,7 +81,7 @@ end
 end
 
 @testset "ALNS-MAXSAT.jl" begin
-    parse_settings!(["--seed=1"])
+    parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.ALNSs.settings_cfg], ["--seed=1"])
     inst = MAXSATInstance("../data/maxsat-simple.cnf")
     sol = MAXSATSolution(inst)
     println(sol)
@@ -107,7 +108,7 @@ end
 @testset "LCS_MCTS" begin
     inst = LCSInstance("../data/test-04_003_050.lcs")
     @test length(inst.s[1]) == 50
-    parse_settings!(["--seed=1"])
+    parse_settings!([MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg], ["--seed=1"])
     Random.seed!(1)
     inst = LCSInstance(3, 10, 4)
     println(inst)
@@ -115,5 +116,5 @@ end
     @test obj(sol) == 0
     env = LCSEnvironment(inst)
     mcts = MCTS{LCSEnvironment}(env)
-    @test perform_mcts!(mcts) == 3
+    @test perform_mcts!(mcts) == 4
 end
