@@ -27,6 +27,8 @@ import MHLib.MCTSs: MCTS, perform_mcts!, get_child
 
 export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo
 
+const settings_cfg = ArgParseSettings()
+
 @add_arg_table! settings_cfg begin
     "--lcs_always_new_seqs"
         help = "LCS: Always create new strings when reset is called"
@@ -531,7 +533,8 @@ end
 Test function that runs MCTS on a small LCS instance.
 """
 function mcts_demo()
-    parse_settings!(["--seed=0",
+    parse_settings!([MHLib.MCTSs.settings_cfg, settings_cfg],
+        ["--seed=0",
         "--mh_mcts_num_sims=1000",
         "--lcs_reward_mode=smallsteps",
         "--mh_mcts_c_uct=0.5",

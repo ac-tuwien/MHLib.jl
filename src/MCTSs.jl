@@ -18,6 +18,8 @@ import MHLib.Environments: Environment, Observation, State, get_state, set_state
 
 export MCTS, perform_mcts!, get_child, set_function!
 
+const settings_cfg = ArgParseSettings()
+
 @add_arg_table! settings_cfg begin
     "--mh_mcts_num_sims"
         help = "MCTS number of simulations"

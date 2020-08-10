@@ -19,6 +19,8 @@ export Result, MHMethod, MHMethodStatistics, Scheduler, perform_method!,
     main_results, delayed_success_update!, log_iteration, log_iteration_header,
     construct!, local_improve!, shaking!, perform_method_pair!
 
+const settings_cfg = ArgParseSettings()
+
 @add_arg_table! settings_cfg begin
     "--mh_titer"
         help = "maximum number of iterations (<0: turned off)"
