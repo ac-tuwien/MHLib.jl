@@ -6,9 +6,10 @@ using MHLib.Schedulers
 using MHLib.ALNSs
 import MHLib.OneMax: OneMaxSolution
 using MHLib.MAXSAT
+using MHLib.LCS  # load LCS functions (exported)
 
-println("Arguments: ", ARGS)
-settings_new_default_value("mh_titer", 1000)
+println("Arguments Command Line: ", ARGS)
+# settings_new_default_value("mh_titer", 1000)
 parse_settings!()
 println(get_settings_as_string())
 
@@ -44,4 +45,13 @@ function maxsat()
     check(sol)
 end
 
-maxsat()
+# maxsat()
+
+function lcs()
+    println("STARTE LCS(arguments)")
+    # println(get_settings_as_string())
+    # println("STARTE WIRKLICH")
+    mcts_demo_args()
+end
+
+lcs()

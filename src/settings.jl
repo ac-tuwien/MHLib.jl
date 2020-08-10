@@ -25,6 +25,10 @@ const settings = Dict{Symbol,Any}()
         help = "random seed, 0: initialize randomly"
         arg_type = Int
         default = 0
+    "--ifile"
+        help = "path to the desired instance file"
+        arg_type = String
+        default = ""
 end
 
 

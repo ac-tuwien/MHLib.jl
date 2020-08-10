@@ -25,7 +25,7 @@ import MHLib.Environments:
     reset!
 import MHLib.MCTSs: MCTS, perform_mcts!, get_child
 
-export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo
+export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo, mcts_demo_args
 
 const settings_cfg = ArgParseSettings()
 
@@ -112,7 +112,7 @@ end
 """
     LCSInstance(file)
 
-Read LCS probem instance from file with given name.
+Read LCS problem instance from file with given name.
 """
 function LCSInstance(file::String)
     local s, m, sigma, alphabet
@@ -376,7 +376,7 @@ function step!(env::LCSEnvironment, action::Int)
         obs = get_observation(env)
     else
         if reward_mode === "direct"
-            reward = state.s.obj_val
+            reward = size(state.s, 1)
         elseif reward_mode === "smallsteps"
             reward = -1.0
         else
@@ -560,5 +560,35 @@ function mcts_demo()
         mcts.best_solution)
 end
 
+
+"""
+    mcts_demo()
+
+Test function that runs MCTS on a small LCS instance.
+"""
+function mcts_demo_args()
+    println("Working directory:" * pwd())
+    cd("MHLib.jl")
+    println("Working directory:" * pwd())
+
+    # Loading instance
+    println("Instance: ", settings[:ifile])
+
+    inst = LCSInstance("data/inst/test-04_003_050.lcs")
+
+    println(inst)
+    env = LCSEnvironment(inst)
+    mcts = MCTS{LCSEnvironment}(env)
+    println("Seed: ", settings[:seed])
+    println("Number of iterations: ", mcts.num_sims, ", c_uct: ", mcts.c_uct)
+
+    # trace ... Sollen die Root-Nodes gedruckt werden?
+    # trace_rollout ... Sollen die Rollouts gedruckt werden?
+    # trace_actions ... Sollen die Aktionen gedruckt werden?
+    actions = iterate_mcts!(mcts, trace = false, trace_rollout = false, trace_actions = true)
+    println("Solution: ", length(actions), ' ', actions)
+    println("Overall best solution encountered: ", length(mcts.best_solution), ' ',
+        mcts.best_solution)
+end
 
 end  # module
