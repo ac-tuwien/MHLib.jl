@@ -7,6 +7,7 @@ module MHLib
 
 using Random
 using Base: copy, copy!, length
+import Base: fill!
 
 export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
@@ -313,7 +314,8 @@ end
 
 
 #----------------------------- SubsetVectorSolution ------------------------------
-export SubsetVectorSolution, clear!, initialize!, fill!, remove_some!, two_exchange_random_fill_neighborhood_search!
+export SubsetVectorSolution, clear!, initialize!, remove_some!, two_exchange_random_fill_neighborhood_search!,
+element_removed_delta_eval!, element_added_delta_eval!, may_be_extendible
 
 """
     SubsetVectorSolution
@@ -328,6 +330,14 @@ function clear!(s::SubsetVectorSolution)
     invalidate!(s)
 end
 
+function sort_sel!(s::SubsetVectorSolution)
+     """Sort selected elements in x."""
+     if s.sel > 0
+        sort!(view(s.x, 1:s.sel))
+    end
+end
+
+
 """Scans elements from pool (by default in random order) and selects those whose inclusion is feasible.
 
 Elements in pool must not yet be selected.
@@ -337,25 +347,25 @@ If random_order is set, the elements in the pool are processed in random order.
 Uses element_added_delta_eval()
 Reorders elements in pool so that the selected ones appear in pool[begin:return-value].
 """
-function fill!(s::SubsetVectorSolution{T}, pool::Vector{T}, random_order::Bool=true) where {T}
+function fill!(s::SubsetVectorSolution{T}, pool::Union{Vector{T},Nothing}, random_order::Bool=true) where {T}
     if !may_be_extendible(s)
         return 0
     end
     x = s.x
     if pool == nothing
-        pool = x[s.sel+1:end]
+        pool = get_extension_pool(s)
     end
 
-    selected = 1
-    for i in 1:len(pool)
+    selected = 0
+    for i in 1:length(pool)
         if random_order
             ir = rand(i:length(pool))
-            if selected != ir
-                pool[selected], pool[ir] = pool[ir], pool[selected]
+            if selected+1 != ir
+                pool[selected+1], pool[ir] = pool[ir], pool[selected+1]
             end
         end
         s.sel += 1
-        x[s.sel] = pool[selected]
+        x[s.sel] = pool[selected+1]
         if element_added_delta_eval!(s)
             selected += 1
             if !may_be_extendible(s)
@@ -391,9 +401,9 @@ function remove_some!(s::SubsetVectorSolution, k::Int)
 end
 
 """Random construction of a new solution by applying fill to an initially empty solution."""
-function initialize!(s::SubsetVectorSolution, k::Int)
+function initialize!(s::SubsetVectorSolution)
     clear!(s)
-    fill!(s,s.all_elements)
+    fill!(s,nothing)
     invalidate!(s)
 end
 
@@ -402,11 +412,11 @@ end
 :param unsorted: if set, it is not checked if s is sorted
 """
 function check(s::SubsetVectorSolution, unsorted::Bool=false)
-    length = length(s.all_elements)
-    if !(1 <= s.sel <= length)
+    len = length(s.all_elements)
+    if !(1 <= s.sel <= len)
         error("Invalid attribute sel in solution: $(s.sel)")
     end
-    if length(s.x) != length
+    if length(s.x) != len
         error("Invalid length of solution array x: $(s.x)")
     end
     if Set(s.x) != s.all_elements
@@ -461,13 +471,13 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution, 
         end
         # delete v by reducing the selection range by one
         s.sel -= 1
-        element_removed_delta_eval!(s,allow_infeasible=True)
+        element_removed_delta_eval!(s, update_obj_val=true, allow_infeasible=true)
         obj1 = obj(s)
         pool = get_extension_pool(s)
         shuffle!(pool)
 
         # search v (the deleted item) and place it at the front of the extension pool
-        v_pos = findall(x->x==v)[1]
+        v_pos = findall(pool.==v)[1]
         if v_pos != 1
             pool[1], pool[v_pos] = pool[v_pos], pool[1]
         end
@@ -482,17 +492,17 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution, 
             s.sel += 1
 
             num_neighbors += 1
-            if element_added_delta_eval(s)
+            if element_added_delta_eval!(s)
                 # neighbor is feasible
                 random_fill_applied = false
                 if may_be_extendible(s)
                     self_backup = copy(s)
-                    fill!(get_extension_pool(s))
+                    fill!(s, nothing)
                     random_fill_applied = true
                 end
                 if is_better(s,best)
                     # new best solution found
-                    if not best_improvement
+                    if !best_improvement
                         sort_sel!(s)
                         return true
                     end
@@ -505,19 +515,19 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution, 
                     copy!(s, self_backup)
                 end
                 s.sel -= 1
-                element_removed_delta_eval(s, update_obj_val=false, allow_infeasible=true)
+                element_removed_delta_eval!(s, update_obj_val=false, allow_infeasible=true)
                 s.obj_val = obj1
             end
             x[sel], pool[j+1] = pool[j+1], vu
         end
         s.sel += 1
-        element_added_delta_eval(s,update_obj_val=false, allow_infeasible=true)
+        element_added_delta_eval!(s,update_obj_val=false, allow_infeasible=true)
         s.obj_val = orig_obj
         if i != sel-1
             x[i], x[sel] = x[sel], x[i]
         end
     end
-    if is_better_obj(s, best.obj(), orig_obj)
+    if is_better_obj(s, obj(best), orig_obj)
         # return new best solution
         copy!(s, best)
         sort_sel!(s)
@@ -529,7 +539,7 @@ end
 
 """Return a list of yet unselected elements that may possibly be added."""
 function get_extension_pool(s::SubsetVectorSolution)
-    return s.x[s.sel+1:end]
+    return @view s.x[s.sel+1:end]
 end
 
 """Quick check if the solution has chances to be extended by adding further elements."""
@@ -551,9 +561,9 @@ This is a helper function for delta-evaluating solutions when searching a neighb
         the update of other data done
         :return: True if feasible, False if infeasible
         """
-function element_removed_delta_eval(s::SubsetVectorSolution, update_obj_val=rrue, allow_infeasible=false)
+function element_removed_delta_eval!(s::SubsetVectorSolution; update_obj_val::Bool=true, allow_infeasible::Bool=false)
     if update_obj_val
-        invalidate(s)
+        invalidate!(s)
     end
     return true
 end
@@ -571,9 +581,9 @@ This is a helper function for delta-evaluating solutions when searching a neighb
         the update of other data done
         :return: True if feasible, False if infeasible
         """
-function element_added_delta_eval(s::SubsetVectorSolution, update_obj_val=true, allow_infeasible=false)
+function element_added_delta_eval!(s::SubsetVectorSolution; update_obj_val::Bool=true, allow_infeasible::Bool=false)
     if update_obj_val
-        invalidate(s)
+        invalidate!(s)
     end
     return true
 end
@@ -590,6 +600,7 @@ include("MCTSs.jl")
 include("demos/OneMax.jl")
 include("demos/MAXSAT.jl")
 include("demos/LCS.jl")
+include("demos/MKP.jl")
 
 const all_settings_cfgs = [
         Schedulers.settings_cfg,

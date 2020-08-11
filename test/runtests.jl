@@ -8,6 +8,7 @@ using MHLib.MCTSs
 using MHLib.OneMax
 using MHLib.MAXSAT
 using MHLib.LCS
+using MHLib.MKP
 
 
 @testset "OneMaxSolution" begin
@@ -117,4 +118,33 @@ end
     env = LCSEnvironment(inst)
     mcts = MCTS{LCSEnvironment}(env)
     @test perform_mcts!(mcts) == 4
+end
+
+@testset "LCS_MCTS" begin
+    inst = LCSInstance("../data/test-04_003_050.lcs")
+    @test length(inst.s[1]) == 50
+    parse_settings!([MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg], ["--seed=1"])
+    Random.seed!(1)
+    inst = LCSInstance(3, 10, 4)
+    println(inst)
+    sol = LCSSolution(inst)
+    @test obj(sol) == 0
+    env = LCSEnvironment(inst)
+    mcts = MCTS{LCSEnvironment}(env)
+    @test perform_mcts!(mcts) == 4
+end
+
+@testset "GVNS-MKP.jl" begin
+    parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1"])
+    inst = MKPInstance("../data/mknapcb5-01.txt")
+    sol = MKPSolution(inst)
+    println(sol)
+    gvns = GVNS(sol, [MHMethod("con", construct!, 0)],
+        [MHMethod("li1", local_improve!, 1)],
+        [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
+            MHMethod("sh3", shaking!, 3)],)
+    GVNSs.run!(gvns)
+    main_results(gvns.scheduler)
+    check(sol)
+    @test obj(sol) >= 0
 end
