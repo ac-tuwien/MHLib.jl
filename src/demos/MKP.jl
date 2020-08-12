@@ -115,7 +115,7 @@ end
 
 function clear(s::MKPSolution)
     fill!(s.y, 0)
-    fill!(s)
+    invoke(clear, Tuple{SubsetVectorSolution}, s)
 end
 
 function construct!(s::MKPSolution, par::Int, result::Result)
