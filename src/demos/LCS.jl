@@ -376,7 +376,7 @@ function step!(env::LCSEnvironment, action::Int)
         obs = get_observation(env)
     else
         if reward_mode === "direct"
-            reward = state.s.obj_val
+            reward = length(state.s)
         elseif reward_mode === "smallsteps"
             reward = -1.0
         else
@@ -536,7 +536,7 @@ function mcts_demo()
     parse_settings!([MHLib.MCTSs.settings_cfg, settings_cfg],
         ["--seed=0",
         "--mh_mcts_num_sims=1000",
-        "--lcs_reward_mode=smallsteps",
+        "--lcs_reward_mode=direct",
         "--mh_mcts_c_uct=0.5",
         "--mh_mcts_tree_policy=PUCT",
         "--lcs_prior_heuristic=UB1",
