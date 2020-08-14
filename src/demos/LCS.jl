@@ -9,8 +9,8 @@ This is a demo problem in particular for the Monte Carlo Tree Search (MCTS).
 module LCS
 
 using Random
-using ArgParse
 using MHLib
+using ArgParse
 
 import Base: copy, copy!, show, append!
 import MHLib: calc_objective
@@ -23,9 +23,8 @@ import MHLib.Environments:
     action_space_size,
     step!,
     reset!
-import MHLib.MCTSs: MCTS, perform_mcts!, get_child
 
-export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo
+export Alphabet, LCSInstance, LCSSolution, LCSEnvironment
 
 const settings_cfg = ArgParseSettings()
 
@@ -112,7 +111,7 @@ end
 """
     LCSInstance(file)
 
-Read LCS probem instance from file with given name.
+Read LCS problem instance from file with given name.
 """
 function LCSInstance(file::String)
     local s, m, sigma, alphabet
@@ -494,70 +493,6 @@ function get_observation(env::LCSEnvironment)::Observation
         error("Invalid parameter lcs_prior_heuristic: $(env.prior_heuristic)")
     end
     return Observation(values, action_mask, priors)
-end
-
-
-# -------------------- Temporary, just for testing --------------------------
-
-"""
-    iterate_mcts!(env)
-
-Iteratively perform MCTS, taking in each iteration the action with the most visits.
-TODO: trace = true druckt den kompletten Node-Output jeder Iteration aus, fürs debuggen.
-"""
-function iterate_mcts!(mcts::MCTS; trace::Bool = false, trace_actions::Bool = false,
-    trace_rollout::Bool = false)
-
-    actions = Int[]
-    # println(string(root))
-
-    while (!mcts.root.done)
-        action = perform_mcts!(mcts; trace = trace_rollout)
-        append!(actions, action)
-        if trace
-            println(string(mcts.root))
-        end
-        mcts.root = get_child(mcts.env, mcts.root, actions[length(actions)])
-        if trace_actions
-            println("\nIteration ", length(actions))
-            println("Actions taken so far: ", string(actions))
-        end
-    end
-    return actions
-end
-
-
-"""
-    mcts_demo()
-
-Test function that runs MCTS on a small LCS instance.
-"""
-function mcts_demo()
-    parse_settings!([MHLib.MCTSs.settings_cfg, settings_cfg],
-        ["--seed=0",
-        "--mh_mcts_num_sims=1000",
-        "--lcs_reward_mode=direct",
-        "--mh_mcts_c_uct=0.5",
-        "--mh_mcts_tree_policy=PUCT",
-        "--lcs_prior_heuristic=UB1",
-        "--mh_mcts_rollout_policy=epsilon-greedy",
-        "--mh_mcts_epsilon_greedy_epsilon=0.2"])
-    # inst = LCSInstance(3, 8, 4)  # Mit UCB, c_uct = 1, seed = 160569761 kommt [3] heraus (!)
-    inst = LCSInstance("data/test-04_003_050.lcs")
-    # inst = LCSInstance("data/rat-04_010_600.lcs")
-    println(inst)
-    env = LCSEnvironment(inst)
-    mcts = MCTS{LCSEnvironment}(env)
-    println("Seed: ", settings[:seed])
-    println("Number of iterations: ", mcts.num_sims, ", c_uct: ", mcts.c_uct)
-
-    # trace ... Sollen die Root-Nodes gedruckt werden?
-    # trace_rollout ... Sollen die Rollouts gedruckt werden?
-    # trace_actions ... Sollen die Aktionen gedruckt werden?
-    actions = iterate_mcts!(mcts, trace = false, trace_rollout = false, trace_actions = true)
-    println("Solution: ", length(actions), ' ', actions)
-    println("Overall best solution encountered: ", length(mcts.best_solution), ' ',
-        mcts.best_solution)
 end
 
 

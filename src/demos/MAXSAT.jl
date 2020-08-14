@@ -9,6 +9,7 @@ conjunctive normal form.
 module MAXSAT
 
 using Random
+using StatsBase
 using MHLib
 using MHLib.Schedulers
 import MHLib.ALNSs: get_number_to_destroy

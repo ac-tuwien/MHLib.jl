@@ -10,9 +10,7 @@ using Base: copy, copy!, length
 
 export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
-
-    # ALNSs
-    get_number_to_destroy,
+    run!,
 
     # settings
     settings
@@ -311,6 +309,14 @@ function flip_variable!(s::BoolVectorSolution, pos::Int)
     obj(s)
 end
 
+
+"""
+    run!()
+
+General function for performing an optimization algorithm in MHLib.
+"""
+function run!
+end
 
 #-----------------------------------------------------------
 
