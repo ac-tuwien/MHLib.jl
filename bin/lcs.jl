@@ -1,10 +1,16 @@
 #!/usr/local/bin/julia
+"""
+    lcs
+
+Demo program for solving the Longest Common Subsequence (LCS) problem.
+"""
 
 using MHLib
 using MHLib.LCS
 using MHLib.MCTSs
 
 println("LCS Demo\nARGS: ", ARGS)
+settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test-04_003_050.lcs")
 parse_settings!([MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg])
 println(get_settings_as_string())
 
@@ -15,8 +21,10 @@ println(get_settings_as_string())
 Test function that runs MCTS on a small LCS instance.
 """
 function mcts_demo()
+    # Ignore actual arguments here, using explicitly specified ones
     parse_settings!([MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg],
         ["--seed=0",
+        "--ifile=data/rat-04_010_600.lcs",
         "--mh_mcts_num_sims=1000",
         "--lcs_reward_mode=smallsteps",
         "--mh_mcts_c_uct=0.5",
@@ -25,8 +33,7 @@ function mcts_demo()
         "--mh_mcts_rollout_policy=epsilon-greedy",
         "--mh_mcts_epsilon_greedy_epsilon=0.2"])
     # inst = LCSInstance(3, 8, 4)  # Mit UCB, c_uct = 1, seed = 160569761 kommt [3] heraus (!)
-    inst = LCSInstance("data/test-04_003_050.lcs")
-    # inst = LCSInstance("data/rat-04_010_600.lcs")
+    inst = LCSInstance(settings[:ifile])
     println(inst)
     env = LCSEnvironment(inst)
     mcts = MCTS{LCSEnvironment}(env)
@@ -86,10 +93,8 @@ function mcts_demo_args()
     # cd("MHLib.jl")
     # println("Working directory:" * pwd())
 
-    # Loading instance
     println("Instance: ", settings[:ifile])
-
-    inst = LCSInstance("data/inst/test-04_003_050.lcs")
+    inst = LCSInstance("data/test-04_003_050.lcs")
 
     println(inst)
     env = LCSEnvironment(inst)

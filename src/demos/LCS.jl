@@ -9,8 +9,8 @@ This is a demo problem in particular for the Monte Carlo Tree Search (MCTS).
 module LCS
 
 using Random
-using ArgParse
 using MHLib
+using ArgParse
 
 import Base: copy, copy!, show, append!
 import MHLib: calc_objective
@@ -23,9 +23,8 @@ import MHLib.Environments:
     action_space_size,
     step!,
     reset!
-import MHLib.MCTSs: MCTS, perform_mcts!, get_child
 
-export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, mcts_demo, mcts_demo_args
+export Alphabet, LCSInstance, LCSSolution, LCSEnvironment
 
 const settings_cfg = ArgParseSettings()
 

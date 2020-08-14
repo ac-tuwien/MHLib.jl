@@ -6,7 +6,7 @@ using ArgParse
 using Random
 
 export settings, parse_settings!, add_arg_table!,
-    get_settings_as_string, seed_random_generator, settings_new_default_value
+    get_settings_as_string, seed_random_generator, settings_new_default_value!
 
 
 """
@@ -33,11 +33,11 @@ end
 
 
 """
-    settings_new_default_value(name, value)
+    settings_new_default_value!(settings_cfg, name, value)
 
 Set a new default value for a registered parameter.
 """
-function settings_new_default_value(name::String, value)
+function settings_new_default_value!(settings_cfg::ArgParseSettings, name::String, value)
     fields = settings_cfg.args_table.fields
     p = findfirst(x -> x.dest_name==name, fields)
     fields[p].default = value
@@ -76,7 +76,8 @@ Get all parameters and their values as descriptive multi-line string.
 """
 function get_settings_as_string()
     s = "Settings:\n"
-    for (par, value) in settings
+
+    for (par, value) in sort(collect(settings), by=x->x[1])
         s *= "--$par=$value\n"
     end
     s

@@ -12,7 +12,9 @@ module GVNSs
 using MHLib
 using MHLib.Schedulers
 
-export GVNS, vnd!, gvns!, run!
+import MHLib.run!
+
+export GVNS, vnd!, gvns!
 
 
 """
@@ -121,7 +123,7 @@ end
 
 
 """
-    run(gvns)
+    run!(gvns)
 
 Actually performs the construction heuristics followed by the GVNS.
 """
