@@ -26,7 +26,7 @@ const settings = Dict{Symbol,Any}()
         arg_type = Int
         default = 0
     "--ifile"
-        help = "path to the desired instance file"
+        help = "problem instance file"
         arg_type = String
         default = ""
 end

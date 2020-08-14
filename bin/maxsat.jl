@@ -2,30 +2,19 @@
 
 using MHLib
 using MHLib.Schedulers
-#using MHLib.GVNSs
+# using MHLib.GVNSs
 using MHLib.ALNSs
-import MHLib.OneMax: OneMaxSolution
 using MHLib.MAXSAT
 using MHLib.LCS  # load LCS functions (exported)
 
-println("Arguments Command Line: ", ARGS)
+println("MAXSAT Demo\nARGS: ", ARGS)
 # settings_new_default_value("mh_titer", 1000)
-parse_settings!()
+parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.ALNSs.settings_cfg], [])
 println(get_settings_as_string())
 
-function onemax()
-    s1 = OneMaxSolution{5}()
-    initialize!(s1)
-    s2 = OneMaxSolution{5}()
-    initialize!(s2)
-    s3 = copy(s1)
-    initialize!(s3)
-    copy!(s1,s3)
-    println("$s1, $(obj(s1))\n$s2, $(obj(s2))\n$s3, $(obj(s3))")
-end
-
 function maxsat()
-    inst = MAXSATInstance("data/maxsat-adv1.cnf")
+    inst = MAXSATInstance("../data/maxsat-adv1.cnf")
+
     sol = MAXSATSolution(inst)
     println(sol)
 
@@ -45,13 +34,4 @@ function maxsat()
     check(sol)
 end
 
-# maxsat()
-
-function lcs()
-    println("STARTE LCS(arguments)")
-    # println(get_settings_as_string())
-    # println("STARTE WIRKLICH")
-    mcts_demo_args()
-end
-
-lcs()
+maxsat()
