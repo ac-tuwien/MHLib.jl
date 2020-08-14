@@ -329,7 +329,7 @@ end
 
 #-----------------------------------------------------------
 
-include("settings.jl")
+include("Settings.jl")
 include("Schedulers.jl")
 include("GVNSs.jl")
 include("ALNSs.jl")
