@@ -9,7 +9,7 @@ using MHLib
 using MHLib.LCS
 using MHLib.MCTSs
 
-println("LCS Demo\nARGS: ", ARGS)
+println("LCS Demo version $(git_version())\nARGS: ", ARGS)
 settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test-04_003_050.lcs")
 parse_settings!([MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg])
 println(get_settings_as_string())

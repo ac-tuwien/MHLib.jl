@@ -10,7 +10,7 @@ using Base: copy, copy!, length
 
 export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
-    run!,
+    run!, git_version,
 
     # settings
     settings
@@ -316,6 +316,15 @@ end
 General function for performing an optimization algorithm in MHLib.
 """
 function run!
+end
+
+"""
+    git_version()
+
+Return git version information of current directory.
+"""
+function git_version() :: String
+    chomp(read(`git describe --abbrev=4 --dirty --always --tags`, String))
 end
 
 #-----------------------------------------------------------
