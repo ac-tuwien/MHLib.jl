@@ -340,6 +340,8 @@ include("demos/OneMax.jl")
 include("demos/MAXSAT.jl")
 include("demos/LCS.jl")
 
+include("DeepLearning.jl")
+
 const all_settings_cfgs = [
         Schedulers.settings_cfg,
         ALNSs.settings_cfg,

@@ -45,6 +45,16 @@ const settings_cfg = ArgParseSettings()
         help = "If epsilon-greedy is used, what value of epsilon in [0, 1] should be used?"
         arg_type = Float64
         default = 0.2
+    "--mh_mcts_child_criterion"
+        help = "After which criterion should the action at the root selected?
+                robust_child: select the most visited child.
+                exp_visit_count: select the child randomly according to exponentiated visit counts"
+        arg_type = String
+        default = "robust_child"
+    "--mh_mcts_exp_visit_counts_temp"
+        help = "Temperature for exponentiated visit count criterion"
+        arg_type = Float64
+        default = 1.0
 end
 
 
@@ -103,7 +113,7 @@ end
 
 Monte Carlo Tree Search.
 
-- tree_policy: PUCT or
+- tree_policy: PUCT or UCB
 - rollout_policy: random (according to priors) or epsilon-greedy
 - epsilon: Value of epsilon in epsilon-greedy strategy
 """
@@ -119,6 +129,9 @@ mutable struct MCTS{TEnv <: Environment}
 
     rollout_policy::String
     epsilon::Float64
+
+    child_criterion::String
+    exp_visit_counts_temp::Float64
 end
 
 
@@ -221,7 +234,8 @@ function MCTS{TEnv}(env::TEnv) where {TEnv <: Environment}
     root = Node{TState}(env, 1, root_state, root_obs, false, 0, root_parent)
     MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
         settings[:mh_mcts_tree_policy], settings[:mh_mcts_gamma], env, root, Int[],
-        settings[:mh_mcts_rollout_policy], settings[:mh_mcts_epsilon_greedy_epsilon])
+        settings[:mh_mcts_rollout_policy], settings[:mh_mcts_epsilon_greedy_epsilon],
+        settings[:mh_mcts_child_criterion], settings[:mh_mcts_exp_visit_counts_temp])
 end
 
 """
@@ -263,7 +277,7 @@ function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false)
                 error("Invalid mcts.rollout_policy " * mcts.rollout_policy)
             end
         else
-            # Anyway the priors are uniform => espilon-greedy makes no sense
+            # If the priors are uniform => espilon-greedy makes no sense
             action = rand(Vector(1:n_actions)[obs.action_mask])
         end
 
@@ -291,7 +305,9 @@ end
 
 Perform MCTS by running episodes from the current root node.
 
-Finally return best action from root, which is the subnode most often visited.
+Finally return best action from root, which is the subnode most often visited
+(child_criterion = robust_child) or one random action according to the
+exponentiated visit counts (child_criterion = exp_visit_count).
 """
 function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Integer
     for i in 1:mcts.num_sims
@@ -318,7 +334,16 @@ function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Integer
         end
         backup(leaf, mcts.gamma)
     end
-    return argmax_rand(mcts.root.child_N)
+
+    if mcts.child_criterion === "robust_child"
+        return argmax_rand(mcts.root.child_N)
+    elseif mcts.child_criterion === "exp_visit_count"
+        weights = mcts.root.child_N .^ (1 / exp_visit_counts_temp)
+        return StatsBase.sample(Vector(1:n_actions)[obs.action_mask], weights)
+            #Weights(weights))
+    else
+        error("invalid child_criterion!")
+    end
 end
 
 """

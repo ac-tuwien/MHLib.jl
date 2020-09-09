@@ -24,7 +24,7 @@ import MHLib.Environments:
     step!,
     reset!
 
-export Alphabet, LCSInstance, LCSSolution, LCSEnvironment
+export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, observation_space_size
 
 const settings_cfg = ArgParseSettings()
 
@@ -38,7 +38,7 @@ const settings_cfg = ArgParseSettings()
         arg_type = String
         default = "smallsteps"
     "--lcs_prior_heuristic"
-        help = "LCS-specific heuristic prior function: none or UB1"
+        help = "LCS-specific heuristic prior function: none or UB1 or RL (Reinforcement Learning)"
         arg_type = String
         default = "none"
 end
@@ -290,7 +290,8 @@ Environment for solving the LCS problem.
 
 Attributes
 - `inst`: `LCSInstance` to solve
-- `prior_heuristic`: heuristic function to be used to determine priors
+- `prior_heuristic`: heuristic to be used to determine priors
+- `prior_function`: function to be used to determine priors
 - `state`: current state
 - `action_mask`: vector indicating currently valid actions
 - `seq_order`: order of sequences in current observation
@@ -299,6 +300,7 @@ Attributes
 mutable struct LCSEnvironment <: Environment
     inst::LCSInstance
     prior_heuristic::String
+    prior_function::Function
 
     state::LCSState
     action_mask::Vector{Bool}
@@ -309,8 +311,42 @@ mutable struct LCSEnvironment <: Environment
         p = ones(Int, inst.m)
         state = LCSState(p, Int[])
         action_mask = ones(Bool, inst.sigma)
-        new(inst, settings[:lcs_prior_heuristic], state, action_mask, Int[], Int[])
+        prior_heuristic = settings[:lcs_prior_heuristic]
+
+        local fun
+        if prior_heuristic === "none"
+            fun = (env::LCSEnvironment, action_values::Vector{Real}) -> Float32[]
+            # priors = Float32[]
+        elseif prior_heuristic === "RL"
+            # Remains undefined here, but can be set from outside
+            fun = (env::LCSEnvironment, action_values::Vector{Real}) -> error("lcs_prior_heuristic: $(env.prior_heuristic): RL not set!")
+        elseif prior_heuristic === "UB1"
+            function fun_ub(env::LCSEnvironment, action_values::Vector{Real})
+                priors = zeros(Float32, env.inst.sigma)
+                p = env.state.p
+                for c = 1:env.inst.sigma
+                    if env.action_mask[c]
+                        p_after_adding_c = [env.inst.succ[i, p[i], c] + 1 for i in 1:env.inst.m]
+                        priors[c] = 1 + sum(remaining_letter_counts(env, p_after_adding_c))
+                    end
+                end
+                # TODO: Rethink again
+                priors[action_mask] = priors[action_mask] .- (minimum(priors[action_mask]) - 1)
+                # priors[action_mask] = 10 .^ priors[action_mask]
+                priors = priors / sum(priors)
+                return priors
+            end
+            fun = fun_ub
+        else
+            error("Invalid parameter lcs_prior_heuristic: $(prior_heuristic)")
+        end
+
+        new(inst, prior_heuristic, fun, state, action_mask, Int[], Int[])
     end
+end
+
+function set_prior_function!(env::LCSEnvironment, fun::Function)
+    env.prior_function = fun
 end
 
 action_space_size(env::LCSEnvironment) = env.inst.sigma
@@ -464,34 +500,23 @@ function get_observation(env::LCSEnvironment)::Observation
     env.seq_order = sortperm(lengths)
     values[1:m] = lengths[env.seq_order]
     counts = remaining_letter_counts(env, p)
-    # env.action_order = sortperm(counts)
-    values[m+1:m+sigma] = counts  # [env.action_order]
+    env.action_order = sortperm(counts)
+    values[m+1:m+sigma] = counts[env.action_order] # ex counts
     idx = m + sigma + 1
-    for i = 1:m
-        for c = 1:sigma
+    for i = env.seq_order # ex 1:m
+        for c = env.action_order # ex 1:sigma
+            # for each sequence (in order) and each action (in order)
             values[idx] = length(s[i]) - env.inst.succ[i, p[i], c]
+            idx += 1 # TODO DANIEL Check this, but it should be ok
         end
     end
-    action_mask = copy(env.action_mask)  # [env.action_order]
+    # values are sorted according to order, priors and action_mask not!
 
-    # determine priors
-    if env.prior_heuristic === "none"
-        priors = Float32[]
-    elseif env.prior_heuristic === "UB1"
-        priors = zeros(Float32, sigma)
-        for c = 1:sigma
-            if action_mask[c]
-                p_after_adding_c = [env.inst.succ[i, p[i], c] + 1 for i in 1:m]
-                priors[c] = 1 + sum(remaining_letter_counts(env, p_after_adding_c))
-            end
-        end
-        # TODO: Rethink again
-        priors[action_mask] = priors[action_mask] .- (minimum(priors[action_mask]) - 1)
-        # priors[action_mask] = 10 .^ priors[action_mask]
-        priors = priors / sum(priors)
-    else
-        error("Invalid parameter lcs_prior_heuristic: $(env.prior_heuristic)")
-    end
+    action_mask = copy(env.action_mask) #[env.action_order]
+    # TODO Achtung: Es wird action_mask von env für die Berechnung der priors herangezogen!
+
+    priors = env.prior_function(env, values)
+
     return Observation(values, action_mask, priors)
 end
 
