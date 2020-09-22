@@ -474,14 +474,13 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution, 
         element_removed_delta_eval!(s, update_obj_val=true, allow_infeasible=true)
         obj1 = obj(s)
         pool = get_extension_pool(s)
-        shuffle!(pool)
+        shuffle!(pool[1:end])
 
         # search v (the deleted item) and place it at the front of the extension pool
-        v_pos = findall(pool.==v)[1]
-        if v_pos != 1
-            pool[1], pool[v_pos] = pool[v_pos], pool[1]
-        end
-
+        #v_pos = findall(pool.==v)[1]
+        #if v_pos != 1
+        #    pool[1], pool[v_pos] = pool[v_pos], pool[1]
+        #end
         # enumerate over all items in the extension pool except for v
         for (j, vu) in enumerate(pool[2:end])
 
@@ -523,7 +522,7 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution, 
         s.sel += 1
         element_added_delta_eval!(s,update_obj_val=false, allow_infeasible=true)
         s.obj_val = orig_obj
-        if i != sel-1
+        if i != sel
             x[i], x[sel] = x[sel], x[i]
         end
     end
