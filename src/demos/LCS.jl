@@ -24,7 +24,8 @@ import MHLib.Environments:
     step!,
     reset!
 
-export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, observation_space_size
+export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, observation_space_size,
+  set_prior_function!, saveInstance, getHeuristicValue
 
 const settings_cfg = ArgParseSettings()
 
@@ -140,13 +141,61 @@ function LCSInstance(file::String)
 end
 
 """
+    getHeuristicValue(file, time)
+
+Computes a heuristic value for a given instance file via beam search and A*
+
+Attributes
+- `file`: the path to the instance file
+- `time`: exexution time in seconds
+- `beta`: beam width
+"""
+function getHeuristicValue(file::AbstractString; time = 10, beta = 100)::Int
+    # TODO Daniel Ordner im sh-Skript ist hardgecodet!
+    # Setup for beam search
+    time = string(time)
+    beta = string(beta)
+
+    output = read(`bash run_marko.sh $file $time $beta`, String)
+
+    m = match(r"value: [0-9]+", output , 1)
+    m = match(r"[0-9]+", m.match, 1)
+    return(parse(Int, m.match))
+end
+
+"""
+    saveInstance(inst)
+
+Saves LCS problem instance to a file with given name.
+"""
+function saveInstance(inst::LCSInstance, file::AbstractString)
+    res = string(inst.m) * " " * string(inst.sigma) * "\n"
+    for i in 1:length(inst.s)
+        x = inst.s[i]
+        temp = string(length(x)) * " "
+        a = alphabets[inst.sigma]
+        for j in 1:length(x)
+            temp = temp * a[x[j]]
+        end
+        res = res * temp * "\n"
+    end
+
+    open(file, "w") do io
+        write(io, res)
+    end;
+end
+
+"""
     create_random_seqs!(inst)
 
 Randomly re-initialize the sequences in the given LCS problem instance.
 """
 function create_random_seqs!(inst::LCSInstance)
-    for i = 1:m
-        rand!(inst.s[i], one(Alphabet)::inst.sigma)
+    # for i = 1:inst.m
+        # rand!(inst.s[i], one(Alphabet)::inst.sigma)
+    # end
+    for i = 1:inst.m
+        inst.s[i] = rand(Alphabet(1):Alphabet(inst.sigma), inst.n)
     end
     determine_aux_data_structures(inst)
 end
@@ -154,7 +203,7 @@ end
 Base.show(io::IO, inst::LCSInstance) = show(io, MIME"text/plain"(), inst.s)
 
 """
-    determine_aux_dta_structure(inst)
+    determine_aux_data_structure(inst)
 
 Determine auxiliary data structures succ and count.
 """
@@ -315,13 +364,13 @@ mutable struct LCSEnvironment <: Environment
 
         local fun
         if prior_heuristic === "none"
-            fun = (env::LCSEnvironment, action_values::Vector{Real}) -> Float32[]
+            fun = (env::LCSEnvironment, action_values::Vector{<:Real}) -> Float32[]
             # priors = Float32[]
         elseif prior_heuristic === "RL"
             # Remains undefined here, but can be set from outside
-            fun = (env::LCSEnvironment, action_values::Vector{Real}) -> error("lcs_prior_heuristic: $(env.prior_heuristic): RL not set!")
+            fun = (env::LCSEnvironment, action_values::Vector{<:Real}) -> error("lcs_prior_heuristic: $(env.prior_heuristic): RL not set!")
         elseif prior_heuristic === "UB1"
-            function fun_ub(env::LCSEnvironment, action_values::Vector{Real})
+            function fun_ub(env::LCSEnvironment, action_values::Vector{<:Real})
                 priors = zeros(Float32, env.inst.sigma)
                 p = env.state.p
                 for c = 1:env.inst.sigma
@@ -380,6 +429,9 @@ function reset!(env::LCSEnvironment)::Observation
     update_action_mask_and_p(env)
     get_observation(env)
 end
+
+# TODO Daniel: Entflechten: reset! mit bool-Parameter aufrufen ist besser!?
+
 
 """
     step!(env, action)

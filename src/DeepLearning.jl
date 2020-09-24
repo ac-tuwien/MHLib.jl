@@ -11,6 +11,8 @@ using MHLib
 using MHLib.LCS
 using MHLib.MCTSs
 using Flux
+using Logging
+using TensorBoardLogger
 
 export iterate_deepl
 
@@ -145,10 +147,11 @@ Parameters
 - `n_training`: number of samples taken out of the replay buffer for training
 - `n_min_buffer`: minimum size of the replay buffer needed to train
 """
-function DeepL(env::LCSEnvironment, n_buffer::Int, n_training::Int, n_min_buffer::Int)
+function DeepL(env::Environment, n_buffer::Int, n_training::Int, n_min_buffer::Int)
     # value network has only state information as input:
     # 1.) Remaining string lengths (m)
     # 2.) Minimum letter appearances (sigma)
+    #TODO n_inp_value = state_space_size(env)
     n_inp_value = env.inst.m + env.inst.sigma
 
     # action network has observation
@@ -258,7 +261,7 @@ Parameters
 - `env`: environment of the LCS
 """
 function actor!(deepl::DeepL, env::LCSEnvironment)
-    mcts = MCTS{LCSEnvironment}(env)
+    mcts = MCTS{LCSEnvironment}(env)  # TODO Daniel evn, netzwerk
 
     # Buffer information
     actions = Int[]
@@ -267,11 +270,13 @@ function actor!(deepl::DeepL, env::LCSEnvironment)
 
     trace_rollout = false
     trace = false
-    trace_actions = true
+    trace_actions = false#true
 
     while (!mcts.root.done)
         # Attention: -mh_mcts_child_criterion should be set to exp_visit_count
         action = perform_mcts!(mcts; trace = trace_rollout)
+
+        # TODO Daniel verwende policy von MCTS (als tupel zurückgegeben)
         policy = softmax(log.(mcts.root.child_N)) # log, since we want to normalize vector
 
         # m x Remaining String Lengths
@@ -334,19 +339,37 @@ end
 
 
 """
+Logging struct for displaying the learning success.
+
+Attributes
+- `number_optimal`: Number of times, given instance(s) was/were solved to optimality (with network-priors)
+- `number_optimal_mcts`: Number of times, given instance(s) was/were solved to optimality (without networks)
+- `value_loss`: The current value loss
+- `policy_loss`: The current policy loss
+"""
+struct LearnLogger
+    number_optimal::AbstractFloat
+    number_optimal_mcts::AbstractFloat
+    value_loss::AbstractFloat
+    policy_loss::AbstractFloat
+end
+
+
+
+"""
     learning!(deepl, buffer, env)
 
-Returns n_training training data as tuple (tactions, tpolicies, tvalues, ttargets)
+Returns an object of the type LearnLogger after training
 
 Parameters
 - `deepl`: the deep learning object
 - `buffer`: the replay buffer
 - `env`: the environment
 """
-function learning!(deepl::DeepL, buffer::ReplayBuffer, env::LCSEnvironment)
+function learning!(deepl::DeepL, buffer::ReplayBuffer, env::LCSEnvironment) :: LearnLogger
 
     if buffer.current_size < deepl.n_min_buffer
-        return nothing
+        error("Not enough data for training!")
     end
 
     # Step 1: Sample training data
@@ -413,8 +436,54 @@ function learning!(deepl::DeepL, buffer::ReplayBuffer, env::LCSEnvironment)
     #    deepl.opt_action)
 
     println("\nLoss after training")
-    @show value_loss(X_value, y_value)
-    @show policy_loss(X_policy, y_policy)
+    value_loss_value = value_loss(X_value, y_value)
+    policy_loss_value = policy_loss(X_policy, y_policy)
+
+    @show value_loss_value
+    @show policy_loss_value
+
+    # TODO Daniel Mach es generischer (mehrere Testfiles möglich)
+    inst = LCSInstance("data/test-04_003_050.lcs")
+    solarray = fill(0, 10)
+    println("\nWERTE FÜR NETZWERK")
+    for i in 1:length(solarray)
+        env = LCSEnvironment(inst)
+        # TODO Daniel set.prior.function aufrufen
+        env.prior_function = get_prior_function(deepl)
+        mcts = MCTS{LCSEnvironment}(env)
+        actions_temp = Int[]
+        while (!mcts.root.done)
+            action = perform_mcts!(mcts; trace = false)
+            append!(actions_temp, action)
+            mcts.root = get_child(mcts.env, mcts.root, actions_temp[length(actions_temp)])
+        end
+        println(length(actions_temp))
+        solarray[i] = length(actions_temp)
+    end
+
+    solarray_mcts = fill(0, 10)
+    println("\nWERTE OHNE NETZWERK")
+    temp = settings[:lcs_prior_heuristic]
+    settings[:lcs_prior_heuristic] = "UB1"
+    for i in 1:length(solarray)
+        env = LCSEnvironment(inst)
+        mcts = MCTS{LCSEnvironment}(env)
+        actions_temp = Int[]
+        while (!mcts.root.done)
+            action = perform_mcts!(mcts; trace = false)
+            append!(actions_temp, action)
+            mcts.root = get_child(mcts.env, mcts.root, actions_temp[length(actions_temp)])
+        end
+        println(length(actions_temp))
+        solarray_mcts[i] = length(actions_temp)
+    end
+    settings[:lcs_prior_heuristic] = temp
+
+    number_opt = sum(solarray) / length(solarray)
+    number_opt_mcts = sum(solarray_mcts) / length(solarray_mcts)
+
+    res = LearnLogger(number_opt, number_opt_mcts, value_loss_value, policy_loss_value)
+    return res
 end
 
 
@@ -443,22 +512,43 @@ Parameters
 function iterate_deepl(m::Int, n::Int, sigma::Int, n_buffer::Int,
     n_min_buffer::Int, n_training::Int, n_episodes::Int)
 
+    bool_always_new_seqs = settings[:lcs_always_new_seqs]
+
     println("Start of iterate_deepl()\n")
 
     inst = LCSInstance(m, n, sigma)
     env = LCSEnvironment(inst)
+    saveInstance(env.inst, "./data/temp.lcs")
+    println("MARKOS HEURISTIK:")
+    println(getHeuristicValue("./data/temp.lcs"))
+
     deepl = DeepL(env, n_buffer, n_training, n_min_buffer)
 
     # setting prior_function in environments (error by default if --lcs_prior_heuristic is RL)
     env.prior_function = get_prior_function(deepl)
+    # TODO Daniel: rufe set_prior_function!() auf!
+
+    # Logging
+    tensor_board_logger = TBLogger(pwd() * "/TensorBoardLogger/Logs", min_level = Logging.Info)
 
     for i in 1:n_episodes
         println("\nEpisode nr " * string(i) * "\n")
         actor!(deepl, env)
-        learning!(deepl, deepl.replay_buffer, env)
+
+        if deepl.replay_buffer.current_size >= deepl.n_min_buffer
+            logging_info = learning!(deepl, deepl.replay_buffer, env)
+            with_logger(tensor_board_logger) do
+                @info "Training" logging=logging_info log_step_increment=1
+            end
+        end
 
         # reset the environment (incl. new instance)
+        settings[:lcs_always_new_seqs] = true
         reset!(env)
+        settings[:lcs_always_new_seqs] = bool_always_new_seqs
+        saveInstance(env.inst, pwd() * "/data/temp.lcs")
+        println("MARKOS HEURISTIK:")
+        println(getHeuristicValue("./data/temp.lcs"))
     end
 end
 

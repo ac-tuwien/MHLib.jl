@@ -141,7 +141,14 @@ function deepl_demo()
         "--mh_mcts_rollout_policy=epsilon-greedy",
         "--mh_mcts_epsilon_greedy_epsilon=0.2"])
     # inst = LCSInstance(3, 8, 4)  # Mit UCB, c_uct = 1, seed = 160569761 kommt [3] heraus (!)
-    iterate_deepl(2, 5, 4, 10, 3, 3, 6)
+    m = 3
+    n = 50
+    sigma = 4
+    n_buffer = 5 * n
+    n_min_buffer = 4 * n
+    n_training = 32
+    n_episodes = 20
+    iterate_deepl(m, n, sigma, n_buffer, n_min_buffer, n_training, n_episodes)
 end
 
 
