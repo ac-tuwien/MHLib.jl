@@ -3,6 +3,14 @@
 
 Deep Learning module for MHLib
 
+TODO: Der Modulname ist äußerst sinnfrei, Deep Learning ist ein Riesengebiet,und wir
+machen hier auch gar kein deep learning da wir kein deep NN verwenden.
+Was hier implementiert werden soll ist ein AlphaZero Agent o.ä.
+
+Wichtig: Dieser Agent sollte völlig unabhängig von LCS sein!
+Das spezielle NN für LCS muss außerhalb in einem eigenen Modul entwickelt werden.
+Auch den Replay-Buffer problemunabhängig und in einem eigenen Modul umsetzen - er kann später
+vielleicht auch für andere Agenten gebraucht werden.
 """
 module DeepLearning
 
@@ -28,47 +36,42 @@ import MHLib.Environments:
 
 
 """
-Replay Buffer
+ReplayBuffer
 
-The Replay Buffer stores at most `max_size` data points (actions, policies, values, targets).
+A FIFO buffer holding at most `max_size` tuples (actions, policies, values, targets)
+from which learning is performed.
 
 Attributes
 - `max_size`: maximum size of the replay buffer
 - `current_size`: current size of the replay buffer
+- `oldest`: index of oldest entry
+- `obs_values`: original observation; each row represents one observation
 - `actions`: actions taken
-- `policies`: corresponding policies suggested by MCTS. Each row represents one policy.
-- `values`: corresponding original observation (without sorting).
-  Each row represents one observation
-- `targets`: string length of the episode
+- `policies`: corresponding policies; each row represents one policy
+- `targets`: obsered target values
 """
 mutable struct ReplayBuffer
     max_size::Int
     current_size::Int
+    oldest::Int
 
-    actions::Array{Int, 1}
+    obs_values::Array{Float32, 2}
+    actions::Vector{Int}
     policies::Array{Float32, 2}
-    values::Array{Float32, 2}
-    targets::Array{Int, 1}
+    targets::Vector{Int}
 end
 
-
-
 """
-    ReplayBuffer(n_buffer, sigma, n_values)
+    ReplayBuffer(buffer_size, action_space_size, obs_space_size)
 
-Initializes the Replay Buffer accordingly.
-
-Parameters
-- `n_buffer`: max size of the replay buffer
-- `sigma`: alphabet size
-- `n_values`: observation size (= input length of action network)
+Initialize the replay buffer.
 """
-function ReplayBuffer(n_buffer::Int, sigma::Int16, n_values::Int)
-    act = Array{Int}(undef, 0)  # Vector{Int} does not work (type DataType)
-    pol = Array{Float32}(undef, 0, sigma)
-    vals = Array{Float32}(undef, n_values, 0)
-    targ = Array{Int}(undef, 0)
-    ReplayBuffer(n_buffer, 0, act, pol, vals, targ)
+function ReplayBuffer(buffer_size, action_space_size, obs_space_size)
+    obs_vals = Array{Float32}(undef, buffer_size, obs_space_size)
+    act = Vector{Int}(undef, buffer_size)
+    pol = Array{Float32}(undef, buffer_size, action_space_size)
+    targ = Vector{Int}(undef, buffer_size)
+    ReplayBuffer(buffer_size, 0, 1, obs_vals, act, pol, targ)
 end
 
 
@@ -160,46 +163,43 @@ function DeepL(env::Environment, n_buffer::Int, n_training::Int, n_min_buffer::I
     DeepL(n_inp_value, n_inp_action, n_buffer, env.inst.sigma, n_training, n_min_buffer)
 end
 
+# TODO GR: Julia-Namenskonventionen beachten, bei Variablen und Funktionen kein CamelCase!
 
 
 """
-    updateReplayBuffer(buffer, newActions, newPolicies, newValues, newTargets)
+    append!(buffer, actions, policies, obs_alues, targets)
 
-Appends the newly generated data to the replay buffer. If the replay buffer
-is overfull, older data are deleted.
+Append provided episode data to the replay buffer. If the replay buffer
+is full, the oldest elements are deleted in a FIFO manner.
 
 Parameters
 - `buffer`: the replay buffer
-- `newActions`: newly taken actions
-- `newPolicies`: corresponding policies suggested by MCTS
-- `newValues`: corresponding original observation (unsorted)
-- `newTargets`: corresponding target values
-  (i.e. string length of the final solution found by MCTS)
+- `actions`: newly taken actions
+- `policies`: corresponding policies
+- `obs_values`: observation
+- `targets`: corresponding target values
 """
-function updateReplayBuffer!(buffer::ReplayBuffer, newActions::Array{Int, 1},
-    newPolicies::Array{<:AbstractFloat, 2}, newValues::Array{<:AbstractFloat, 2}, newTargets::Array{Int, 1})
+function append!(buffer::ReplayBuffer, actions::Array{Int, 1},
+    policies::Array{<:AbstractFloat, 2}, obs_values::Array{<:AbstractFloat, 2},
+    targets::Array{Int, 1})
 
     @assert length(newActions) == length(newTargets) == size(newPolicies, 1) ==
-        size(newValues, 2)
+        size(newValues, 1)
 
-    # Step 1: Append new information
-    append!(buffer.actions, newActions)
-    append!(buffer.targets, newTargets)
-    buffer.policies = vcat(buffer.policies, newPolicies) # append new policies as rows
-    buffer.values = hcat(buffer.values, newValues)       # append new values as columns
+    # TODO GR: Der Buffer kann sehr groß werden, Hinzufügen/Löschen in O(1) Zeit ist essentiell!
+    for i in length(newactions)
+        buffer.actions[oldest] = actions[i]
+        buffer.policies[oldest] = policies[i]
+        buffer.obs_values[oldest] = obs_values[i]
+        buffer.targets[oldest] = targets[i]
 
-    # Step 2: Check, if buffer is full
-    buffer.current_size += length(newActions)
-    if buffer.current_size > buffer.max_size
-        diff = buffer.current_size - buffer.max_size
-
-        # Delete diff elements
-        buffer.actions = buffer.actions[(diff + 1):length(buffer.actions)]
-        buffer.targets = buffer.targets[(diff + 1):length(buffer.targets)]
-        buffer.policies = buffer.policies[(diff + 1):size(buffer.policies, 1), :]
-        buffer.values = buffer.values[:, (diff + 1):size(buffer.values, 2)]
-
-        buffer.current_size = buffer.max_size
+        oldest += 1
+        if oldest > buffer.max_size
+            oldest = 1
+        end
+        if buffer.current_size < buffer.max_size
+            buffer.current_size += 1
+        end
     end
 end
 
@@ -211,6 +211,7 @@ end
 Applies the logistic function to all elements of the given logit array.
 Needed for transforming logits to [0, 1].
 
+TODO GR: Würde mich sehr wundern wenn es da nicht in Flux etc. eine Funktion dafür gibt!
 Parameters
 - `logitarr`: The array
 """
@@ -309,7 +310,7 @@ function actor!(deepl::DeepL, env::LCSEnvironment)
 
     targets = fill(length(actions), (length(actions)))
 
-    updateReplayBuffer!(deepl.replay_buffer, actions, policies, values, targets)
+    append!(deepl.replay_buffer, actions, policies, values, targets)
 
     return actions
 end
@@ -326,11 +327,14 @@ Parameters
 - `n_training`: number of training data to be sampled
 """
 function sampleReplayBuffer(buffer::ReplayBuffer, n_training::Int)
+    # TODO: Auswahl in O(n_training machen, nicht O(buffer.max_size)!
+    # -> StatsBase.sample
     ind = randperm(buffer.current_size)[1:n_training]
 
+    # TODO Unnötiges Kopieren vermeiden, einen zB einen View retournieren!
     tactions = buffer.actions[ind]
     tpolicies = buffer.policies[ind, :]
-    tvalues = buffer.values[:, ind]
+    tvalues = buffer.obj_values[ind, :]
     ttargets = buffer.targets[ind, :]
 
     return (tactions, tpolicies, tvalues, ttargets)
@@ -518,9 +522,9 @@ function iterate_deepl(m::Int, n::Int, sigma::Int, n_buffer::Int,
 
     inst = LCSInstance(m, n, sigma)
     env = LCSEnvironment(inst)
-    saveInstance(env.inst, "./data/temp.lcs")
+    save(env.inst, "./data/temp.lcs")
     println("MARKOS HEURISTIK:")
-    println(getHeuristicValue("./data/temp.lcs"))
+    println(call_external_solver("./data/temp.lcs"))
 
     deepl = DeepL(env, n_buffer, n_training, n_min_buffer)
 
@@ -546,9 +550,9 @@ function iterate_deepl(m::Int, n::Int, sigma::Int, n_buffer::Int,
         settings[:lcs_always_new_seqs] = true
         reset!(env)
         settings[:lcs_always_new_seqs] = bool_always_new_seqs
-        saveInstance(env.inst, pwd() * "/data/temp.lcs")
+        save(env.inst, pwd() * "/data/temp.lcs")
         println("MARKOS HEURISTIK:")
-        println(getHeuristicValue("./data/temp.lcs"))
+        println(call_external_solver("./data/temp.lcs"))
     end
 end
 

@@ -28,6 +28,8 @@ Observation of a state in the environment, from which predictions are made.
 Attributes
 - values::Vector{Float32}: Observed values
 - action_mask::Vector{Bool}: Boolean vector indicating valid actions
+
+TODO GR: Besser weg hier mit den Priors, das war ein unschöner Hack.
 - priors::Vector{Float32}: Problem-specific heuristic priors; zero-length if not used
 """
 struct Observation

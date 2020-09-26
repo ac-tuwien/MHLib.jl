@@ -25,7 +25,7 @@ import MHLib.Environments:
     reset!
 
 export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, observation_space_size,
-  set_prior_function!, saveInstance, getHeuristicValue
+  set_prior_function!, save, call_external_solver
 
 const settings_cfg = ArgParseSettings()
 
@@ -141,34 +141,22 @@ function LCSInstance(file::String)
 end
 
 """
-    getHeuristicValue(file, time)
+    call_external_solver(file)
 
-Computes a heuristic value for a given instance file via beam search and A*
-
-Attributes
-- `file`: the path to the instance file
-- `time`: exexution time in seconds
-- `beta`: beam width
+Call bin/lcs_external_solver.sh for solving the LCS instance in the given file
+and return solution length.
 """
-function getHeuristicValue(file::AbstractString; time = 10, beta = 100)::Int
-    # TODO Daniel Ordner im sh-Skript ist hardgecodet!
-    # Setup for beam search
-    time = string(time)
-    beta = string(beta)
-
-    output = read(`bash run_marko.sh $file $time $beta`, String)
-
-    m = match(r"value: [0-9]+", output , 1)
-    m = match(r"[0-9]+", m.match, 1)
-    return(parse(Int, m.match))
+function call_external_solver(file::AbstractString)::Int
+    s = read(`bash binlcs_external_solver.sh $file`, String)
+    parse(Int, split(s)[2])
 end
 
 """
-    saveInstance(inst)
+    save(inst, filename)
 
 Saves LCS problem instance to a file with given name.
 """
-function saveInstance(inst::LCSInstance, file::AbstractString)
+function save(inst::LCSInstance, file::AbstractString)
     res = string(inst.m) * " " * string(inst.sigma) * "\n"
     for i in 1:length(inst.s)
         x = inst.s[i]
@@ -191,11 +179,8 @@ end
 Randomly re-initialize the sequences in the given LCS problem instance.
 """
 function create_random_seqs!(inst::LCSInstance)
-    # for i = 1:inst.m
-        # rand!(inst.s[i], one(Alphabet)::inst.sigma)
-    # end
     for i = 1:inst.m
-        inst.s[i] = rand(Alphabet(1):Alphabet(inst.sigma), inst.n)
+        rand!(inst.s[i], one(Alphabet):inst.sigma)
     end
     determine_aux_data_structures(inst)
 end
@@ -310,7 +295,7 @@ append!(sol::LCSSolution, c) = sol.s[sol.obj_val+=1] = c
 """
     LCSState
 
-State in the LCSEnvironment.
+State in an LCSEnvironment.
 
 Attributes
 - `p`: position vector: the sequences are still relevant from this positions onward
@@ -348,6 +333,11 @@ Attributes
 """
 mutable struct LCSEnvironment <: Environment
     inst::LCSInstance
+
+    # GR TODO: Bitte prior_heuristic und prior_function hier entfernen, das passt hier einfach nich her.
+    # prior_heuristic ist doch eher ein Parameter und generell sollte das LCSEnvironment völlig unabhängig
+    # von irgendeinem Lösungsalgorithmus sein! UB1 besser als normale Funktion definieren, der MCTS
+    # ggfs als Parameter mitgeben, so wie ein Alphazero-Actor seine NN-Funktion auch der MCTS übergibt.
     prior_heuristic::String
     prior_function::Function
 
