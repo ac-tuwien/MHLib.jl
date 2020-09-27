@@ -45,7 +45,7 @@ to_maximize(::Type) = true
 to_maximize(s::Solution) = to_maximize(typeof(s))
 
 
-print(s::Solution) = error("abstract string(s) called")
+print(s::Solution) = error("abstract print(s) called")
 
 
 """
@@ -68,7 +68,7 @@ end
 Actually calculate the objective value of the given solution.
 """
 calc_objective(::Solution) =
-    error("calc_objective not implemented for concrete solution")
+    error("abstract calc_objective(solution) called")
 
 
 """
@@ -340,7 +340,8 @@ include("demos/OneMax.jl")
 include("demos/MAXSAT.jl")
 include("demos/LCS.jl")
 
-include("DeepLearning.jl")
+# include("DeepLearning.jl")
+include("RL/RL.jl")
 
 const all_settings_cfgs = [
         Schedulers.settings_cfg,

@@ -21,10 +21,11 @@ import MHLib.Environments:
     get_state,
     set_state!,
     action_space_size,
+    observation_space_size,
     step!,
     reset!
 
-export Alphabet, LCSInstance, LCSSolution, LCSEnvironment, observation_space_size,
+export Alphabet, LCSInstance, LCSSolution, LCSEnvironment,
   set_prior_function!, save, call_external_solver
 
 const settings_cfg = ArgParseSettings()

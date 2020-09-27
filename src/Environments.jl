@@ -1,9 +1,9 @@
 """
     Environments
 
-Abstract classes for environments and state graphs on which agents may act.
+Abstract types for environments and state graphs on which algorithms/agents may act.
 
-Used for tree search methods, reinforcement learning etc.
+Used for construction or tree search based methods, reinforcement learning etc.
 """
 module Environments
 
@@ -29,17 +29,15 @@ Attributes
 - values::Vector{Float32}: Observed values
 - action_mask::Vector{Bool}: Boolean vector indicating valid actions
 
-TODO GR: Besser weg hier mit den Priors, das war ein unschöner Hack.
-- priors::Vector{Float32}: Problem-specific heuristic priors; zero-length if not used
+TODO GR: Weg hier mit den Priors, das war ein unschöner Hack.
+Priors sind etwas sehr MCTS-Spezifisches und LCS sollte davon nichts wissen müssen.
+Der Typ könnte anstattdessen um eine Funktion `heuristic` erweitert werden, die optional eine
+problemspezifische heuristische Policy zurückliefert,
 """
 struct Observation
     values::Vector{Float32}
     action_mask::Vector{Bool}
     priors::Vector{Float32}
-end
-
-function Base.string(obs::Observation)
-    res = "Observation\n  Priors: " * string(obs.priors)
 end
 
 
@@ -58,16 +56,51 @@ Abstract methods
 """
 abstract type Environment end
 
+"""
+    action_space_size(env)
+
+Return size of the action space.
+"""
 action_space_size(env::Environment)::Int =
     error("abstract action_space_size(env) called")
 
+"""
+    obs_space_size(env)
+
+Return size of the action space.
+"""
+observation_space_size(env::Environment)::Int =
+    error("abstract observation_space_size(env) called")
+
+"""
+    reset!(env)
+
+Reset the environment and return initial observation.
+"""
 reset!(env::Environment)::Observation = error("abstract reset!(env) called")
 
+"""
+    get_state(env)
+
+Return complete current state that can later be set again.
+"""
 get_state(env::Environment)::State = error("abstract get_state(env) called")
 
+"""
+    set_state(env)
+
+Set the state formerly obtained by `get_state(env)`.
+"""
 set_state!(env::Environment, state::State, obs::Observation) =
     error("abstract set_state!(env, state, obs) called")
 
+"""
+    step!(env, action)
+
+Perform action in environment.
+
+Return new observation, reward and a Bool indicating end of episode.
+"""
 step!(env::Environment, action::Int)::(Observation, Float32, Bool) =
     error("abstract step!(env, action) called")
 

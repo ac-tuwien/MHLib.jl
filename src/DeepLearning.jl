@@ -35,44 +35,6 @@ import MHLib.Environments:
     reset!
 
 
-"""
-ReplayBuffer
-
-A FIFO buffer holding at most `max_size` tuples (actions, policies, values, targets)
-from which learning is performed.
-
-Attributes
-- `max_size`: maximum size of the replay buffer
-- `current_size`: current size of the replay buffer
-- `oldest`: index of oldest entry
-- `obs_values`: original observation; each row represents one observation
-- `actions`: actions taken
-- `policies`: corresponding policies; each row represents one policy
-- `targets`: obsered target values
-"""
-mutable struct ReplayBuffer
-    max_size::Int
-    current_size::Int
-    oldest::Int
-
-    obs_values::Array{Float32, 2}
-    actions::Vector{Int}
-    policies::Array{Float32, 2}
-    targets::Vector{Int}
-end
-
-"""
-    ReplayBuffer(buffer_size, action_space_size, obs_space_size)
-
-Initialize the replay buffer.
-"""
-function ReplayBuffer(buffer_size, action_space_size, obs_space_size)
-    obs_vals = Array{Float32}(undef, buffer_size, obs_space_size)
-    act = Vector{Int}(undef, buffer_size)
-    pol = Array{Float32}(undef, buffer_size, action_space_size)
-    targ = Vector{Int}(undef, buffer_size)
-    ReplayBuffer(buffer_size, 0, 1, obs_vals, act, pol, targ)
-end
 
 
 
@@ -165,43 +127,6 @@ end
 
 # TODO GR: Julia-Namenskonventionen beachten, bei Variablen und Funktionen kein CamelCase!
 
-
-"""
-    append!(buffer, actions, policies, obs_alues, targets)
-
-Append provided episode data to the replay buffer. If the replay buffer
-is full, the oldest elements are deleted in a FIFO manner.
-
-Parameters
-- `buffer`: the replay buffer
-- `actions`: newly taken actions
-- `policies`: corresponding policies
-- `obs_values`: observation
-- `targets`: corresponding target values
-"""
-function append!(buffer::ReplayBuffer, actions::Array{Int, 1},
-    policies::Array{<:AbstractFloat, 2}, obs_values::Array{<:AbstractFloat, 2},
-    targets::Array{Int, 1})
-
-    @assert length(newActions) == length(newTargets) == size(newPolicies, 1) ==
-        size(newValues, 1)
-
-    # TODO GR: Der Buffer kann sehr groß werden, Hinzufügen/Löschen in O(1) Zeit ist essentiell!
-    for i in length(newactions)
-        buffer.actions[oldest] = actions[i]
-        buffer.policies[oldest] = policies[i]
-        buffer.obs_values[oldest] = obs_values[i]
-        buffer.targets[oldest] = targets[i]
-
-        oldest += 1
-        if oldest > buffer.max_size
-            oldest = 1
-        end
-        if buffer.current_size < buffer.max_size
-            buffer.current_size += 1
-        end
-    end
-end
 
 
 
@@ -317,28 +242,6 @@ end
 
 
 
-"""
-    sampleReplayBuffer(buffer, n_training)
-
-Returns n_training training data as tuple (tactions, tpolicies, tvalues, ttargets)
-
-Parameters
-- `buffer`: the replay buffer
-- `n_training`: number of training data to be sampled
-"""
-function sampleReplayBuffer(buffer::ReplayBuffer, n_training::Int)
-    # TODO: Auswahl in O(n_training machen, nicht O(buffer.max_size)!
-    # -> StatsBase.sample
-    ind = randperm(buffer.current_size)[1:n_training]
-
-    # TODO Unnötiges Kopieren vermeiden, einen zB einen View retournieren!
-    tactions = buffer.actions[ind]
-    tpolicies = buffer.policies[ind, :]
-    tvalues = buffer.obj_values[ind, :]
-    ttargets = buffer.targets[ind, :]
-
-    return (tactions, tpolicies, tvalues, ttargets)
-end
 
 
 
