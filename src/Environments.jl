@@ -7,7 +7,8 @@ Used for construction or tree search based methods, reinforcement learning etc.
 """
 module Environments
 
-export Environment, State, Observation
+export Environment, State, Observation, reset!, action_space_size, observation_space_size,
+    get_state, set_state!, step!
 
 
 """
@@ -48,7 +49,8 @@ Abstract type for an environment on which an optimization or learning agent may 
 
 Abstract methods
 - `action_space_size(env)::Int`: Size of action space
-- `reset(env)::Observation`: Reset environment to initial state and return observation
+- `observation_space_size(env)::Int`: Size of observation space
+- `reset!(env)::Observation`: Reset environment to initial state and return observation
 - `get_state(env)::State`: Return current state
 - `set_state!(env, state::State, obs::Observation)`: Set state of environment
 - `step!(env, action)`: Perform action in environment and

@@ -8,7 +8,8 @@ module RL
 using MHLib.Environments
 using Logging
 
-export Actor, Learner, Agent, EnvironmentLoop, run!
+import MHLib.run!
+export Actor, Learner, Agent, EnvironmentLoop
 
 
 """
@@ -104,8 +105,8 @@ abstract type Agent <: Actor end
 select_action(agent::Agent, obs::Observation)::Tuple{Int, Vector{Float32}} =
     select_action(agent.actor, obs)
 
-observe_first!(agent::Agent, env::Environment)::Observation =
-    observe_first!(agent.actor, env)
+observe_first!(agent::Agent, observation::Observation) =
+    observe_first!(agent.actor, observation)
 
 function observe!(agent::Agent, action::Int, policy::Vector{Float32}, obs::Observation,
         reward::Float32, isfinal::Bool)
@@ -158,7 +159,7 @@ Perform a whole episode.
 Return a dictionary containing results.
 """
 function run_episode!(el::EnvironmentLoop)
-    # start_time = time.time()
+    start_time = time()
     episode_steps = 0
     episode_reward = 0
     isfinal = false
@@ -183,11 +184,11 @@ function run_episode!(el::EnvironmentLoop)
     end
 
     # collect the results
-    # steps_per_second = episode_steps / (time.time() - start_time)
+    steps_per_second = episode_steps / (time() - start_time)
     result = Dict(
         "episode_length" => episode_steps,
         "episode_reward" => episode_reward,
-        # "steps_per_second" => steps_per_second,
+        "steps_per_second" => steps_per_second,
     )
     return result
 end
@@ -200,7 +201,7 @@ Perform environment loop for the given number of episodes.
 function run!(el::EnvironmentLoop, num_episodes::Int)
     episode_count = 0
     while episode_count < num_episodes
-        result = self.run_episode()
+        result = run_episode!(el)
         episode_count += 1
     end
 end

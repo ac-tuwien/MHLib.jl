@@ -1,30 +1,59 @@
-"""
-    ActionValueNetwork
+export AlphaZero, PolicyValueNetwork, DummyNetwork
 
-Abstract class for a trainable action-value network.
+"""
+    PolicyValueNetwork
+
+Abstract type for a trainable policy/value function.
+
+The function takes as input an `Observation` and outputs a policy, i.e.,
+probability distribution over the possible actions, and a value that
+should approximate the total discounted reward received from the current state
+onwards.
 
 A concrete class must implement:
-- TODO
+- `forward(network, observation)::Tuple{Int, Vector{Float32}}`
 """
-abstract type ActionValueNetwork end
+abstract type PolicyValueNetwork end
+
+forward(network::PolicyValueNetwork, observation::Observation)::
+        Tuple{Int, Vector{Float32}} =
+    error("abstract forward(network, observation) called")
+
+
+"""
+    DummyNetwork(action_space_size, observation_space_size)
+
+A `PolicyValueNetwork` that just returns a random action and uniform policy.
+
+Used just for testing purposes.
+"""
+struct DummyNetwork <: PolicyValueNetwork
+    action_space_size::Int
+end
+
+function forward(network::DummyNetwork, observation::Observation)
+    na = network.action_space_size
+    return rand(1:na), fill(Float32(1)/na, na)
+end
+
 
 #------------------------------------------------------------------------------
 
 """
     AZActor(network, replay_buffer)
 
-Actor of AlphaZero agent, based on `MCTS` utilizing an `ActionValueNetwork` for
+Actor of AlphaZero agent, based on `MCTS` utilizing an `PolicyValueNetwork` for
 leaf node evaluation.
 """
 mutable struct AZActor
     buffer::ReplayBuffer
     adder::ReplayBufferAdder
     prev_observation::Union{Observation, Nothing}
-    network::ActionValueNetwork
+    network::PolicyValueNetwork
 
-    function AZActor(network::ActionValueNetwork, buffer::ReplayBuffer)
-        actor.adder = ReplayBufferAdder(buffer)
-        new(buffer, adder, Nothing, network)
+    function AZActor(network::PolicyValueNetwork, buffer::ReplayBuffer)
+        adder = ReplayBufferAdder(buffer)
+        new(buffer, adder, nothing, network)
     end
 end
 
@@ -74,14 +103,14 @@ end
 """
     AZLearner(network, replay_buffer)
 
-Learner of AlphaZero agent, training the `ActionValueNetwork` used in the actor's MCTS
+Learner of AlphaZero agent, training the `PolicyValueNetwork` used in the actor's MCTS
 with data from the replay buffer
 """
 mutable struct AZLearner
-    network::ActionValueNetwork
+    network::PolicyValueNetwork
     buffer::ReplayBuffer
 
-    function AZLearner(network::AZLearner, buffer::ReplayBuffer)
+    function AZLearner(network::PolicyValueNetwork, buffer::ReplayBuffer)
         new(network, buffer)
     end
 end
@@ -89,7 +118,7 @@ end
 """
     step!(az_learner)
 
-Perform an update step of the `ActionValueNetwork`.
+Perform an update step of the `PolicyValueNetwork`.
 """
 function step!(learner::AZLearner)
     # TODO
@@ -116,19 +145,19 @@ mutable struct AlphaZero <: Agent
     num_observations::Int
     learning_steps_per_update::Int
 
-    network::ActionValueNetwork
+    network::PolicyValueNetwork
     replay_buffer::ReplayBuffer
 
-    function AlphaZero(env::Environment, network::ActionValueNetwork;
+    function AlphaZero(env::Environment, network::PolicyValueNetwork;
             replay_capacity=1000,                   # TODO 5n when calling for LCS
             min_observations_for_learning=100,      # TODO 4n when calling for LCS
             observations_per_learning_step=1,
             learning_steps_per_update=1,)
-        replay_buffer = ReplayBuffer(replay_capacity, obervation_space_size(env),
+        replay_buffer = ReplayBuffer(replay_capacity, observation_space_size(env),
             action_space_size(env))
         actor = AZActor(network, replay_buffer)
         learner = AZLearner(network, replay_buffer)
-        AlphaZero(actor, learner, min_observations_for_learning,
+        new(actor, learner, min_observations_for_learning,
             observations_per_learning_step, 0, learning_steps_per_update, network,
             replay_buffer)
     end

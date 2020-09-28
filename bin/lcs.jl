@@ -5,16 +5,14 @@
 Demo program for solving the Longest Common Subsequence (LCS) problem.
 """
 
-# module binlcs
-
+using Logging
 using MHLib
 using MHLib.LCS
 using MHLib.MCTSs
-using MHLib.DeepLearning
+# using MHLib.DeepLearning
+using MHLib.RL
+using MHLib.Environments
 
-# import MHLib.DeepL: iterate_deepl
-
-# export mcts_demo
 
 println("LCS Demo version $(git_version())\nARGS: ", ARGS)
 settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test-04_003_050.lcs")
@@ -120,13 +118,6 @@ function mcts_demo_args()
 end
 
 
-
-
-"""
-    mcts_demo()
-
-Test function that runs MCTS on a small LCS instance.
-"""
 function deepl_demo()
     # Ignore actual arguments here, using explicitly specified ones
     parse_settings!([MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg],
@@ -148,10 +139,41 @@ function deepl_demo()
     n_min_buffer = 4 * n
     n_training = 32
     n_episodes = 20
-    iterate_deepl(m, n, sigma, n_buffer, n_min_buffer, n_training, n_episodes)
+    # iterate_deepl(m, n, sigma, n_buffer, n_min_buffer, n_training, n_episodes)
 end
 
 
+function lcs_alphazero()
+    # Ignore actual arguments here, using explicitly specified ones
+    parse_settings!([MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg],
+        ["--seed=0",
+        #"--ifile=data/rat-04_010_600.lcs",
+        "--ifile=data/test-04_003_050.lcs",
+        "--mh_mcts_num_sims=1000",
+        "--lcs_reward_mode=smallsteps",
+        "--mh_mcts_c_uct=0.5",
+        "--mh_mcts_tree_policy=PUCT",
+        "--lcs_prior_heuristic=UB1",
+        "--mh_mcts_rollout_policy=epsilon-greedy",
+        "--mh_mcts_epsilon_greedy_epsilon=0.2"])
+
+    inst = LCSInstance(settings[:ifile])
+    n = inst.n
+    println(inst)
+    env = LCSEnvironment(inst)
+    obs = reset!(env)
+    network = DummyNetwork(action_space_size(env))
+    alphazero = AlphaZero(env, network, replay_capacity = 5n,
+        min_observations_for_learning = 4n,)
+    el = EnvironmentLoop(env, alphazero)
+    @info "AlphaZero object successfully created, running environment loop"
+
+    num_episodes = 100
+    run!(el, num_episodes)
+    @info "Done"
+end
+
 # mcts_demo()
 # mcts_demo_args()
-deepl_demo()
+# deepl_demo()
+lcs_alphazero()
