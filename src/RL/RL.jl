@@ -6,6 +6,7 @@ Problem-independent types for reinforcement learning (RL).
 module RL
 
 using MHLib.Environments
+using Logging
 
 export Actor, Learner, Agent, EnvironmentLoop, run!
 
@@ -17,7 +18,7 @@ Abstract type for an actor in RL.
 
 A concrete actor must implement:
 - `select_action(actor)`
-- `observe_first!(actor, environment)`
+- `observe_first!(actor, observation)`
 - `observe!(actor, action, observation, reward, isfinal)`
 - `update!(actor)`
 """
@@ -26,26 +27,26 @@ abstract type Actor end
 """
     select_action(actor, observation)
 
-Sample policy for given observation and return action.
+Sample policy for given observation and return action and policy.
 """
-select_action(::Actor, ::Observation)::Int =
+select_action(::Actor, ::Observation)::Tuple{Int, Vector{Float32}} =
     error("abstract select_action(actor, observation) called")
 
 """
-    observe_first!(actor, environment)
+    observe_first!(actor, observation)
 
 Make a first observation from the environment.
 """
-observe_first!(::Actor, ::Environment)::Observation =
-    error("abstract observe_first!(actor, environment) called")
+observe_first!(::Actor, ::Observation) =
+    error("abstract observe_first!(actor, observation) called")
 
 """
-    observe!(actor, action, observation, reward, isfinal)
+    observe!(actor, action, policy, observation, reward, isfinal)
 
 Observe the performed action and resulting observation, reward and if state is final.
 """
-observe!(::Actor, action::Int, ::Observation, ::Float32, ::Bool) =
-    error("abstract observe!(actor, action, observation, reward, isfinal) called")
+observe!(::Actor, action::Int, ::Vector{Float32}, ::Observation, ::Float32, ::Bool) =
+    error("abstract observe!(actor, action, policy, observation, reward, isfinal) called")
 
 """
     update!(actor)
@@ -93,27 +94,28 @@ of observations to make before running a certain number of learner step.
 Concrete subtypes must implement:
 - `actor::Actor`
 - `learner::Learner`
-- `min_observations::Int`: minimum number of observations for learning
-- `observations_per_step::Int`: number of observations between learning steps
+- `min_observations_for_learning::Int`: minimum number of observations for learning
+- `observations_per_learning_step::Int`: number of observations between learning steps
 - `num_observations::Int`: number of performed observations
-- `learning_steps_per_update::Int`: number of learning steps per update
+- `learning_steps_per_update::Int`: number of learning steps per update call of learner
 """
 abstract type Agent <: Actor end
 
-select_action(agent::Agent, obs::Observation)::Int =
+select_action(agent::Agent, obs::Observation)::Tuple{Int, Vector{Float32}} =
     select_action(agent.actor, obs)
 
 observe_first!(agent::Agent, env::Environment)::Observation =
     observe_first!(agent.actor, env)
 
-function observe!(agent::Agent, action::Int, obs::Observation, reward::Float32, isfinal::Bool)
-    observe!(agent.actor, action, obs, reward, isfinal)
+function observe!(agent::Agent, action::Int, policy::Vector{Float32}, obs::Observation,
+        reward::Float32, isfinal::Bool)
+    observe!(agent.actor, action, policy, obs, reward, isfinal)
     agent.num_observations += 1
 end
 
 function update!(agent::Agent)
-    n_obs = agent.num_observations - agent.min_observations
-    if n_obs >= 0 && n_obs % agent.observations_per_step
+    n_obs = agent.num_observations - agent.min_observations_for_learning
+    if n_obs >= 0 && n_obs % agent.observations_per_learning_step
         for i in 1:agent.learning_steps_per_update
             step!(agent.learner)
         end
@@ -140,11 +142,12 @@ created to maintain counts between calls to the `run` method.
 mutable struct EnvironmentLoop
     environment::Environment
     actor::Actor
-end
+    logger::AbstractLogger
 
-function EnvironmentLoop(el::EnvironmentLoop, env::Environment, actor::Actor)
-    el.environment = env
-    el.actor = actor
+    function EnvironmentLoop(env::Environment, actor::Actor,
+            logger::AbstractLogger=global_logger())
+        new(env, actor, logger)
+    end
 end
 
 """
@@ -166,11 +169,11 @@ function run_episode!(el::EnvironmentLoop)
     # perform a whole episode
     while isfinal
         # generate an action from the agent's policy and step the environment
-        select_action(el.actor, observation)
+        action, policy = select_action(el.actor, observation)
         observation, reward, isfinal = step!(el.environment, action)
 
         # have the agent observe the timestep and let the actor update itself
-        observe!(el.actor, action, observation, reward, isfinal)
+        observe!(el.actor, action, policy, observation, reward, isfinal)
         if el.should_update
             update!(actor)
         end

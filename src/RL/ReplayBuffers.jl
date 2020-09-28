@@ -90,3 +90,57 @@ function sampleReplayBuffer(buffer::ReplayBuffer, n_training::Int)
     targets = buffer.targets[ind, :]
     return (obs_values, policies, actions, targets)
 end
+
+
+"""
+    ReplayBufferAdder(replay_buffer)
+
+Aggregate data of actor for a whole episode before appending all to replay buffer.
+"""
+mutable struct ReplayBufferAdder
+    buffer::ReplayBuffer
+    obs_values::Vector{Vector{Float32}}
+    actions::Vector{Int}
+    policies::Vector{Vector{Float32}}
+    targets::Vector{Float32}
+
+    function ReplayBufferAdder(replay_buffer::ReplayBuffer)
+        buffer = replay_buffer
+        obs_values = Vector{Vector{Float32}}()
+        actions = Vector{Int}()
+        policies = Vector{Vector{Float32}}()
+        rewards = Vector{Float32}()
+        new(buffer, obs_values, actions, policies, targets)
+    end
+end
+
+"""
+    add!(replay_buffer_adder, observation, action, policy, reward)
+
+Add data of performed action to the adder cache.
+"""
+function add!(adder::ReplayBufferAdder, observation::Observation, action::Int,
+        policy::Vector{Float32}, reward::Float32)
+    append!(adder.obs_values, observation.values)
+    append!(adder.actions, action)
+    append!(adder.policies, policy)
+    append!(adder.rewards, reward)
+end
+
+"""
+    flush!(replay_buffer_adder)
+
+Calculate target values from received rewards and write all to the replay buffer.
+"""
+function flush!(adder::ReplayBufferAdder)
+    targets = similar(rewards)
+    targets[end] = rewards[end]
+    for i in length(rewards)-1:1
+        targets[i] = targets[i+1] + rewards[i]
+    end
+    append!(buffer, obs_values, actions, policies, targets)
+    empty!(obs_values)
+    empty!(actions)
+    empty!(policies)
+    empty!(targets)
+end
