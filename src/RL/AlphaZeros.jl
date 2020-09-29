@@ -1,3 +1,5 @@
+using MHLib.MCTSs
+
 export AlphaZero, PolicyValueNetwork, DummyNetwork
 
 """
@@ -11,14 +13,21 @@ should approximate the total discounted reward received from the current state
 onwards.
 
 A concrete class must implement:
-- `forward(network, observation)::Tuple{Int, Vector{Float32}}`
+- `forward(network, obs_values, action_mask)::Tuple{Int, Vector{Float32}}`
 """
 abstract type PolicyValueNetwork end
 
-forward(network::PolicyValueNetwork, observation::Observation)::
-        Tuple{Int, Vector{Float32}} =
-    error("abstract forward(network, observation) called")
+"""
+    forward(network, obs_values, action_mask)
 
+Calculate network in forward direction returning action and policy.
+The provided action_mask may or may not be considered
+"""
+forward(network::PolicyValueNetwork, obs_values::Vector{Float32},
+        action_mask::Vector{Bool})::Tuple{Int, Vector{Float32}} =
+    error("abstract forward(network, obs_values, action_mask) called")
+
+#------------------------------------------------------------------------------
 
 """
     DummyNetwork(action_space_size, observation_space_size)
@@ -31,7 +40,8 @@ struct DummyNetwork <: PolicyValueNetwork
     action_space_size::Int
 end
 
-function forward(network::DummyNetwork, observation::Observation)
+function forward(network::DummyNetwork, obs_values::Vector{Float32},
+    action_mask::Vector{Bool})::Tuple{Int, Vector{Float32}}
     na = network.action_space_size
     return rand(1:na), fill(Float32(1)/na, na)
 end
@@ -40,20 +50,23 @@ end
 #------------------------------------------------------------------------------
 
 """
-    AZActor(network, replay_buffer)
+    AZActor(network, replay_buffer, environment)
 
 Actor of AlphaZero agent, based on `MCTS` utilizing an `PolicyValueNetwork` for
 leaf node evaluation.
 """
 mutable struct AZActor
+    environment::Environment
     buffer::ReplayBuffer
     adder::ReplayBufferAdder
     prev_observation::Union{Observation, Nothing}
     network::PolicyValueNetwork
+    mcts::MCTS
 
-    function AZActor(network::PolicyValueNetwork, buffer::ReplayBuffer)
+    function AZActor(network::PolicyValueNetwork, buffer::ReplayBuffer, env::Environment)
         adder = ReplayBufferAdder(buffer)
-        new(buffer, adder, nothing, network)
+        mcts = MCTS(env)
+        new(env, buffer, adder, nothing, network, mcts)
     end
 end
 
@@ -155,7 +168,7 @@ mutable struct AlphaZero <: Agent
             learning_steps_per_update=1,)
         replay_buffer = ReplayBuffer(replay_capacity, observation_space_size(env),
             action_space_size(env))
-        actor = AZActor(network, replay_buffer)
+        actor = AZActor(network, replay_buffer, env)
         learner = AZLearner(network, replay_buffer)
         new(actor, learner, min_observations_for_learning,
             observations_per_learning_step, 0, learning_steps_per_update, network,

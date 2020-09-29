@@ -108,32 +108,6 @@ mutable struct Node{TState <: State}
 end
 
 
-"""
-    MCTS
-
-Monte Carlo Tree Search.
-
-- tree_policy: PUCT or UCB
-- rollout_policy: random (according to priors) or epsilon-greedy
-- epsilon: Value of epsilon in epsilon-greedy strategy
-"""
-mutable struct MCTS{TEnv <: Environment}
-    num_sims::Int
-    c_uct::Float64
-    tree_policy::String
-    gamma::Float64
-
-    env::TEnv
-    root::Node
-    best_solution::Vector{Int}
-
-    rollout_policy::String
-    epsilon::Float64
-
-    child_criterion::String
-    exp_visit_counts_temp::Float64
-end
-
 
 function Node{TState}(env::Environment, action::Int, state::TState, obs::Observation,
     done::Bool, reward, parent::Union{Node, Nothing}) where {TState <: State}
@@ -220,22 +194,50 @@ function backup(node::Node, gamma)
     end
 end
 
+#------------------------------------------------------------------------------
 
 """
-    MCTS(env)
+    MCTS{TEnv}
 
-Create MCTS, i.e., root node and reset environment
+Monte Carlo Tree Search for environment of type `Tenv`.
+
+TODO update docstring
+- tree_policy: PUCT or UCB
+- rollout_policy: random (according to priors) or epsilon-greedy
+- epsilon: Value of epsilon in epsilon-greedy strategy
 """
-function MCTS{TEnv}(env::TEnv) where {TEnv <: Environment}
-    root_obs = reset!(env)
-    root_state = get_state(env)
-    TState = typeof(root_state)
-    root_parent = Node{TState}(env, 1, root_state, root_obs, false, 0, nothing)
-    root = Node{TState}(env, 1, root_state, root_obs, false, 0, root_parent)
-    MCTS(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
-        settings[:mh_mcts_tree_policy], settings[:mh_mcts_gamma], env, root, Int[],
-        settings[:mh_mcts_rollout_policy], settings[:mh_mcts_epsilon_greedy_epsilon],
-        settings[:mh_mcts_child_criterion], settings[:mh_mcts_exp_visit_counts_temp])
+mutable struct MCTS{TEnv <: Environment}
+    num_sims::Int
+    c_uct::Float64
+    tree_policy::String
+    gamma::Float64
+
+    env::TEnv
+    root::Node
+    best_solution::Vector{Int}
+
+    rollout_policy::String
+    epsilon::Float64
+
+    child_criterion::String
+    exp_visit_counts_temp::Float64
+
+    """
+        MCTS(env)
+
+    Create MCTS for given environment with root node and reset environment
+    """
+    function MCTS(env)   # {TEnv}(env::TEnv) where {TEnv <: Environment}
+        root_obs = reset!(env)
+        root_state = get_state(env)
+        TState = typeof(root_state)
+        root_parent = Node{TState}(env, 1, root_state, root_obs, false, 0, nothing)
+        root = Node{TState}(env, 1, root_state, root_obs, false, 0, root_parent)
+        new{typeof(env)}(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
+            settings[:mh_mcts_tree_policy], settings[:mh_mcts_gamma], env, root, Int[],
+            settings[:mh_mcts_rollout_policy], settings[:mh_mcts_epsilon_greedy_epsilon],
+            settings[:mh_mcts_child_criterion], settings[:mh_mcts_exp_visit_counts_temp])
+    end
 end
 
 """
