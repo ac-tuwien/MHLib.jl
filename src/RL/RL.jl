@@ -133,7 +133,7 @@ end
 A simple RL environment loop.
 
 This takes `Environment` and `Actor` instances and coordinates their
-interaction. Agent is updated if `should_update=True`. This can be used as:
+interaction. Agent is updated. This can be used as:
 loop = EnvironmentLoop(environment, actor)
 loop.run(num_episodes)
 A `Counter` instance can optionally be given in order to maintain counts
@@ -175,9 +175,7 @@ function run_episode!(el::EnvironmentLoop)
 
         # have the agent observe the timestep and let the actor update itself
         observe!(el.actor, action, policy, observation, reward, isfinal)
-        if el.should_update
-            update!(actor)
-        end
+        update!(el.actor)
 
         episode_reward += reward
         episode_steps += 1

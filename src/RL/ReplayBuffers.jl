@@ -139,15 +139,15 @@ end
 Calculate target values from received rewards and write all to the replay buffer.
 """
 function flush!(adder::ReplayBufferAdder)
-    targets = similar(rewards)
-    targets[end] = rewards[end]
-    for i in length(rewards)-1:1
-        targets[i] = targets[i+1] + rewards[i]
+    targets = similar(adder.rewards)
+    targets[end] = adder.rewards[end]
+    for i in length(adder.rewards)-1:1
+        targets[i] = targets[i+1] + adder.rewards[i]
     end
-    append!(buffer, obs_values, action_masks, actions, policies, targets)
-    empty!(obs_values)
-    empty!(action_masks)
-    empty!(actions)
-    empty!(policies)
-    empty!(targets)
+    append!(adder.buffer, adder.obs_values, adder.action_masks, adder.actions, adder.policies, targets)
+    empty!(adder.obs_values)
+    empty!(adder.action_masks)
+    empty!(adder.actions)
+    empty!(adder.policies)
+    empty!(adder.rewards)
 end

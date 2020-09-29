@@ -162,8 +162,8 @@ mutable struct AlphaZero <: Agent
     replay_buffer::ReplayBuffer
 
     function AlphaZero(env::Environment, network::PolicyValueNetwork;
-            replay_capacity=1000,                   # TODO 5n when calling for LCS
-            min_observations_for_learning=100,      # TODO 4n when calling for LCS
+            replay_capacity=1000,
+            min_observations_for_learning=100,
             observations_per_learning_step=1,
             learning_steps_per_update=1,)
         replay_buffer = ReplayBuffer(replay_capacity, observation_space_size(env),
