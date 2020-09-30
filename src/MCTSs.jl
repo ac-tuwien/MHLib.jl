@@ -291,7 +291,7 @@ function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false) :: Float32
         obs, reward, done = step!(env, action)
         append!(solution, action)
         value += reward
-    end
+    end    set_state!(env, leaf.state, leaf.obs)
     # TODO should be rebplaced by generic reward check
     if length(solution)+length(leaf.state.s) > length(mcts.best_action_sequence)
         copy!(mcts.best_action_sequence, [leaf.state.s; solution])
@@ -347,6 +347,7 @@ function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Tuple{Vector{Float32}
                 V = rollout!(mcts, leaf; trace = trace)
             else
                 # policy_value_function given, call it instead of performing a rollout
+
                 child_priors, V = policy_value_function(leaf.obs.values,
                     leaf.obs.action_mask)
             end
@@ -362,6 +363,7 @@ function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Tuple{Vector{Float32}
         end
         backup(leaf, mcts.gamma)
     end
+    set_state!(env, root.state, root.obs)
     return visit_count_policy(mcts, mcts.visit_counts_policy_temp)
 end
 
