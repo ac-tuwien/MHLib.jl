@@ -42,7 +42,8 @@ function mcts_demo()
     inst = LCSInstance(settings[:ifile])
     println(inst)
     env = LCSEnvironment(inst)
-    mcts = MCTS{LCSEnvironment}(env)
+    obs = reset!(env)
+    mcts = MCTS(env, obs)
     println("Seed: ", settings[:seed])
     println("Number of iterations: ", mcts.num_sims, ", c_uct: ", mcts.c_uct)
 
@@ -55,6 +56,7 @@ function mcts_demo()
         mcts.best_solution)
 end
 
+# TODO GR: Tracing bitte entfernen wenn diese Funktionen soweit funktionieren
 
 """
     iterate_mcts!(env)
@@ -69,7 +71,7 @@ function iterate_mcts!(mcts::MCTS; trace::Bool = false, trace_actions::Bool = fa
     # println(string(root))
 
     while (!mcts.root.done)
-        action = perform_mcts!(mcts; trace = trace_rollout)
+        policy, action = perform_mcts!(mcts; trace = trace_rollout)
         append!(actions, action)
         if trace
             println(string(mcts.root))
@@ -104,9 +106,10 @@ function mcts_demo_args()
 
     println(inst)
     env = LCSEnvironment(inst)
-    mcts = MCTS{LCSEnvironment}(env)
+    obs = reset!(env)
+    mcts = MCTS(env, obs)
     println("Seed: ", settings[:seed])
-    println("Number of iterations: ", mcts.num_sims, ", c_uct: ", mcts.c_uct)
+    println("Number of simulations: ", mcts.num_sims, ", c_uct: ", mcts.c_uct)
 
     # trace ... Sollen die Root-Nodes gedruckt werden?
     # trace_rollout ... Sollen die Rollouts gedruckt werden?

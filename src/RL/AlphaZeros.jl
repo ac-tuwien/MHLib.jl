@@ -59,14 +59,14 @@ mutable struct AZActor
     environment::Environment
     buffer::ReplayBuffer
     adder::ReplayBufferAdder
-    prev_observation::Union{Observation, Nothing}
     network::PolicyValueNetwork
+    
+    prev_observation::Observation
     mcts::MCTS
 
     function AZActor(network::PolicyValueNetwork, buffer::ReplayBuffer, env::Environment)
         adder = ReplayBufferAdder(buffer)
-        mcts = MCTS(env)
-        new(env, buffer, adder, nothing, network, mcts)
+        new(env, buffer, adder, network)  # prev_observation and mcts left uninitialized
     end
 end
 
@@ -75,18 +75,19 @@ end
 
 Sample policy for given observation by performing MCTS and return action and policy.
 """
-function select_action(actor::AZActor, observation::Observation)::
-    Tuple{Int, Vector{Float32}}
+function select_action(actor::AZActor, observation::Observation) ::
+        Tuple{Int, Vector{Float32}}
     # TODO
 end
 
 """
     observe_first!(az_actor, environment)
 
-Make a first observation from the environment.
+Make a first observation from the environment: create new MCTS.
 """
 function observe_first!(actor::AZActor, observation::Observation)
     actor.prev_observation = observation
+    actor.mcts = MCTS(actor.environment, observation)
 end
 
 """

@@ -200,7 +200,7 @@ function actor!(deepl::DeepL, env::LCSEnvironment)
 
     while (!mcts.root.done)
         # Attention: -mh_mcts_child_criterion should be set to exp_visit_count
-        action = perform_mcts!(mcts; trace = trace_rollout)
+        policy, action = perform_mcts!(mcts; trace = trace_rollout)
 
         # TODO Daniel verwende policy von MCTS (als tupel zurückgegeben)
         policy = softmax(log.(mcts.root.child_N)) # log, since we want to normalize vector
@@ -360,7 +360,7 @@ function learning!(deepl::DeepL, buffer::ReplayBuffer, env::LCSEnvironment) :: L
         mcts = MCTS{LCSEnvironment}(env)
         actions_temp = Int[]
         while (!mcts.root.done)
-            action = perform_mcts!(mcts; trace = false)
+            policy, action = perform_mcts!(mcts; trace = false)
             append!(actions_temp, action)
             mcts.root = get_child(mcts.env, mcts.root, actions_temp[length(actions_temp)])
         end

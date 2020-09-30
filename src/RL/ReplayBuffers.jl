@@ -126,10 +126,10 @@ Add data of performed action to the adder cache.
 """
 function add!(adder::ReplayBufferAdder, observation::Observation, action::Int,
         policy::Vector{Float32}, reward::Float32)
-    append!(adder.obs_values, observation.values)
-    append!(adder.action_masks, observation.action_mask)
+    append!(adder.obs_values, copy(observation.values))
+    append!(adder.action_masks, copy(observation.action_mask))
     append!(adder.actions, action)
-    append!(adder.policies, policy)
+    append!(adder.policies, copy(policy))
     append!(adder.rewards, reward)
 end
 

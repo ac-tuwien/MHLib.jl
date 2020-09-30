@@ -115,6 +115,7 @@ end
     sol = LCSSolution(inst)
     @test obj(sol) == 0
     env = LCSEnvironment(inst)
-    mcts = MCTS{LCSEnvironment}(env)
-    @test perform_mcts!(mcts) == 4
+    obs = reset!(env)
+    mcts = MCTS(env, obs)
+    @test perform_mcts!(mcts)[2] == 4
 end
