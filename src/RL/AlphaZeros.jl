@@ -60,7 +60,7 @@ mutable struct AZActor
     buffer::ReplayBuffer
     adder::ReplayBufferAdder
     network::PolicyValueNetwork
-    
+
     prev_observation::Observation
     mcts::MCTS
 
@@ -77,7 +77,7 @@ Sample policy for given observation by performing MCTS and return action and pol
 """
 function select_action(actor::AZActor, observation::Observation) ::
         Tuple{Int, Vector{Float32}}
-    # TODO
+    perform_mcts!(mcts)
 end
 
 """

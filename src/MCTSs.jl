@@ -291,7 +291,7 @@ function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false) :: Float32
         obs, reward, done = step!(env, action)
         append!(solution, action)
         value += reward
-    end    set_state!(env, leaf.state, leaf.obs)
+    end
     # TODO should be rebplaced by generic reward check
     if length(solution)+length(leaf.state.s) > length(mcts.best_action_sequence)
         copy!(mcts.best_action_sequence, [leaf.state.s; solution])

@@ -169,7 +169,7 @@ function lcs_alphazero()
     alphazero = AlphaZero(env, network, replay_capacity = 5n,
         min_observations_for_learning = 4n,)
     el = EnvironmentLoop(env, alphazero)
-    @info "AlphaZero object successfully created, running environment loop"
+    # @info "AlphaZero object successfully created, running environment loop"
 
     num_episodes = 100
     run!(el, num_episodes)
