@@ -53,22 +53,23 @@ Parameters
 - `policies`: corresponding policies
 - `targets`: corresponding target values
 """
-function append!(buffer::ReplayBuffer, obs_values::Array{<:AbstractFloat, 2},
-    actions::Vector{Int}, policies::Array{<:AbstractFloat, 2}, targets::Vector{Int})
+function append!(buffer::ReplayBuffer, obs_values::Vector{Vector{Float32}},
+    action_masks::Vector{Vector{Bool}}, actions::Vector{Int},
+    policies::Vector{Vector{Float32}}, targets::Vector{Float32})
 
     @assert size(obs_values, 1) == size(action_masks, 1) == length(actions) ==
          size(policies, 1) == length(targets)
 
     for i in length(actions)
-        buffer.obs_values[oldest] = obs_values[i]
-        buffer.action_masks[oldest] = action_masks[i]
-        buffer.actions[oldest] = actions[i]
-        buffer.policies[oldest] = policies[i]
-        buffer.targets[oldest] = targets[i]
+        buffer.obs_values[buffer.oldest, :] = obs_values[i]
+        buffer.action_masks[buffer.oldest, :] = action_masks[i]
+        buffer.actions[buffer.oldest] = actions[i]
+        buffer.policies[buffer.oldest, :] = policies[i]
+        buffer.targets[buffer.oldest] = targets[i]
 
-        oldest += 1
-        if oldest > buffer.max_size
-            oldest = 1
+        buffer.oldest += 1
+        if buffer.oldest > buffer.max_size
+            buffer.oldest = 1
         end
         if buffer.current_size < buffer.max_size
             buffer.current_size += 1
@@ -139,12 +140,13 @@ end
 Calculate target values from received rewards and write all to the replay buffer.
 """
 function flush!(adder::ReplayBufferAdder)
-    targets = similar(adder.rewards)
+    targets = Vector{Float32}(adder.rewards)
     targets[end] = adder.rewards[end]
     for i in length(adder.rewards)-1:1
         targets[i] = targets[i+1] + adder.rewards[i]
     end
-    append!(adder.buffer, adder.obs_values, adder.action_masks, adder.actions, adder.policies, targets)
+    append!(adder.buffer, adder.obs_values, adder.action_masks, adder.actions,
+        adder.policies, targets)
     empty!(adder.obs_values)
     empty!(adder.action_masks)
     empty!(adder.actions)

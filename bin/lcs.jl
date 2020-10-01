@@ -76,7 +76,7 @@ function iterate_mcts!(mcts::MCTS; trace::Bool = false, trace_actions::Bool = fa
         if trace
             println(string(mcts.root))
         end
-        mcts.root = get_child(mcts.env, mcts.root, actions[length(actions)])
+        mcts.root = mcts.root.children[action]
         if trace_actions
             println("\nIteration ", length(actions))
             println("Actions taken so far: ", string(actions))
@@ -152,7 +152,7 @@ function lcs_alphazero()
         ["--seed=7",
         #"--ifile=data/rat-04_010_600.lcs",
         "--ifile=data/test-04_003_050.lcs",
-        "--mh_mcts_num_sims=10",
+        "--mh_mcts_num_sims=100",
         "--lcs_reward_mode=smallsteps",
         "--mh_mcts_c_uct=1.0",
         "--mh_mcts_tree_policy=PUCT",
@@ -169,7 +169,7 @@ function lcs_alphazero()
     el = EnvironmentLoop(env, alphazero)
     # @info "AlphaZero object successfully created, running environment loop"
 
-    num_episodes = 100
+    num_episodes = 10
     run!(el, num_episodes)
     # @info "Done"
 end

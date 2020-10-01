@@ -172,6 +172,7 @@ function run_episode!(el::EnvironmentLoop)
         # generate an action from the agent's policy and step the environment
         action, policy = select_action(el.actor, observation)
         observation, reward, isfinal = Environments.step!(el.environment, action)
+        # rintln("action: ", action, "->", el.environment.state.p)
 
         # have the agent observe the timestep and let the actor update itself
         observe!(el.actor, action, policy, observation, reward, isfinal)
@@ -188,6 +189,7 @@ function run_episode!(el::EnvironmentLoop)
         "episode_reward" => episode_reward,
         "steps_per_second" => steps_per_second,
     )
+    println(result)
     return result
 end
 

@@ -101,6 +101,7 @@ function observe!(actor::AZActor, action::Int, policy::Vector{Float32},
     if isfinal
         flush!(actor.adder)
     end
+    set_new_root!(actor.mcts, action, observation)
     prev_observation = observation
 end
 

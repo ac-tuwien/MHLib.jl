@@ -16,7 +16,7 @@ using StatsBase
 import MHLib.Environments: Environment, Observation, State, get_state, set_state!, reset!,
     action_space_size, step!
 
-export MCTS, perform_mcts!, get_child, set_function!
+export MCTS, perform_mcts!, get_child, set_function!, set_new_root!
 
 const settings_cfg = ArgParseSettings()
 
@@ -49,6 +49,10 @@ const settings_cfg = ArgParseSettings()
         help = "MCTS temperature for visit count policy to select action; 0: greedy"
         arg_type = Float64
         default = 0.0
+    "--mh_mcts_reuse_subtrees"
+        help = "MCTS: Reuse subtrees after performing an action"
+        arg_type = Bool
+        default = true
 end
 
 
@@ -99,15 +103,15 @@ mutable struct Node{TState <: State}
     done::Bool
     state::TState
     obs::Observation
-end
 
-function Node{TState}(env::Environment, action::Int, state::TState, obs::Observation,
-    done::Bool, reward, parent::Union{Node, Nothing}) where {TState <: State}
-    n_actions = action_space_size(env)
-    return Node{TState}(action, false, parent, Vector{Union{Node, Nothing}}(nothing,
-        n_actions), zeros(Float32, n_actions), zeros(Float32, n_actions),
-        zeros(Float32, n_actions), reward, 0, done,
-        deepcopy(state), deepcopy(obs))
+    function Node(env::Environment, action::Int, state::TState, obs::Observation,
+        done::Bool, reward, parent::Union{Node, Nothing}) where {TState <: State}
+        n_actions = action_space_size(env)
+        new{TState}(action, false, parent, Vector{Union{Node, Nothing}}(nothing,
+            n_actions), zeros(Float32, n_actions), zeros(Float32, n_actions),
+            zeros(Float32, n_actions), reward, 0, done,
+            deepcopy(state), deepcopy(obs))
+    end
 end
 
 function Base.string(node::Node)
@@ -135,6 +139,11 @@ child_Q(node::Node) = node.child_W ./ (1 .+ node.child_N)
 
 child_U(node::Node) = sqrt(N(node)) .* node.child_P ./ (1 .+ node.child_N)
 
+"""
+    best_action(node, tree_policy, c_uct)
+
+Select best action according to the provided tree policy.
+"""
 function best_action(node::Node, tree_policy::String, c_uct)::Int
     child_score = nothing
     if tree_policy === "PUCT"
@@ -150,6 +159,12 @@ function best_action(node::Node, tree_policy::String, c_uct)::Int
     return argmax_rand(masked_child_score)
 end
 
+"""
+    select_leaf(node, env, tree_policy, c_uct)
+
+Traverse tree down from current until until a leaf is reached according
+to the provided tree policy.
+"""
 function select_leaf(node::Node, env::Environment, tree_policy::String, c_uct)::Node
     current_node = node
     while current_node.is_expanded
@@ -159,23 +174,41 @@ function select_leaf(node::Node, env::Environment, tree_policy::String, c_uct)::
     return current_node
 end
 
+"""
+    expand(node, child_P)
+
+The given node is expanded and initialized with the given prior `child_P`.
+"""
 function expand(node::Node, child_P)
     node.is_expanded = true
     node.child_P = child_P
 end
 
+"""
+    get_child(env, node, action)
+
+Return child node of the given node w.r.t. the given action.
+
+If the child node does not yet exist the corresponding step is performed in
+the environment and a new node initialized.
+"""
 function get_child(env::Environment, node::Node, action::Int) :: Node
     @assert 1 <= action <= action_space_size(env)
     if node.children[action] == nothing
         set_state!(env, node.state, node.obs)
         obs, reward, done = step!(env, action)
         next_state = get_state(env)
-        node.children[action] = Node{typeof(node.state)}(env, action, next_state,
-            obs, done, reward, node)
+        node.children[action] = Node(env, action, next_state,  obs, done, reward, node)
     end
     return node.children[action]
 end
 
+"""
+    backup(node, gamma)
+
+Perform backup by updating the rewards and visit counters of the given node and its
+predecessors.
+"""
 function backup(node::Node, gamma)
     R = node.V
     while node.parent != nothing
@@ -185,6 +218,20 @@ function backup(node::Node, gamma)
         node = node.parent
     end
 end
+
+"""
+    create_root_node(env, obs)
+
+Create MCTS root node including is artificial parent for the current environment and
+observation.
+"""
+function create_root_node(env::Environment, obs::Observation)
+    root_obs = obs
+    root_state = get_state(env)
+    root_parent = Node(env, 1, root_state, root_obs, false, 0, nothing)
+    Node(env, 1, root_state, root_obs, false, 0, root_parent)
+end
+
 
 #------------------------------------------------------------------------------
 
@@ -212,6 +259,7 @@ mutable struct MCTS{TEnv <: Environment}
     epsilon::Float64
 
     visit_counts_policy_temp::Float64
+    reuse_subtrees::Bool
 
     policy_value_function::Union{Function, Nothing}
 
@@ -225,15 +273,11 @@ mutable struct MCTS{TEnv <: Environment}
     """
     function MCTS(env::Environment, obs::Observation,
             policy_value_function::Union{Function, Nothing} = nothing)
-        root_obs = obs
-        root_state = get_state(env)
-        TState = typeof(root_state)
-        root_parent = Node{TState}(env, 1, root_state, root_obs, false, 0, nothing)
-        root = Node{TState}(env, 1, root_state, root_obs, false, 0, root_parent)
+        root = create_root_node(env, obs)
         new{typeof(env)}(settings[:mh_mcts_num_sims], settings[:mh_mcts_c_uct],
             settings[:mh_mcts_tree_policy], settings[:mh_mcts_gamma], env, root, Int[],
             settings[:mh_mcts_rollout_policy], settings[:mh_mcts_epsilon_greedy_epsilon],
-            settings[:mh_mcts_visit_counts_policy_temp],
+            settings[:mh_mcts_visit_counts_policy_temp], settings[:mh_mcts_reuse_subtrees],
             policy_value_function)
     end
 end
@@ -245,7 +289,8 @@ Perform rollout always taking random actions until the episode is done, return t
 
 The episode is not done in the current leaf, i.e., at least one action can be performed.
 """
-function rollout!(mcts::MCTS, leaf::Node; trace::Bool = false) :: Float32
+function rollout!(mcts::MCTS{TEnv}, leaf::Node; trace::Bool = false) :: Float32 where
+        {TEnv <: Environment}
     value = leaf.reward
     env = mcts.env
     set_state!(env, leaf.state, leaf.obs)
@@ -308,7 +353,8 @@ If the temperature is zero a greedy selection is performed.
 Returns selected action and probability distribution corresponding to normalized
 visit counts as policy.
 """
-function visit_count_policy(mcts::MCTS, temperature) :: Tuple{Int, Vector{Float32}}
+function visit_count_policy(mcts::MCTS{TEnv}, temperature) ::
+        Tuple{Int, Vector{Float32}} where {TEnv <: Environment}
     visits = mcts.root.child_N
     if sum(visits) == 0
         visits .+= 1  # uniform policy for zero total visits
@@ -336,7 +382,8 @@ Perform MCTS by running simulations from the current root node.
 Return policy, i.e., probability distribution on actions, and selected action
 according to `visit_count_policy`.
 """
-function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Tuple{Int, Vector{Float32}}
+function perform_mcts!(mcts::MCTS{TEnv}; trace::Bool = false) ::
+        Tuple{Int, Vector{Float32}} where {TEnv <: Environment}
     for i in 1:mcts.num_sims
         leaf = select_leaf(mcts.root, mcts.env, mcts.tree_policy, mcts.c_uct)
         if !leaf.done
@@ -365,6 +412,23 @@ function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Tuple{Int, Vector{Flo
     end
     set_state!(mcts.env, mcts.root.state, mcts.root.obs)
     return visit_count_policy(mcts, mcts.visit_counts_policy_temp)
+end
+
+"""
+    set_new_root!(mcts::MCTS, action, obs)
+
+Set the root node to the current state of the environment obtained from
+the original root node's state by the given action yielding the given observation.
+
+In dependence of `mcts.reuse_subtrees`, an existing subtree is either reused or
+an entirely new root node is created.
+"""
+function set_new_root!(mcts::M, action::Int, obs::Observation) where {M <: MCTS}
+    if mcts.reuse_subtrees && mcts.root.children[action] != nothing
+        mcts.root = mcts.root.children[action]
+    else
+        mcts.root = create_root_node(mcts.env, obs)
+    end
 end
 
 
