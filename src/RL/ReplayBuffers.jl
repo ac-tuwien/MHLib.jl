@@ -42,7 +42,7 @@ end
 """
     append!(buffer, obs_values, action_masks, actions, policies, targets)
 
-Append provided episode data to the replay buffer. If the replay buffer
+Add provided episode data to the replay buffer. If the replay buffer
 is full, the oldest elements are deleted in a FIFO manner.
 
 Parameters
@@ -106,7 +106,7 @@ mutable struct ReplayBufferAdder
     action_masks::Vector{Vector{Bool}}
     actions::Vector{Int}
     policies::Vector{Vector{Float32}}
-    rewards::Vector{Float32}
+    rewards::Vector{Reward}
 
     function ReplayBufferAdder(replay_buffer::ReplayBuffer)
         buffer = replay_buffer
@@ -114,7 +114,7 @@ mutable struct ReplayBufferAdder
         action_masks = Vector{Vector{Bool}}()
         actions = Vector{Int}()
         policies = Vector{Vector{Float32}}()
-        rewards = Vector{Float32}()
+        rewards = Vector{Reward}()
         new(buffer, obs_values, action_masks, actions, policies, rewards)
     end
 end
@@ -125,12 +125,12 @@ end
 Add data of performed action to the adder cache.
 """
 function add!(adder::ReplayBufferAdder, observation::Observation, action::Int,
-        policy::Vector{Float32}, reward::Float32)
-    append!(adder.obs_values, copy(observation.values))
-    append!(adder.action_masks, copy(observation.action_mask))
-    append!(adder.actions, action)
-    append!(adder.policies, copy(policy))
-    append!(adder.rewards, reward)
+        policy::Vector{Float32}, reward::Reward)
+    push!(adder.obs_values, copy(observation.values))
+    push!(adder.action_masks, copy(observation.action_mask))
+    push!(adder.actions, action)
+    push!(adder.policies, copy(policy))
+    push!(adder.rewards, reward)
 end
 
 """

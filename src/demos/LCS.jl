@@ -445,18 +445,18 @@ function step!(env::LCSEnvironment, action::Int)
     reward_mode = settings[:lcs_reward_mode]
     if not_done
         if reward_mode === "direct"
-            reward = 0.0
+            reward = 0.0f0
         elseif reward_mode === "smallsteps"
-            reward = 0.05
+            reward = 0.05f0
         else
             error("Invalid reward_mode $reward_mode")
         end
         obs = get_observation(env)
     else
         if reward_mode === "direct"
-            reward = length(state.s)
+            reward = Float32(length(state.s))
         elseif reward_mode === "smallsteps"
-            reward = -1.0
+            reward = -1.0f0
         else
             error("Invalid reward_mode $reward_mode")
         end

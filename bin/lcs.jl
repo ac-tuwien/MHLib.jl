@@ -149,16 +149,14 @@ end
 function lcs_alphazero()
     # Ignore actual arguments here, using explicitly specified ones
     parse_settings!([MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg],
-        ["--seed=0",
+        ["--seed=7",
         #"--ifile=data/rat-04_010_600.lcs",
         "--ifile=data/test-04_003_050.lcs",
-        "--mh_mcts_num_sims=1000",
+        "--mh_mcts_num_sims=10",
         "--lcs_reward_mode=smallsteps",
-        "--mh_mcts_c_uct=0.5",
+        "--mh_mcts_c_uct=1.0",
         "--mh_mcts_tree_policy=PUCT",
-        "--lcs_prior_heuristic=UB1",
-        "--mh_mcts_rollout_policy=epsilon-greedy",
-        "--mh_mcts_epsilon_greedy_epsilon=0.2"])
+        "--lcs_prior_heuristic=UB1",])
 
     inst = LCSInstance(settings[:ifile])
     n = inst.n
@@ -173,7 +171,7 @@ function lcs_alphazero()
 
     num_episodes = 100
     run!(el, num_episodes)
-    @info "Done"
+    # @info "Done"
 end
 
 # mcts_demo()

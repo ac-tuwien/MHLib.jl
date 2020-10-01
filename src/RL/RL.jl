@@ -116,7 +116,7 @@ end
 
 function update!(agent::Agent)
     n_obs = agent.num_observations - agent.min_observations_for_learning
-    if n_obs >= 0 && n_obs % agent.observations_per_learning_step
+    if n_obs >= 0 && n_obs % agent.observations_per_learning_step == 0
         for i in 1:agent.learning_steps_per_update
             step!(agent.learner)
         end
@@ -168,10 +168,10 @@ function run_episode!(el::EnvironmentLoop)
     observe_first!(el.actor, observation)
 
     # perform a whole episode
-    while isfinal
+    while !isfinal
         # generate an action from the agent's policy and step the environment
         action, policy = select_action(el.actor, observation)
-        observation, reward, isfinal = step!(el.environment, action)
+        observation, reward, isfinal = Environments.step!(el.environment, action)
 
         # have the agent observe the timestep and let the actor update itself
         observe!(el.actor, action, policy, observation, reward, isfinal)

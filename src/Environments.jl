@@ -7,9 +7,16 @@ Used for construction or tree search based methods, reinforcement learning etc.
 """
 module Environments
 
-export Environment, State, Observation, reset!, action_space_size, observation_space_size,
+export Environment, State, Observation, Reward, reset!, action_space_size, observation_space_size,
     get_state, set_state!, step!
 
+
+"""
+    Reward
+
+Type for a reward, corresponds to Float32.
+"""
+Reward = Float32
 
 """
     State
@@ -103,7 +110,7 @@ Perform action in environment.
 
 Return new observation, reward and a Bool indicating end of episode.
 """
-step!(env::Environment, action::Int)::(Observation, Float32, Bool) =
+step!(env::Environment, action::Int)::(Observation, Reward, Bool) =
     error("abstract step!(env, action) called")
 
 end  # module

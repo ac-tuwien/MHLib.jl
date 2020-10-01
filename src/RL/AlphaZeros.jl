@@ -77,7 +77,7 @@ Sample policy for given observation by performing MCTS and return action and pol
 """
 function select_action(actor::AZActor, observation::Observation) ::
         Tuple{Int, Vector{Float32}}
-    perform_mcts!(mcts)
+    perform_mcts!(actor.mcts)
 end
 
 """
@@ -96,8 +96,8 @@ end
 Observe the performed action and resulting observation, reward and if state is final.
 """
 function observe!(actor::AZActor, action::Int, policy::Vector{Float32},
-        observation::Observation, reward::Float32, isfinal::Bool)
-    add!(actor.adder, prev_observation, action, policy, reward)
+        observation::Observation, reward::Reward, isfinal::Bool)
+    add!(actor.adder, actor.prev_observation, action, policy, reward)
     if isfinal
         flush!(actor.adder)
     end

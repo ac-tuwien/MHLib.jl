@@ -305,10 +305,10 @@ end
 Select action according to exponentiated visit counts of children nodes of root node.
 
 If the temperature is zero a greedy selection is performed.
-Returns probability distribution corresponding to normalized visit counts and
-selected action.
+Returns selected action and probability distribution corresponding to normalized
+visit counts as policy.
 """
-function visit_count_policy(mcts::MCTS, temperature) :: Tuple{Vector{Float32}, Int}
+function visit_count_policy(mcts::MCTS, temperature) :: Tuple{Int, Vector{Float32}}
     visits = mcts.root.child_N
     if sum(visits) == 0
         visits .+= 1  # uniform policy for zero total visits
@@ -325,7 +325,7 @@ function visit_count_policy(mcts::MCTS, temperature) :: Tuple{Vector{Float32}, I
         # weights = probs ./ sum(probs)
         action = sample(Vector(1:n_actions)[obs.action_mask], weights)
     end
-    return rescaled_visits, action
+    return action, rescaled_visits
 end
 
 """
@@ -336,7 +336,7 @@ Perform MCTS by running simulations from the current root node.
 Return policy, i.e., probability distribution on actions, and selected action
 according to `visit_count_policy`.
 """
-function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Tuple{Vector{Float32}, Int}
+function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Tuple{Int, Vector{Float32}}
     for i in 1:mcts.num_sims
         leaf = select_leaf(mcts.root, mcts.env, mcts.tree_policy, mcts.c_uct)
         if !leaf.done
@@ -363,7 +363,7 @@ function perform_mcts!(mcts::MCTS; trace::Bool = false) :: Tuple{Vector{Float32}
         end
         backup(leaf, mcts.gamma)
     end
-    set_state!(env, root.state, root.obs)
+    set_state!(mcts.env, mcts.root.state, mcts.root.obs)
     return visit_count_policy(mcts, mcts.visit_counts_policy_temp)
 end
 
