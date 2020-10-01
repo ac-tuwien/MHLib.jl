@@ -5,6 +5,7 @@
 Demo program for solving the Longest Common Subsequence (LCS) problem.
 """
 
+using ArgParse
 using Logging
 using MHLib
 using MHLib.LCS
@@ -148,7 +149,8 @@ end
 
 function lcs_alphazero()
     # Ignore actual arguments here, using explicitly specified ones
-    parse_settings!([MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg],
+    parse_settings!([MHLib.RL.settings_cfg, MHLib.MCTSs.settings_cfg,
+        MHLib.LCS.settings_cfg],
         ["--seed=7",
         #"--ifile=data/rat-04_010_600.lcs",
         "--ifile=data/test-04_003_050.lcs",
@@ -170,12 +172,13 @@ function lcs_alphazero()
     alphazero = AlphaZero(env, network, replay_capacity = 5n,
         min_observations_for_learning = 4n,)
     el = EnvironmentLoop(env, alphazero)
-    # @info "AlphaZero object successfully created, running environment loop"
+    @info "AlphaZero successfully created, running environment loop"
 
     num_episodes = 10
     run!(el, num_episodes)
-    # @info "Done"
+    @info "Done"
 end
+
 
 # mcts_demo()
 # mcts_demo_args()

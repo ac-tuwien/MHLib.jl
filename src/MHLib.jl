@@ -347,6 +347,7 @@ const all_settings_cfgs = [
         Schedulers.settings_cfg,
         ALNSs.settings_cfg,
         MCTSs.settings_cfg,
+        RL.settings_cfg,
         OneMax.settings_cfg,
         LCS.settings_cfg,
     ]
