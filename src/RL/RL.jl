@@ -5,11 +5,37 @@ Problem-independent types for reinforcement learning (RL).
 """
 module RL
 
-using MHLib.Environments
+using ArgParse
 using Logging
+using TensorBoardLogger: TBLogger
+using Logging
+using Dates
+using Printf
 
+using MHLib
+using MHLib.Environments
 import MHLib.run!
+
 export Actor, Learner, Agent, EnvironmentLoop
+
+
+const settings_cfg = ArgParseSettings()
+
+@add_arg_table! settings_cfg begin
+    "--rl_lfreq"
+        help = "RL: frequency of writing iteration logs"
+        arg_type = Int
+        default = 1
+    "--rl_ldir"
+        help = "RL: directory where to write TensorBoard logs"
+        arg_type = AbstractString
+        default = "tblog"
+
+    "--rl_titer"
+        help = "RL: number of main iterations to perform"
+        arg_type = Int
+        default = 300
+end
 
 
 """
@@ -143,20 +169,18 @@ created to maintain counts between calls to the `run` method.
 mutable struct EnvironmentLoop
     environment::Environment
     actor::Actor
-    logger::AbstractLogger
+    tblogger::AbstractLogger
 
-    function EnvironmentLoop(env::Environment, actor::Actor,
-            logger::AbstractLogger=global_logger())
-        new(env, actor, logger)
+    function EnvironmentLoop(env::Environment, actor::Actor)
+        logdir = joinpath(settings[:rl_ldir], "RL-" * string(now()) * tempname(".")[3:end])
+        new(env, actor, TBLogger(logdir))
     end
 end
 
 """
     run_episode!(environment_loop)
 
-Perform a whole episode.
-
-Return a dictionary containing results.
+Perform a whole episode and return a tuple with statistical results.
 """
 function run_episode!(el::EnvironmentLoop)
     start_time = time()
@@ -181,16 +205,8 @@ function run_episode!(el::EnvironmentLoop)
         episode_reward += reward
         episode_steps += 1
     end
-
-    # collect the results
-    steps_per_second = episode_steps / (time() - start_time)
-    result = Dict(
-        "episode_length" => episode_steps,
-        "episode_reward" => episode_reward,
-        "steps_per_second" => steps_per_second,
-    )
-    println(result)
-    return result
+    steps_per_s = episode_steps / (time() - start_time)
+    (episode_length=episode_steps, reward=episode_reward, steps_per_s=steps_per_s)
 end
 
 """
@@ -200,9 +216,23 @@ Perform environment loop for the given number of episodes.
 """
 function run!(el::EnvironmentLoop, num_episodes::Int)
     episode_count = 0
+    println("episode\tlength\treward\tsteps_s")
     while episode_count < num_episodes
-        result = run_episode!(el)
+        results = run_episode!(el)
         episode_count += 1
+        if (episode_count-1) % settings[:rl_lfreq] == 0
+            with_logger(el.tblogger) do
+                @info("MHlib.RL",
+                    episode_length = results.episode_length,
+                    reward = results.reward,
+                    steps_per_s = results.steps_per_s)
+            end
+            @printf("%5d\t%6d\t%6.4f\t%6.4f\n",
+                episode_count,
+                results.episode_length,
+                results.reward,
+                results.steps_per_s)
+        end
     end
 end
 
