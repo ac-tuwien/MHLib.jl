@@ -11,6 +11,7 @@ module LCS
 using Random
 using MHLib
 using ArgParse
+using Flux
 
 import Base: copy, copy!, show, append!
 import MHLib: calc_objective
@@ -26,7 +27,7 @@ import MHLib.Environments:
     reset!
 
 export Alphabet, LCSInstance, LCSSolution, LCSEnvironment,
-  set_prior_function!, save, call_external_solver
+  set_prior_function!, save, call_external_solver, LCSNetwork
 
 const settings_cfg = ArgParseSettings()
 
@@ -43,6 +44,10 @@ const settings_cfg = ArgParseSettings()
         help = "LCS-specific heuristic prior function: none or UB1 or RL (Reinforcement Learning)"
         arg_type = String
         default = "none"
+    "--lcs_use_external_solver"
+        help = "Boolean: Should an external solver be used to estimate an optimal solution?"
+        arg_type = Bool
+        default = true
 end
 
 
@@ -79,6 +84,7 @@ Attributes
 - `s`: vector of m input sequences of length at most n
 - `succ[i, j, c]`: index of next occurrence of c in s[i] from position j onward
 - `count[i, j, c]`: number of further appearances of c in s[i] from position j onward
+- `external_result`: result (string length) of an external solver. -1 means "no result"
 """
 struct LCSInstance
     m::Int
@@ -88,6 +94,7 @@ struct LCSInstance
     s::Vector{Vector{Alphabet}}
     succ::Array{Int,3}
     count::Array{Int,3}
+    external_result::Int
 end
 
 """
@@ -105,6 +112,7 @@ function LCSInstance(m::Int, n::Int, sigma)
         [rand(Alphabet(1):Alphabet(sigma), n) for i = 1:m],
         zeros(Int, (m, n + 1, sigma)),
         zeros(Int, (m, n + 1, sigma)),
+        -1
     )
     determine_aux_data_structures(inst)
     return inst
@@ -128,6 +136,9 @@ function LCSInstance(file::String)
         end
     end
     n = maximum(length(si) for si in s)
+
+    res = settings[:lcs_use_external_solver] ? call_external_solver(file) : -1
+
     inst = LCSInstance(
         m,
         n,
@@ -136,6 +147,7 @@ function LCSInstance(file::String)
         s,
         zeros(Int, (m, n + 1, sigma)),
         zeros(Int, (m, n + 1, sigma)),
+        res
     )
     determine_aux_data_structures(inst)
     return inst
@@ -184,6 +196,12 @@ function create_random_seqs!(inst::LCSInstance)
         rand!(inst.s[i], one(Alphabet):inst.sigma)
     end
     determine_aux_data_structures(inst)
+
+    inst.external_result = -1
+    if settings[:lcs_use_external_solver]
+        save(inst, "./data/temp.lcs")
+        inst.external_result = call_external_solver("./data/temp.lcs")
+    end
 end
 
 Base.show(io::IO, inst::LCSInstance) = show(io, MIME"text/plain"(), inst.s)
@@ -308,6 +326,7 @@ struct LCSState <: State
     s::Vector{Int}
 end
 
+
 Base.string(state::LCSState) =
     "State:" * "\n  Position Vector: " * Base.string(state.p) *
     "\n  Partial Solution: " * Base.string(state.s)
@@ -343,6 +362,8 @@ mutable struct LCSEnvironment <: Environment
     prior_function::Function
 
     state::LCSState
+    # TODO Daniel: action_mask ist doppelt definiert (auch in observation)
+    # nur in observation belassen?
     action_mask::Vector{Bool}
     seq_order::Vector{Int}
     action_order::Vector{Int}
@@ -385,6 +406,17 @@ mutable struct LCSEnvironment <: Environment
     end
 end
 
+
+"""
+    state_space_size(env)
+
+Return size of the state space.
+"""
+state_space_size(state::LCSEnvironment)::Int
+    return env.inst.m + env.inst.sigma
+end
+
+
 function set_prior_function!(env::LCSEnvironment, fun::Function)
     env.prior_function = fun
 end
@@ -421,8 +453,6 @@ function reset!(env::LCSEnvironment)::Observation
     get_observation(env)
 end
 
-# TODO Daniel: Entflechten: reset! mit bool-Parameter aufrufen ist besser!?
-
 
 """
     step!(env, action)
@@ -448,6 +478,8 @@ function step!(env::LCSEnvironment, action::Int)
             reward = 0.0f0
         elseif reward_mode === "smallsteps"
             reward = 0.05f0
+            reward = (env.inst.external_result > 0) ?
+              2.0f0 / env.inst.external_result : 0.05f0
         else
             error("Invalid reward_mode $reward_mode")
         end
@@ -456,7 +488,8 @@ function step!(env::LCSEnvironment, action::Int)
         if reward_mode === "direct"
             reward = Float32(length(state.s))
         elseif reward_mode === "smallsteps"
-            reward = -1.0f0
+            reward = (env.inst.external_result > 0) ?
+              -1.0f0 + 2.0f0 / env.inst.external_result : -1.0f0
         else
             error("Invalid reward_mode $reward_mode")
         end
@@ -563,5 +596,105 @@ function get_observation(env::LCSEnvironment)::Observation
     return Observation(values, action_mask, priors)
 end
 
+
+
+
+"""
+LCS network incredients consisting of the two networks.
+
+Attributes
+- `value_nn`: network for the values
+- `policy_nn`: network for the policy
+- `opt_value`: ADAM-optimizer for value network
+- `opt_policy`: ADAM-optimizer for policy network
+"""
+mutable struct LCSNetwork <: PolicyValueNetwork
+    value_network::Chain
+    action_network::Chain
+
+    opt_value::ADAM
+    opt_action::ADAM
+end
+
+
+# TODO Daniel Make the network more flexible
+"""
+    LCSNetwork(n_inp_value, n_inp_action, n_buffer, sigma, n_training, n_min_buffer)
+
+Constructor for the Neural Networks. Also the Optimizer ADAM is initialized.
+The policy network returns logits!
+
+Parameters
+- `n_inp_value`: number of inputs in value network
+- `n_inp_policy`: number of inputs in policy network
+- `sigma`: Alphabet size
+"""
+function LCSNetwork(n_inp_value::Int, n_inp_policy::Int, sigma::Alphabet)
+    value_network = Chain(
+        Dense(n_inp_value, 50, relu),
+        Dense(50, 50, relu),
+        Dense(50, 1, relu))
+    policy_network = Chain(
+        Dense(n_inp_policy, 50, relu),
+        Dense(50, 50, relu),
+        Dense(50, sigma, identity))
+    # TODO Daniel: identity instead of relu, since softmax is used.
+
+    opt_value = Flux.Optimise.ADAM(0.001, (0.9, 0.999))
+    opt_policy = Flux.Optimise.ADAM(0.001, (0.9, 0.999))
+
+    LCSNetwork(value_network, policy_network, opt_value, opt_policy)
+end
+
+
+"""
+    LCSNetwork(env)
+
+Constructor for the Neural Networks. Also the Optimizer ADAM is initialized.
+All the necessary information for initializing the DeepL object are derived
+from the environment.
+
+Parameters
+- `env`: the environment of the problem
+"""
+function LCSNetwork(env::Environment)
+    # value network has only state information as input:
+    # 1.) Remaining string lengths (m)
+    # 2.) Minimum letter appearances (sigma)
+    n_inp_value = state_space_size(env)
+
+    # action network has observation
+    n_inp_action = observation_space_size(env)
+
+    sigma = env.inst.sigma
+
+    LCSNetwork(n_inp_value, n_inp_action, sigma)
+end
+
+
+"""
+    forward(network, obs_values, action_mask)
+
+Calculate network in forward direction returning policy and value.
+The provided action_mask may or may not be considered
+"""
+function forward(network::LCSNetwork, obs_values::Vector{Float32},
+    action_mask::Vector{Bool})::Tuple{Vector{Float32}, Float32}
+
+    policy = network.policy_network()
+
+    # TODO Daniel: Check if Chain() returns Float32
+    # TODO Daniel: Checke, ob logistische Funktion überhaupt notwendig ist (bei RELU eher nicht)
+
+    # Normalization of policy: Policy are unmasked logits
+    policy[action_mask] = typemin(Float32)
+    # TODO Daniel: Klären, ob policy maskiert werden soll.
+    # Wenn nicht, obige Zeile auskommentieren
+    policy = softmax(policy)
+
+    value = network.value_network()
+
+    return policy, value
+end
 
 end  # module

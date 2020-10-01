@@ -163,7 +163,10 @@ function lcs_alphazero()
     println(inst)
     env = LCSEnvironment(inst)
     obs = reset!(env)
+
     network = DummyNetwork(action_space_size(env))
+    # network = LCSNetwork(env)
+
     alphazero = AlphaZero(env, network, replay_capacity = 5n,
         min_observations_for_learning = 4n,)
     el = EnvironmentLoop(env, alphazero)

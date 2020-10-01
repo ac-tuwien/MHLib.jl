@@ -37,145 +37,151 @@ import MHLib.Environments:
 
 
 
+# Das kommt zu LCS
+# ERLEDIGT
+# """
+# Deep Learning incredients consisting of the two networks and the replay buffer.
+#
+# Attributes
+# - `value_nn`: network for the values
+# - `action_nn`: network for the actions
+# - `replay_buffer`: the replay buffer for sampling data points for training
+# - `n_training`: number of samples taken out of the replay buffer for training
+# - `n_min_buffer`: minimum size of the replay buffer needed to train
+# - `opt_value`: ADAM-optimizer for value network
+# - `opt_action`: ADAM-optimizer for action network
+# """
+# mutable struct DeepL
+#     value_nn::Chain
+#     action_nn::Chain
+#     replay_buffer::ReplayBuffer
+#     n_training::Int
+#     n_min_buffer::Int
+#
+#     opt_value::ADAM
+#     opt_action::ADAM
+# end
+#
+#
+# # Das kommt zu LCS
+# # ERLEDIGT
+# """
+#     DeepL(n_inp_value, n_inp_action, n_buffer, sigma, n_training, n_min_buffer)
+#
+# Constructor for the Deep Learning object. The networks as well as the
+# replay buffer are initialized.
+#
+# Parameters
+# - `n_inp_value`: number of inputs in value network
+# - `n_inp_action`: number of inputs in value network
+# - `n_buffer`: maximum buffer size
+# - `sigma`: alphabet size
+# - `n_training`: number of samples taken out of the replay buffer for training
+# - `n_min_buffer`: minimum size of the replay buffer needed to train
+# """
+# function DeepL(n_inp_value::Int, n_inp_action::Int, n_buffer::Int, sigma, n_training::Int,
+#     n_min_buffer::Int)
+#     value_nn = Chain(
+#         Dense(n_inp_value, 50, relu),
+#         Dense(50, 50, relu),
+#         Dense(50, 1, relu))
+#     # TODO DANIEL per_action_nn: how to incorporate action?
+#     action_nn = Chain(
+#         Dense(n_inp_action, 50, relu),
+#         Dense(50, 50, relu),
+#         Dense(50, sigma, relu))
+#     replayBuffer = ReplayBuffer(n_buffer, sigma, n_inp_action)
+#
+#     opt_value = Flux.Optimise.ADAM(0.001, (0.9, 0.999))
+#     opt_action = Flux.Optimise.ADAM(0.001, (0.9, 0.999))
+#
+#     DeepL(value_nn, action_nn, replayBuffer, n_training, n_min_buffer,
+#         opt_value, opt_action)
+# end
+#
 
-"""
-Deep Learning incredients consisting of the two networks and the replay buffer.
-
-Attributes
-- `value_nn`: network for the values
-- `action_nn`: network for the actions
-- `replay_buffer`: the replay buffer for sampling data points for training
-- `n_training`: number of samples taken out of the replay buffer for training
-- `n_min_buffer`: minimum size of the replay buffer needed to train
-- `opt_value`: ADAM-optimizer for value network
-- `opt_action`: ADAM-optimizer for action network
-"""
-mutable struct DeepL
-    value_nn::Chain
-    action_nn::Chain
-    replay_buffer::ReplayBuffer
-    n_training::Int
-    n_min_buffer::Int
-
-    opt_value::ADAM
-    opt_action::ADAM
-end
-
-
-
-"""
-    DeepL(n_inp_value, n_inp_action, n_buffer, sigma, n_training, n_min_buffer)
-
-Constructor for the Deep Learning object. The networks as well as the
-replay buffer are initialized.
-
-Parameters
-- `n_inp_value`: number of inputs in value network
-- `n_inp_action`: number of inputs in value network
-- `n_buffer`: maximum buffer size
-- `sigma`: alphabet size
-- `n_training`: number of samples taken out of the replay buffer for training
-- `n_min_buffer`: minimum size of the replay buffer needed to train
-"""
-function DeepL(n_inp_value::Int, n_inp_action::Int, n_buffer::Int, sigma, n_training::Int,
-    n_min_buffer::Int)
-    value_nn = Chain(
-        Dense(n_inp_value, 50, relu),
-        Dense(50, 50, relu),
-        Dense(50, 1, relu))
-    # TODO DANIEL per_action_nn: how to incorporate action?
-    action_nn = Chain(
-        Dense(n_inp_action, 50, relu),
-        Dense(50, 50, relu),
-        Dense(50, sigma, relu))
-    replayBuffer = ReplayBuffer(n_buffer, sigma, n_inp_action)
-
-    opt_value = Flux.Optimise.ADAM(0.001, (0.9, 0.999))
-    opt_action = Flux.Optimise.ADAM(0.001, (0.9, 0.999))
-
-    DeepL(value_nn, action_nn, replayBuffer, n_training, n_min_buffer,
-        opt_value, opt_action)
-end
-
-
-
-"""
-    DeepL(env, n_buffer, n_training)
-
-Constructor for the Deep Learning object. The networks as well as the
-replay buffer are initialized. All the necessary information for initializing
-the DeepL object are derived from the environment (exception: n_buffer).
-
-Parameters
-- `env`: the environment of the problem
-- `n_buffer`: maximum buffer size
-- `n_training`: number of samples taken out of the replay buffer for training
-- `n_min_buffer`: minimum size of the replay buffer needed to train
-"""
-function DeepL(env::Environment, n_buffer::Int, n_training::Int, n_min_buffer::Int)
-    # value network has only state information as input:
-    # 1.) Remaining string lengths (m)
-    # 2.) Minimum letter appearances (sigma)
-    #TODO n_inp_value = state_space_size(env)
-    n_inp_value = env.inst.m + env.inst.sigma
-
-    # action network has observation
-    n_inp_action = observation_space_size(env)
-
-    DeepL(n_inp_value, n_inp_action, n_buffer, env.inst.sigma, n_training, n_min_buffer)
-end
-
-# TODO GR: Julia-Namenskonventionen beachten, bei Variablen und Funktionen kein CamelCase!
-
-
-
-
-"""
-    logistic!(logitarr)
-
-Applies the logistic function to all elements of the given logit array.
-Needed for transforming logits to [0, 1].
-
-TODO GR: Würde mich sehr wundern wenn es da nicht in Flux etc. eine Funktion dafür gibt!
-Parameters
-- `logitarr`: The array
-"""
-function logistic!(logitarr::Array{T}) where T <: Real
-    for i in 1:length(logitarr)
-        logitarr[i] = 1 / (1 + exp(- logitarr[i]))
-    end
-end
+# Das kommt zu LCS
+# ERLEDIGT
+# """
+#     DeepL(env, n_buffer, n_training)
+#
+# Constructor for the Deep Learning object. The networks as well as the
+# replay buffer are initialized. All the necessary information for initializing
+# the DeepL object are derived from the environment (exception: n_buffer).
+#
+# Parameters
+# - `env`: the environment of the problem
+# - `n_buffer`: maximum buffer size
+# - `n_training`: number of samples taken out of the replay buffer for training
+# - `n_min_buffer`: minimum size of the replay buffer needed to train
+# """
+# function DeepL(env::Environment, n_buffer::Int, n_training::Int, n_min_buffer::Int)
+#     # value network has only state information as input:
+#     # 1.) Remaining string lengths (m)
+#     # 2.) Minimum letter appearances (sigma)
+#     #TODO n_inp_value = state_space_size(env)
+#     n_inp_value = env.inst.m + env.inst.sigma
+#
+#     # action network has observation
+#     n_inp_action = observation_space_size(env)
+#
+#     DeepL(n_inp_value, n_inp_action, n_buffer, env.inst.sigma, n_training, n_min_buffer)
+# end
+#
+# # TODO GR: Julia-Namenskonventionen beachten, bei Variablen und Funktionen kein CamelCase!
 
 
 
-"""
-    get_prior_function(deepl)
 
-Returns a function, that can compute priors out of the environment.
-The DeepL object is implicitely used.
-"""
-function get_prior_function(deepl::DeepL)
-    function tempfun(env::Environment, action_values::Vector{Float32})
-        sigma = env.inst.sigma
-        logits = Array{Real}(undef, sigma)
-
-        # values are sorted according to sortperm
-        # i.e. actions must be used in correct order.
-        # every time when step! is applied (whenever a new letter is appended),
-        # the observation is recomputed (get_observation() in LCS).
-
-        temp = deepl.action_nn(action_values)
-        logits[env.action_order] = temp
-
-        # Determine probability weights
-        logistic!(logits)
-        return(logits / sum(logits))
-    end
-    return tempfun
-end
+# """
+#     logistic!(logitarr)
+#
+# Applies the logistic function to all elements of the given logit array.
+# Needed for transforming logits to [0, 1].
+#
+# TODO GR: Würde mich sehr wundern wenn es da nicht in Flux etc. eine Funktion dafür gibt!
+# Parameters
+# - `logitarr`: The array
+# """
+# function logistic!(logitarr::Array{T}) where T <: Real
+#     for i in 1:length(logitarr)
+#         logitarr[i] = 1 / (1 + exp(- logitarr[i]))
+#     end
+# end
 
 
 
+# Das kommt zu AlphaZero
+# ERLEDIGT
+# """
+#     get_prior_function(deepl)
+#
+# Returns a function, that can compute priors out of the environment.
+# The DeepL object is implicitely used.
+# """
+# function get_prior_function(deepl::DeepL)
+#     function tempfun(env::Environment, action_values::Vector{Float32})
+#         sigma = env.inst.sigma
+#         logits = Array{Real}(undef, sigma)
+#
+#         # values are sorted according to sortperm
+#         # i.e. actions must be used in correct order.
+#         # every time when step! is applied (whenever a new letter is appended),
+#         # the observation is recomputed (get_observation() in LCS).
+#
+#         temp = deepl.action_nn(action_values)
+#         logits[env.action_order] = temp
+#
+#         # Determine probability weights
+#         logistic!(logits)
+#         return(logits / sum(logits))
+#     end
+#     return tempfun
+# end
+
+
+
+# TODO Daniel Kann entfallen
 """
     actor!(deepl, env)
 
@@ -244,7 +250,7 @@ end
 
 
 
-
+# Hinfällig?!
 """
 Logging struct for displaying the learning success.
 

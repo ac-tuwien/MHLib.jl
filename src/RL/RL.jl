@@ -172,7 +172,7 @@ function run_episode!(el::EnvironmentLoop)
         # generate an action from the agent's policy and step the environment
         action, policy = select_action(el.actor, observation)
         observation, reward, isfinal = Environments.step!(el.environment, action)
-        # rintln("action: ", action, "->", el.environment.state.p)
+        # println("action: ", action, "->", el.environment.state.p)
 
         # have the agent observe the timestep and let the actor update itself
         observe!(el.actor, action, policy, observation, reward, isfinal)
@@ -203,6 +203,7 @@ function run!(el::EnvironmentLoop, num_episodes::Int)
     while episode_count < num_episodes
         result = run_episode!(el)
         episode_count += 1
+        step!(el.actor.learner)
     end
 end
 
