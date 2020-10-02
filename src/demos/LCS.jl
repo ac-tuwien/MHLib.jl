@@ -10,6 +10,7 @@ module LCS
 
 using Random
 using MHLib
+using MHLib.RL
 using ArgParse
 using Flux
 

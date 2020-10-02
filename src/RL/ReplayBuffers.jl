@@ -102,7 +102,7 @@ function sample(buffer::ReplayBuffer, n::Int)
     ind = StatsBase.sample(1:buffer.current_size, n, replace=false)
 
     # TODO Unnötiges Kopieren vermeiden, einen zB einen View retournieren!
-    obs_values = buffer.obj_values[ind, :]
+    obs_values = buffer.obs_values[ind, :]
     action_masks = buffer.action_masks[ind, :]
     actions = buffer.actions[ind]
     policies = buffer.policies[ind, :]
@@ -123,6 +123,7 @@ mutable struct ReplayBufferAdder
     actions::Vector{Int}
     policies::Vector{Vector{Float32}}
     rewards::Vector{Reward}
+    is_empty::Bool # Indicates, if the ReplayBufferAdder is empty (true) or not (false)
 
     function ReplayBufferAdder(replay_buffer::ReplayBuffer)
         buffer = replay_buffer
@@ -131,7 +132,7 @@ mutable struct ReplayBufferAdder
         actions = Vector{Int}()
         policies = Vector{Vector{Float32}}()
         rewards = Vector{Reward}()
-        new(buffer, obs_values, action_masks, actions, policies, rewards)
+        new(buffer, obs_values, action_masks, actions, policies, rewards, true)
     end
 end
 
@@ -148,6 +149,7 @@ function add!(adder::ReplayBufferAdder, observation::Observation, action::Int,
     push!(adder.actions, action)
     push!(adder.policies, copy(policy))
     push!(adder.rewards, reward)
+    adder.is_empty = false
 end
 
 """
@@ -169,4 +171,5 @@ function flush!(adder::ReplayBufferAdder)
     empty!(adder.actions)
     empty!(adder.policies)
     empty!(adder.rewards)
+    adder.is_empty = true
 end

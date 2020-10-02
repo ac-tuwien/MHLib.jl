@@ -144,9 +144,11 @@ end
 Perform an update step of the `PolicyValueNetwork`.
 """
 function step!(learner::AZLearner)
-    println("-- AlphaZeros_step!(learner::AZLearner) called")
+    println("-- LEARNING-STEP: AlphaZeros_step!(learner::AZLearner) called")
+
+
     train_data = sample(learner.buffer, learner.batch_size)
-    println(train_data)
+    # println(train_data)
     # TODO train!(network, train_data(relevanter Teil))
 end
 

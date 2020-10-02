@@ -34,6 +34,10 @@ const settings_cfg = ArgParseSettings()
         help = "RL: number of main iterations to perform"
         arg_type = Int
         default = 300
+    "--rl_learning_only_full_episodes"
+        help = "Indicates wheter to learn only after full episodes (true) or after every step (false)"
+        arg_type = Bool
+        default = true
 end
 
 
@@ -151,11 +155,12 @@ function update!(agent::Agent)
     println("   agent.num_observations: " * string(agent.num_observations))
     println("   agent.min_observations: " * string(agent.min_observations_for_learning))
     println("   current_buffer_size:    " * string(agent.learner.buffer.current_size))
-    # TODO Daniel learning only after full episodes.
-    # Hier wird nach jedem MCTS-step gelernt! Wie abschalten, sodass
-    # nur nach einer Episode gelernt wird?
-    n_obs = agent.num_observations - agent.min_observations_for_learning
-    if n_obs >= 0 && n_obs % agent.observations_per_learning_step == 0
+
+    # n_obs = agent.num_observations - agent.min_observations_for_learning
+    n_obs = agent.actor.buffer.current_size - agent.min_observations_for_learning
+    if n_obs >= 0 && n_obs % agent.observations_per_learning_step == 0 &&
+        ((settings[:rl_learning_only_full_episodes] && agent.actor.adder.is_empty) ||
+        settings[:rl_learning_only_full_episodes])
         for i in 1:agent.learning_steps_per_update
             step!(agent.learner)
         end
