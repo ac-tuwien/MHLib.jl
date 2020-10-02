@@ -9,11 +9,6 @@ This is a demo problem in particular for the Monte Carlo Tree Search (MCTS).
 module LCS
 
 using Random
-<<<<<<< HEAD
-using MHLib
-using MHLib.RL
-=======
->>>>>>> 2ecf8146f58d12354a04ed18a3255ea55c8de800
 using ArgParse
 using Flux
 
