@@ -177,7 +177,7 @@ function lcs_alphazero()
     el = EnvironmentLoop(env, alphazero)
     @info "AlphaZero successfully created, running environment loop"
 
-    num_episodes = 10
+    num_episodes = 20
     run!(el, num_episodes)
     @info "Done"
 end

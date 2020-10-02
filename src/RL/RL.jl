@@ -135,11 +135,25 @@ observe_first!(agent::Agent, observation::Observation) =
 
 function observe!(agent::Agent, action::Int, policy::Vector{Float32}, obs::Observation,
         reward::Float32, isfinal::Bool)
+    println("-- RL.observe!(agent, action, policy, obs, reward, isfinal) called")
+    println("   Typ von agent.actor: " * string(typeof(agent.actor)))
     observe!(agent.actor, action, policy, obs, reward, isfinal)
     agent.num_observations += 1
 end
 
+"""
+    update!(agent::Agent)
+
+Updates the learner and the agent if there are enough observations
+"""
 function update!(agent::Agent)
+    println("-- RL.update!(agent) called")
+    println("   agent.num_observations: " * string(agent.num_observations))
+    println("   agent.min_observations: " * string(agent.min_observations_for_learning))
+    println("   current_buffer_size:    " * string(agent.learner.buffer.current_size))
+    # TODO Daniel learning only after full episodes.
+    # Hier wird nach jedem MCTS-step gelernt! Wie abschalten, sodass
+    # nur nach einer Episode gelernt wird?
     n_obs = agent.num_observations - agent.min_observations_for_learning
     if n_obs >= 0 && n_obs % agent.observations_per_learning_step == 0
         for i in 1:agent.learning_steps_per_update
@@ -183,6 +197,7 @@ end
 Perform a whole episode and return a tuple with statistical results.
 """
 function run_episode!(el::EnvironmentLoop)
+    println("-- RL.run_episode!(el) called")
     start_time = time()
     episode_steps = 0
     episode_reward = 0
@@ -191,8 +206,13 @@ function run_episode!(el::EnvironmentLoop)
     observation = reset!(el.environment)
     observe_first!(el.actor, observation)
 
+    iter = 0
+
     # perform a whole episode
     while !isfinal
+        iter += 1
+        println("Episodeniteration " * string(iter))
+
         # generate an action from the agent's policy and step the environment
         action, policy = select_action(el.actor, observation)
         observation, reward, isfinal = Environments.step!(el.environment, action)
@@ -218,8 +238,9 @@ function run!(el::EnvironmentLoop, num_episodes::Int)
     episode_count = 0
     println("episode\tlength\treward\tsteps_s")
     while episode_count < num_episodes
-        results = run_episode!(el)
         episode_count += 1
+        println("\nEPISODE NUMMER " * string(episode_count))
+        results = run_episode!(el)
 
         # TODO Daniel Hier kommt step!() rein?!
 

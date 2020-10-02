@@ -102,6 +102,7 @@ Observe the performed action and resulting observation, reward and if state is f
 """
 function observe!(actor::AZActor, action::Int, policy::Vector{Float32},
         observation::Observation, reward::Reward, isfinal::Bool)
+    println("-- AlphaZeros.observe!(actor, action, policy, observation, reward, isfinal) called")
     add!(actor.adder, actor.prev_observation, action, policy, reward)
     if isfinal
         flush!(actor.adder)
@@ -143,7 +144,9 @@ end
 Perform an update step of the `PolicyValueNetwork`.
 """
 function step!(learner::AZLearner)
-    train_data = sample(buffer, batch_size)
+    println("-- AlphaZeros_step!(learner::AZLearner) called")
+    train_data = sample(learner.buffer, learner.batch_size)
+    println(train_data)
     # TODO train!(network, train_data(relevanter Teil))
 end
 
@@ -165,7 +168,6 @@ mutable struct AlphaZero <: Agent
     learner::AZLearner
     min_observations_for_learning::Int
     observations_per_learning_step::Int
-    # TODO Daniel: Wofür stehen diese beiden Parameter?
     num_observations::Int
     learning_steps_per_update::Int
 
@@ -177,7 +179,7 @@ mutable struct AlphaZero <: Agent
             min_observations_for_learning=100,
             observations_per_learning_step=1,
             learning_steps_per_update=1,
-            batch_size = 32,)  # TODO Daniel Find meaningful standard value
+            batch_size = min_observations_for_learning,)  # TODO Daniel Find meaningful standard value
         replay_buffer = ReplayBuffer(replay_capacity, observation_space_size(env),
             action_space_size(env))
         actor = AZActor(env, network, replay_buffer)

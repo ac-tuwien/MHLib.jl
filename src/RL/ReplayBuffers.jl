@@ -58,13 +58,17 @@ function append!(buffer::ReplayBuffer, obs_values::Vector{Vector{Float32}},
     action_masks::Vector{Vector{Bool}}, actions::Vector{Int},
     policies::Vector{Vector{Float32}}, targets::Vector{Float32})
 
+    println("-- ReplayBuffers.append!(buffer, ...) called")
+    println("   Number of new data: " * string(length(actions)))
+    println("   Old buffer size: " * string(buffer.current_size))
+
     @assert size(obs_values, 1) == size(action_masks, 1) == length(actions) ==
          size(policies, 1) == length(targets)
 
     if buffer.max_size == 0  # buffer not used, do nothing
         return
     end
-    for i in length(actions)
+    for i in 1:length(actions)
         buffer.obs_values[buffer.oldest, :] = obs_values[i]
         buffer.action_masks[buffer.oldest, :] = action_masks[i]
         buffer.actions[buffer.oldest] = actions[i]
@@ -79,6 +83,8 @@ function append!(buffer::ReplayBuffer, obs_values::Vector{Vector{Float32}},
             buffer.current_size += 1
         end
     end
+
+    println("   New buffer size: " * string(buffer.current_size))
 end
 
 """
@@ -88,7 +94,12 @@ Return `n` randomly sampled data from the replay buffer as tuple
 (obs_values, action_masks, actions, policies, targets)
 """
 function sample(buffer::ReplayBuffer, n::Int)
-    ind = sample(1:buffer.current_size, n, replace=false)
+    println("-- ReplayBuffers.sample(buffer, n) called")
+    println("   buffer.current_size: " * string(buffer.current_size))
+    println("   n: " * string(n))
+
+    @assert buffer.current_size >= n
+    ind = StatsBase.sample(1:buffer.current_size, n, replace=false)
 
     # TODO Unnötiges Kopieren vermeiden, einen zB einen View retournieren!
     obs_values = buffer.obj_values[ind, :]
@@ -131,6 +142,7 @@ Add data of performed action to the adder cache.
 """
 function add!(adder::ReplayBufferAdder, observation::Observation, action::Int,
         policy::Vector{Float32}, reward::Reward)
+    println("-- ReplayBuffers.add!(adder, observation, action, policy, reward) called")
     push!(adder.obs_values, copy(observation.values))
     push!(adder.action_masks, copy(observation.action_mask))
     push!(adder.actions, action)
@@ -144,6 +156,7 @@ end
 Calculate target values from received rewards and write all to the replay buffer.
 """
 function flush!(adder::ReplayBufferAdder)
+    println("-- ReplayBuffers.flush!(adder) called")
     targets = Vector{Float32}(adder.rewards)
     targets[end] = adder.rewards[end]
     for i in length(adder.rewards)-1:1
