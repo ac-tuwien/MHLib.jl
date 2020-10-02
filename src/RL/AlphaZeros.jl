@@ -7,14 +7,14 @@ export AlphaZero, AZActor, PolicyValueNetwork, DummyNetwork
 
 Abstract type for a trainable policy/value function.
 
-The function takes as input an `Observation` and outputs a policy, i.e.,
-probability distribution over the possible actions, and a value that
+The function takes as input observation values and an action mask and outputs a policy,
+i.e., a probability distribution over the actions, and a value that
 should approximate the total discounted reward received from the current state
-onwards.
+onwards when taking the best actions.
 
 A concrete class must implement:
 - `forward(network, obs_values, action_mask)::Tuple{Vector{Float32}, Float32}`
-- `learn!(...TODO)`
+- `train!(network, obs_values, action_masks, actions, targets)`
 """
 abstract type PolicyValueNetwork end
 
@@ -22,11 +22,22 @@ abstract type PolicyValueNetwork end
     forward(network, obs_values, action_mask)
 
 Calculate network in forward direction returning policy and value.
-The provided action_mask may or may not be considered
+The provided action_mask may or may not be considered.
 """
 forward(network::PolicyValueNetwork, obs_values::Vector{Float32},
         action_mask::Vector{Bool})::Tuple{Float32, Vector{Float32}} =
     error("abstract forward(network, obs_values, action_mask) called")
+
+"""
+    train!(network, obs_values, action_masks, actions, targets)
+
+Train the network with the provided data.
+"""
+train!(network::PolicyValueNetwork, obs_values::AbstractArray{Float32, 2},
+    action_masks::AbstractArray{Bool, 2}, actions::AbstractVector{Int},
+    policies::AbstractArray{Float32, 2}, targets::AbstractVector{Float32}) =
+    error("abstract train!(network, obs_values, action_masks, actions, targets) called")
+
 
 #------------------------------------------------------------------------------
 
@@ -43,10 +54,15 @@ end
 
 function forward(network::DummyNetwork, obs_values::Vector{Float32},
     action_mask::Vector{Bool})::Tuple{Vector{Float32}, Float32}
-    na = network.action_space_size
-    return fill(Float32(1)/na, na), Float32(rand(1:na))
+    actions = network.action_space_size
+    return fill(Float32(1)/actions, actions), Float32(rand(1:actions))
 end
 
+function train!(network::DummyNetwork, obs_values::AbstractArray{Float32, 2},
+    action_masks::AbstractArray{Bool, 2}, actions::AbstractVector{Int},
+    policies::AbstractArray{Float32, 2}, targets::AbstractVector{Float32})
+    # do nothing
+end
 
 #------------------------------------------------------------------------------
 
@@ -102,7 +118,6 @@ Observe the performed action and resulting observation, reward and if state is f
 """
 function observe!(actor::AZActor, action::Int, policy::Vector{Float32},
         observation::Observation, reward::Reward, isfinal::Bool)
-    println("-- AlphaZeros.observe!(actor, action, policy, observation, reward, isfinal) called")
     add!(actor.adder, actor.prev_observation, action, policy, reward)
     if isfinal
         flush!(actor.adder)
@@ -141,15 +156,13 @@ end
 """
     step!(az_learner)
 
-Perform an update step of the `PolicyValueNetwork`.
+Perform an update step of the `PolicyValueNetwork` with data sampled from the buffer.
 """
 function step!(learner::AZLearner)
-    println("-- LEARNING-STEP: AlphaZeros_step!(learner::AZLearner) called")
-
-
-    train_data = sample(learner.buffer, learner.batch_size)
-    # println(train_data)
-    # TODO train!(network, train_data(relevanter Teil))
+    training_data = sample(learner.buffer, learner.batch_size)
+    if size(training_data[1], 1) > 0
+        train!(learner.network, training_data...)
+    end
 end
 
 #------------------------------------------------------------------------------
@@ -177,17 +190,17 @@ mutable struct AlphaZero <: Agent
     replay_buffer::ReplayBuffer
 
     function AlphaZero(env::Environment, network::PolicyValueNetwork;
-            replay_capacity=1000,
-            min_observations_for_learning=100,
-            observations_per_learning_step=1,
-            learning_steps_per_update=1,
-            batch_size = min_observations_for_learning,)  # TODO Daniel Find meaningful standard value
+            replay_capacity = 1000,
+            min_observations_for_learning = 100,
+            observations_per_learning_step = 1,
+            learning_steps_per_update = 1,
+            learning_batch_size = 32)
         replay_buffer = ReplayBuffer(replay_capacity, observation_space_size(env),
             action_space_size(env))
         actor = AZActor(env, network, replay_buffer)
-        learner = AZLearner(network, replay_buffer, batch_size)
+        learner = AZLearner(network, replay_buffer, learning_batch_size)
         new(actor, learner, min_observations_for_learning,
-            observations_per_learning_step, 0, learning_steps_per_update, network,
-            replay_buffer)
+            observations_per_learning_step, 0, learning_steps_per_update,
+            network, replay_buffer)
     end
 end

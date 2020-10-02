@@ -12,8 +12,8 @@ using MHLib.MAXSAT
 using MHLib.LCS
 
 
-if endswith(pwd(), "MHLib")
-    cd("test")
+if endswith(pwd(), "test")
+    cd("..")
 end
 
 
@@ -64,7 +64,7 @@ end
 
 @testset "GVNS-MAXSAT.jl" begin
     parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1"])
-    inst = MAXSATInstance("../data/maxsat-simple.cnf")
+    inst = MAXSATInstance("data/maxsat-simple.cnf")
     sol = MAXSATSolution(inst)
     println(sol)
     # methods = [MHMethod("con", construct!, 0),
@@ -89,7 +89,7 @@ end
 
 @testset "ALNS-MAXSAT.jl" begin
     parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.ALNSs.settings_cfg], ["--seed=1"])
-    inst = MAXSATInstance("../data/maxsat-simple.cnf")
+    inst = MAXSATInstance("data/maxsat-simple.cnf")
     sol = MAXSATSolution(inst)
     println(sol)
     # methods = [MHMethod("con", construct!, 0),
@@ -113,9 +113,9 @@ end
 end
 
 @testset "LCS_MCTS" begin
-    inst = LCSInstance("../data/test-04_003_050.lcs")
-    @test length(inst.s[1]) == 50
     parse_settings!([MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg], ["--seed=1"])
+    inst = LCSInstance("data/test-04_003_050.lcs")
+    @test length(inst.s[1]) == 50
     Random.seed!(1)
     inst = LCSInstance(3, 10, 4)
     println(inst)

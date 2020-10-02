@@ -10,7 +10,6 @@ using Logging
 using MHLib
 using MHLib.LCS
 using MHLib.MCTSs
-# using MHLib.DeepLearning
 using MHLib.RL
 using MHLib.Environments
 
@@ -172,8 +171,13 @@ function lcs_alphazero()
     network = DummyNetwork(action_space_size(env))
     # network = LCSNetwork(env)
 
-    alphazero = AlphaZero(env, network, replay_capacity = 5n,
-        min_observations_for_learning = 4n,)
+    # create AlphaZero agent with configuration as in Python implementation
+    alphazero = AlphaZero(env, network,
+        replay_capacity = 5n,
+        min_observations_for_learning = 4n,
+        observations_per_learning_step = 1,
+        learning_steps_per_update = 1,
+        learning_batch_size = 32)
     el = EnvironmentLoop(env, alphazero)
     @info "AlphaZero successfully created, running environment loop"
 

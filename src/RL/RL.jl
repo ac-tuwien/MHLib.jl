@@ -34,10 +34,6 @@ const settings_cfg = ArgParseSettings()
         help = "RL: number of main iterations to perform"
         arg_type = Int
         default = 300
-    "--rl_learning_only_full_episodes"
-        help = "Indicates wheter to learn only after full episodes (true) or after every step (false)"
-        arg_type = Bool
-        default = true
 end
 
 
@@ -139,8 +135,6 @@ observe_first!(agent::Agent, observation::Observation) =
 
 function observe!(agent::Agent, action::Int, policy::Vector{Float32}, obs::Observation,
         reward::Float32, isfinal::Bool)
-    println("-- RL.observe!(agent, action, policy, obs, reward, isfinal) called")
-    println("   Typ von agent.actor: " * string(typeof(agent.actor)))
     observe!(agent.actor, action, policy, obs, reward, isfinal)
     agent.num_observations += 1
 end
@@ -151,16 +145,8 @@ end
 Updates the learner and the agent if there are enough observations
 """
 function update!(agent::Agent)
-    println("-- RL.update!(agent) called")
-    println("   agent.num_observations: " * string(agent.num_observations))
-    println("   agent.min_observations: " * string(agent.min_observations_for_learning))
-    println("   current_buffer_size:    " * string(agent.learner.buffer.current_size))
-
-    # n_obs = agent.num_observations - agent.min_observations_for_learning
-    n_obs = agent.actor.buffer.current_size - agent.min_observations_for_learning
-    if n_obs >= 0 && n_obs % agent.observations_per_learning_step == 0 &&
-        ((settings[:rl_learning_only_full_episodes] && agent.actor.adder.is_empty) ||
-        settings[:rl_learning_only_full_episodes])
+    n_obs = agent.num_observations - agent.min_observations_for_learning
+    if n_obs >= 0 && n_obs % agent.observations_per_learning_step == 0
         for i in 1:agent.learning_steps_per_update
             step!(agent.learner)
         end
@@ -202,7 +188,6 @@ end
 Perform a whole episode and return a tuple with statistical results.
 """
 function run_episode!(el::EnvironmentLoop)
-    println("-- RL.run_episode!(el) called")
     start_time = time()
     episode_steps = 0
     episode_reward = 0
@@ -216,7 +201,6 @@ function run_episode!(el::EnvironmentLoop)
     # perform a whole episode
     while !isfinal
         iter += 1
-        println("Episodeniteration " * string(iter))
 
         # generate an action from the agent's policy and step the environment
         action, policy = select_action(el.actor, observation)
@@ -244,10 +228,7 @@ function run!(el::EnvironmentLoop, num_episodes::Int)
     println("episode\tlength\treward\tsteps_s")
     while episode_count < num_episodes
         episode_count += 1
-        println("\nEPISODE NUMMER " * string(episode_count))
         results = run_episode!(el)
-
-        # TODO Daniel Hier kommt step!() rein?!
 
         if (episode_count-1) % settings[:rl_lfreq] == 0
             with_logger(el.tblogger) do

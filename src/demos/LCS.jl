@@ -13,7 +13,6 @@ using ArgParse
 using Flux
 
 using MHLib
-using MHLib.RL
 
 import Base: copy, copy!, show, append!
 import MHLib: calc_objective
@@ -27,6 +26,9 @@ import MHLib.Environments:
     observation_space_size,
     step!,
     reset!
+import MHLib.RL: PolicyValueNetwork, forward, train!
+
+
 
 export Alphabet, LCSInstance, LCSSolution, LCSEnvironment,
   set_prior_function!, save, call_external_solver, LCSNetwork
@@ -47,7 +49,7 @@ const settings_cfg = ArgParseSettings()
         arg_type = String
         default = "none"
     "--lcs_use_external_solver"
-        help = "LCS: Should an external solver be used to estimate an optimal solution?"
+        help = "LCS: Should an external solver be used to get a heuristic solution value?"
         arg_type = Bool
         default = true
 end
@@ -402,7 +404,7 @@ mutable struct LCSEnvironment <: Environment
             error("Invalid parameter lcs_prior_heuristic: $(prior_heuristic)")
         end
 
-        new(inst, prior_heuristic, fun, state, action_mask, Int[], Int[])
+        new(inst, prior_heuristic, fun, state, action_mask, Int[])
     end
 end
 
@@ -637,9 +639,12 @@ end
 # TODO Was für ein NN soll das nun eigentlich sein? Ein problemunabhängiges generisches?
 # Oder das spezialisierte wie ich es in Python implementiert habe?
 # Derzeit ist das weder das eine noch das andere.
+# Bitte hier das NN meiner Python-Implementierung, das auch im Dokument beschrieben ist,
+# ganz exakt nachbilden!
 
-# TODO Warum 2 Konstruktoren?
+# TODO Warum 2 Konstruktoren? -  Besser nur einen und diesen intern.
 # TODO Wichtig: Nach außen hin ist das *ein* NN das observation.values als Input bekommt!
+# Dass es zwei unabhängige Komponenten gibt ist ein reines Designdetail.
 
 """
     LCSNetwork(env)
@@ -665,31 +670,31 @@ function LCSNetwork(env::Environment)
     LCSNetwork(n_inp_value, n_inp_action, sigma)
 end
 
-
 """
     forward(network, obs_values, action_mask)
 
 Calculate network in forward direction returning policy and value.
-The provided action_mask may or may not be considered
+The provided action_mask is not considered here.
 """
 function forward(network::LCSNetwork, obs_values::Vector{Float32},
-    action_mask::Vector{Bool})::Tuple{Vector{Float32}, Float32}
+    action_mask::Vector{Bool}) :: Tuple{Vector{Float32}, Float32}
 
     logits = network.policy_network()
 
     # TODO Daniel: Check if Chain() returns Float32
     # TODO Daniel: Checke, ob logistische Funktion überhaupt notwendig ist (bei RELU eher nicht)
 
-    # Normalization of policy: Policy are unmasked logits
-    policy[action_mask] = typemin(Float32)
-    # TODO Daniel: Klären, ob policy maskiert werden soll.
-    # Wenn nicht, obige Zeile auskommentieren
-    # GR Nein, nicht maskieren
     policy = softmax(logits)
 
     value = network.value_network()
 
     return policy, value
+end
+
+function train!(network::LCSNetwork, obs_values::Array{Float32, 2},
+    action_masks::Array{Bool, 2}, actions::Vector{Int}, policies::Array{Float32, 2},
+    targets::Vector{Float32})
+    # TODO train
 end
 
 end  # module
