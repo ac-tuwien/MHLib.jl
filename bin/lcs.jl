@@ -14,6 +14,9 @@ using MHLib.MCTSs
 using MHLib.RL
 using MHLib.Environments
 
+if endswith(pwd(), "test")
+    cd("..")
+end
 
 println("LCS Demo version $(git_version())\nARGS: ", ARGS)
 settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test-04_003_050.lcs")

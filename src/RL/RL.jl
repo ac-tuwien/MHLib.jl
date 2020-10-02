@@ -237,6 +237,7 @@ function run!(el::EnvironmentLoop, num_episodes::Int)
                 results.steps_per_s)
         end
     end
+    return true
 end
 
 

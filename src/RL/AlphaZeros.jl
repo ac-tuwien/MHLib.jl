@@ -1,6 +1,6 @@
 using MHLib.MCTSs
 
-export AlphaZero, PolicyValueNetwork, DummyNetwork
+export AlphaZero, AZActor, PolicyValueNetwork, DummyNetwork
 
 """
     PolicyValueNetwork
@@ -50,23 +50,25 @@ end
 #------------------------------------------------------------------------------
 
 """
-    AZActor(network, replay_buffer, environment)
+    AZActor(environment, network, replay_buffer)
 
 Actor of AlphaZero agent, based on `MCTS` utilizing an `PolicyValueNetwork` for
 leaf node evaluation.
 """
-mutable struct AZActor
+mutable struct AZActor <: Actor
     environment::Environment
+    network::PolicyValueNetwork
     buffer::ReplayBuffer
     adder::ReplayBufferAdder
-    network::PolicyValueNetwork
 
     prev_observation::Observation
     mcts::MCTS
 
-    function AZActor(network::PolicyValueNetwork, buffer::ReplayBuffer, env::Environment)
+    function AZActor(env::Environment, network::PolicyValueNetwork,
+            buffer::ReplayBuffer = ReplayBuffer(0, observation_space_size(env),
+                action_space_size(env)))
         adder = ReplayBufferAdder(buffer)
-        new(env, buffer, adder, network)  # prev_observation and mcts left uninitialized
+        new(env, network, buffer, adder)  # prev_observation and mcts left uninitialized
     end
 end
 
@@ -199,7 +201,7 @@ mutable struct AlphaZero <: Agent
             learning_steps_per_update=1,)
         replay_buffer = ReplayBuffer(replay_capacity, observation_space_size(env),
             action_space_size(env))
-        actor = AZActor(network, replay_buffer, env)
+        actor = AZActor(env, network, replay_buffer)
         learner = AZLearner(network, replay_buffer)
         new(actor, learner, min_observations_for_learning,
             observations_per_learning_step, 0, learning_steps_per_update, network,

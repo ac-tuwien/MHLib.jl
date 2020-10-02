@@ -5,9 +5,16 @@ using MHLib.Schedulers
 using MHLib.GVNSs
 using MHLib.ALNSs
 using MHLib.MCTSs
+using MHLib.Environments
+using MHLib.RL
 using MHLib.OneMax
 using MHLib.MAXSAT
 using MHLib.LCS
+
+
+if endswith(pwd(), "MHLib")
+    cd("test")
+end
 
 
 @testset "OneMaxSolution" begin
@@ -117,5 +124,19 @@ end
     env = LCSEnvironment(inst)
     obs = reset!(env)
     mcts = MCTS(env, obs)
-    @test perform_mcts!(mcts)[2] == 4
+    @test perform_mcts!(mcts)[1] == 4
+end
+
+@testset "LCS_AZActor" begin
+    parse_settings!([MHLib.RL.settings_cfg, MHLib.MCTSs.settings_cfg,
+        MHLib.LCS.settings_cfg], ["--seed=1"])
+    Random.seed!(1)
+    inst = LCSInstance(3, 10, 4)
+    println(inst)
+    env = LCSEnvironment(inst)
+    network = DummyNetwork(action_space_size(env))
+    actor = AZActor(env, network, ReplayBuffer(0, observation_space_size(env),
+        action_space_size(env)))
+    el = EnvironmentLoop(env, actor)
+    @test run!(el, 2)
 end

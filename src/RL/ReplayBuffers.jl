@@ -7,6 +7,7 @@ ReplayBuffer(buffer_size, obs_space_size, action_space_size)
 
 A FIFO buffer holding at most `max_size` tuples of data for actions in episodes
 from which learning is performed.
+The `buffer_size` may also be 0, in which case the buffer is actually not used.
 
 Attributes
 - `max_size`: maximum size of the replay buffer
@@ -60,6 +61,9 @@ function append!(buffer::ReplayBuffer, obs_values::Vector{Vector{Float32}},
     @assert size(obs_values, 1) == size(action_masks, 1) == length(actions) ==
          size(policies, 1) == length(targets)
 
+    if buffer.max_size == 0  # buffer not used, do nothing
+        return
+    end
     for i in length(actions)
         buffer.obs_values[buffer.oldest, :] = obs_values[i]
         buffer.action_masks[buffer.oldest, :] = action_masks[i]
