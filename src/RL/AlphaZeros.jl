@@ -90,7 +90,7 @@ Make a first observation from the environment: create new MCTS incl. policy_valu
 """
 function observe_first!(actor::AZActor, observation::Observation)
     actor.prev_observation = observation
-    policy_value_function(env::Environment, obs::Observation)::Tuple =
+    policy_value_function(obs::Observation)::Tuple =
         forward(actor.network, obs.values, obs.action_mask)
     actor.mcts = MCTS(actor.environment, observation, policy_value_function)
 end
@@ -129,14 +129,11 @@ with data from the replay buffer
 mutable struct AZLearner
     network::PolicyValueNetwork
     buffer::ReplayBuffer
-    obervations_per_training::Int
-    min_observations_for_training::Int
     batch_size::Int
 
     function AZLearner(network::PolicyValueNetwork, buffer::ReplayBuffer,
-        obervations_per_training::Int, min_observations_for_training::Int,
         batch_size::Int)
-        new(network, buffer, obervations_per_training, min_observations_for_training, batch_size)
+        new(network, buffer, batch_size)
     end
 end
 
@@ -166,9 +163,8 @@ Additional keyword arguments in constructor:
 mutable struct AlphaZero <: Agent
     actor::AZActor
     learner::AZLearner
-    # TODO Daniel: Nach AZLearner verschoben, da dort mehr Sinn
-    #min_observations_for_learning::Int
-    #observations_per_learning_step::Int
+    min_observations_for_learning::Int
+    observations_per_learning_step::Int
     # TODO Daniel: Wofür stehen diese beiden Parameter?
     num_observations::Int
     learning_steps_per_update::Int
@@ -180,11 +176,12 @@ mutable struct AlphaZero <: Agent
             replay_capacity=1000,
             min_observations_for_learning=100,
             observations_per_learning_step=1,
-            learning_steps_per_update=1,)
+            learning_steps_per_update=1,
+            batch_size = 32,)  # TODO Daniel Find meaningful standard value
         replay_buffer = ReplayBuffer(replay_capacity, observation_space_size(env),
             action_space_size(env))
         actor = AZActor(env, network, replay_buffer)
-        learner = AZLearner(network, replay_buffer)
+        learner = AZLearner(network, replay_buffer, batch_size)
         new(actor, learner, min_observations_for_learning,
             observations_per_learning_step, 0, learning_steps_per_update, network,
             replay_buffer)

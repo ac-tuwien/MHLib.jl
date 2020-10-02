@@ -10,6 +10,7 @@ module LCS
 
 using Random
 using MHLib
+using MHLib.RL
 using ArgParse
 using Flux
 
@@ -160,7 +161,7 @@ Call bin/lcs_external_solver.sh for solving the LCS instance in the given file
 and return solution length.
 """
 function call_external_solver(file::AbstractString)::Int
-    s = read(`bash binlcs_external_solver.sh $file`, String)
+    s = read(`bash bin/lcs_external_solver.sh $file`, String)
     parse(Int, split(s)[2])
 end
 
@@ -365,6 +366,7 @@ mutable struct LCSEnvironment <: Environment
     # nur in observation belassen?
     action_mask::Vector{Bool}
     seq_order::Vector{Int}
+    # action_order::Vector{Int}
 
     function LCSEnvironment(inst::LCSInstance)
         p = ones(Int, inst.m)
@@ -400,7 +402,7 @@ mutable struct LCSEnvironment <: Environment
             error("Invalid parameter lcs_prior_heuristic: $(prior_heuristic)")
         end
 
-        new(inst, prior_heuristic, fun, state, action_mask, Int[], Int[])
+        new(inst, prior_heuristic, fun, state, action_mask, Int[])
     end
 end
 
@@ -410,14 +412,11 @@ end
 
 Return size of the state space.
 """
-state_space_size(state::LCSEnvironment)::Int
+function state_space_size(state::LCSEnvironment)::Int
     return env.inst.m + env.inst.sigma
 end
 
 
-function set_prior_function!(env::LCSEnvironment, fun::Function)
-    env.prior_function = fun
-end
 
 action_space_size(env::LCSEnvironment) = env.inst.sigma
 

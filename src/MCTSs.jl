@@ -394,7 +394,7 @@ function perform_mcts!(mcts::MCTS{TEnv}; trace::Bool = false) ::
                 V = rollout!(mcts, leaf; trace = trace)
             else
                 # policy_value_function given, call it instead of performing a rollout
-                child_priors, V = policy_value_function(leaf.obs)
+                child_priors, V = mcts.policy_value_function(leaf.obs)
             end
             leaf.V = V
             expand(leaf, child_priors)

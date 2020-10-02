@@ -336,12 +336,13 @@ include("ALNSs.jl")
 include("Environments.jl")
 include("MCTSs.jl")
 
+# include("DeepLearning.jl")
+include("RL/RL.jl")
+
 include("demos/OneMax.jl")
 include("demos/MAXSAT.jl")
 include("demos/LCS.jl")
 
-# include("DeepLearning.jl")
-include("RL/RL.jl")
 
 const all_settings_cfgs = [
         Schedulers.settings_cfg,

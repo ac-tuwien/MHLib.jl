@@ -30,7 +30,6 @@ const settings_cfg = ArgParseSettings()
         help = "RL: directory where to write TensorBoard logs"
         arg_type = AbstractString
         default = "tblog"
-
     "--rl_titer"
         help = "RL: number of main iterations to perform"
         arg_type = Int
@@ -172,7 +171,8 @@ mutable struct EnvironmentLoop
     tblogger::AbstractLogger
 
     function EnvironmentLoop(env::Environment, actor::Actor)
-        logdir = joinpath(settings[:rl_ldir], "RL-" * string(now()) * tempname(".")[3:end])
+        subdir = replace("RL-" * string(now()) * tempname(".")[3:end], ":"=>"-")
+        logdir = joinpath(settings[:rl_ldir], subdir)
         new(env, actor, TBLogger(logdir))
     end
 end
