@@ -14,6 +14,7 @@ onwards.
 
 A concrete class must implement:
 - `forward(network, obs_values, action_mask)::Tuple{Vector{Float32}, Float32}`
+- `learn!(...TODO)`
 """
 abstract type PolicyValueNetwork end
 
@@ -30,7 +31,7 @@ forward(network::PolicyValueNetwork, obs_values::Vector{Float32},
 #------------------------------------------------------------------------------
 
 """
-    DummyNetwork(action_space_size, observation_space_size)
+    DummyNetwork(action_space_size)
 
 A `PolicyValueNetwork` that just returns a uniform policy and random value.
 
@@ -89,30 +90,9 @@ Make a first observation from the environment: create new MCTS incl. policy_valu
 """
 function observe_first!(actor::AZActor, observation::Observation)
     actor.prev_observation = observation
-
-    # Determine prior function
-    function tempfun(env::Environment, obs::Observation)::Tuple
-        n_actions = action_space_size(env)
-        policy = Array{Real}(undef, n_actions)
-
-        policy_sorted, action = forward(actor.network, obs.values, obs.action_mask)
-
-        # forward returns the policy in a sorted manner,
-        # must be backsorted
-        policy[env.action_order] = policy_sorted
-
-        # TODO Daniel: Checke action_mask!!
-
-        # TODO Daniel: Kontrolliere Sortierung: In der Theorie sollte es so sein:
-        # Die values sind nach action und Sequenzen sortiert, das Netzwerk berechnet
-        # die Policy gemäß dieser Sortierung. Die Policy muss also rücksortiert werden.
-        # Ob die Sequenzen bei LCS rücksortiert werden, ist nicht Teil dieser Funktion!
-
-        return policy, value
-    end
-
-    actor.mcts = MCTS(actor.environment, observation)
-    actor.mcts.set_policy_prior_function(tempfun)
+    policy_value_function(env::Environment, obs::Observation)::Tuple =
+        forward(actor.network, obs.values, obs.action_mask)
+    actor.mcts = MCTS(actor.environment, observation, policy_value_function)
 end
 
 """
@@ -151,10 +131,12 @@ mutable struct AZLearner
     buffer::ReplayBuffer
     obervations_per_training::Int
     min_observations_for_training::Int
+    batch_size::Int
 
     function AZLearner(network::PolicyValueNetwork, buffer::ReplayBuffer,
-        obervations_per_training::Int, min_observations_for_training::Int)
-        new(network, buffer, obervations_per_training, min_observations_for_training)
+        obervations_per_training::Int, min_observations_for_training::Int,
+        batch_size::Int)
+        new(network, buffer, obervations_per_training, min_observations_for_training, batch_size)
     end
 end
 
@@ -164,8 +146,8 @@ end
 Perform an update step of the `PolicyValueNetwork`.
 """
 function step!(learner::AZLearner)
-    # TODO
-    # TODO Daniel Sollte auch abstrakt sein?
+    train_data = sample(buffer, batch_size)
+    # TODO train!(network, train_data(relevanter Teil))
 end
 
 #------------------------------------------------------------------------------

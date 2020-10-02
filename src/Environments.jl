@@ -7,8 +7,8 @@ Used for construction or tree search based methods, reinforcement learning etc.
 """
 module Environments
 
-export Environment, State, Observation, Reward, reset!, action_space_size, observation_space_size,
-    get_state, set_state!, step!
+export Environment, State, Observation, Reward, reset!, action_space_size,
+    observation_space_size, get_state, set_state!, step!
 
 
 """

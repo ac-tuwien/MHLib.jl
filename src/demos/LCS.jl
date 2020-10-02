@@ -349,7 +349,6 @@ Attributes
 - `state`: current state
 - `action_mask`: vector indicating currently valid actions
 - `seq_order`: order of sequences in current observation
-- `action_order`: order of actions in current observation
 """
 mutable struct LCSEnvironment <: Environment
     inst::LCSInstance
@@ -366,7 +365,6 @@ mutable struct LCSEnvironment <: Environment
     # nur in observation belassen?
     action_mask::Vector{Bool}
     seq_order::Vector{Int}
-    action_order::Vector{Int}
 
     function LCSEnvironment(inst::LCSInstance)
         p = ones(Int, inst.m)
@@ -466,7 +464,7 @@ function step!(env::LCSEnvironment, action::Int)
     done = false
     inst = env.inst
     state = env.state
-    c = action  # env.action_order[action]
+    c = action
     append!(env.state.s, c)
     update_p(inst, state.p, c)
     update_action_mask_and_p(env)
@@ -576,11 +574,10 @@ function get_observation(env::LCSEnvironment)::Observation
     env.seq_order = sortperm(lengths)
     values[1:m] = lengths[env.seq_order]
     counts = remaining_letter_counts(env, p)
-    env.action_order = sortperm(counts)
-    values[m+1:m+sigma] = counts[env.action_order] # ex counts
+    values[m+1:m+sigma] = counts
     idx = m + sigma + 1
-    for i = env.seq_order # ex 1:m
-        for c = env.action_order # ex 1:sigma
+    for i = 1:m
+        for c = 1:sigma
             # for each sequence (in order) and each action (in order)
             values[idx] = length(s[i]) - env.inst.succ[i, p[i], c]
             idx += 1 # TODO DANIEL Check this, but it should be ok
@@ -588,7 +585,7 @@ function get_observation(env::LCSEnvironment)::Observation
     end
     # values are sorted according to order, priors and action_mask not!
 
-    action_mask = copy(env.action_mask) #[env.action_order]
+    action_mask = copy(env.action_mask)
     # TODO Achtung: Es wird action_mask von env für die Berechnung der priors herangezogen!
 
     priors = env.prior_function(env, values)

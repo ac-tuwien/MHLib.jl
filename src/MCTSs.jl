@@ -283,16 +283,6 @@ mutable struct MCTS{TEnv <: Environment}
 end
 
 """
-    set_policy_value_function(mcts, fun)
-
-Sets the policy_value_function of MCTS. The function has Environment and
-Observation as inputs and returns a policy and a value.
-"""
-set_policy_value_function(mcts::{TEnv}, fun::Function) where TEnv <: Environment
-    mcts.policy_value_function = fun
-end
-
-"""
     rollout!(mcts, leaf)
 
 Perform rollout always taking random actions until the episode is done, return total reward.
