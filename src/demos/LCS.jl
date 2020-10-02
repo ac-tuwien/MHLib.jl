@@ -9,10 +9,16 @@ This is a demo problem in particular for the Monte Carlo Tree Search (MCTS).
 module LCS
 
 using Random
+<<<<<<< HEAD
 using MHLib
 using MHLib.RL
+=======
+>>>>>>> 2ecf8146f58d12354a04ed18a3255ea55c8de800
 using ArgParse
 using Flux
+
+using MHLib
+using MHLib.RL
 
 import Base: copy, copy!, show, append!
 import MHLib: calc_objective
@@ -46,7 +52,7 @@ const settings_cfg = ArgParseSettings()
         arg_type = String
         default = "none"
     "--lcs_use_external_solver"
-        help = "Boolean: Should an external solver be used to estimate an optimal solution?"
+        help = "LCS: Should an external solver be used to estimate an optimal solution?"
         arg_type = Bool
         default = true
 end
@@ -366,7 +372,6 @@ mutable struct LCSEnvironment <: Environment
     # nur in observation belassen?
     action_mask::Vector{Bool}
     seq_order::Vector{Int}
-    # action_order::Vector{Int}
 
     function LCSEnvironment(inst::LCSInstance)
         p = ones(Int, inst.m)
@@ -402,21 +407,14 @@ mutable struct LCSEnvironment <: Environment
             error("Invalid parameter lcs_prior_heuristic: $(prior_heuristic)")
         end
 
-        new(inst, prior_heuristic, fun, state, action_mask, Int[])
+        new(inst, prior_heuristic, fun, state, action_mask, Int[], Int[])
     end
 end
 
-
-"""
-    state_space_size(env)
-
-Return size of the state space.
-"""
-function state_space_size(state::LCSEnvironment)::Int
-    return env.inst.m + env.inst.sigma
+# TODO GR Bitte wie gesagt entfernen:
+function set_prior_function!(env::LCSEnvironment, fun::Function)
+    env.prior_function = fun
 end
-
-
 
 action_space_size(env::LCSEnvironment) = env.inst.sigma
 
@@ -593,16 +591,14 @@ function get_observation(env::LCSEnvironment)::Observation
 end
 
 
-
-
 """
-LCS network incredients consisting of the two networks.
+Special policy-value neural network for the LCS to be used in AlphaZero.
 
 Attributes
-- `value_nn`: network for the values
+- `value_nn`: network for the state values
 - `policy_nn`: network for the policy
-- `opt_value`: ADAM-optimizer for value network
-- `opt_policy`: ADAM-optimizer for policy network
+- `opt_value`: optimizer for value network
+- `opt_policy`: optimizer for policy network
 """
 mutable struct LCSNetwork <: PolicyValueNetwork
     value_network::Chain
@@ -614,11 +610,12 @@ end
 
 
 # TODO Daniel Make the network more flexible
+# TODO Bleiben wir bitte bei den Begriffen observation/action space size statt n_inp_value, sigma etc.
 """
     LCSNetwork(n_inp_value, n_inp_action, n_buffer, sigma, n_training, n_min_buffer)
 
-Constructor for the Neural Networks. Also the Optimizer ADAM is initialized.
-The policy network returns logits!
+Construct a special policy-value neural net for the LCS.
+# TODO
 
 Parameters
 - `n_inp_value`: number of inputs in value network
@@ -633,7 +630,7 @@ function LCSNetwork(n_inp_value::Int, n_inp_policy::Int, sigma::Alphabet)
     policy_network = Chain(
         Dense(n_inp_policy, 50, relu),
         Dense(50, 50, relu),
-        Dense(50, sigma, identity))
+        Dense(50, sigma, identity))  # returns logits!
     # TODO Daniel: identity instead of relu, since softmax is used.
 
     opt_value = Flux.Optimise.ADAM(0.001, (0.9, 0.999))
@@ -642,6 +639,12 @@ function LCSNetwork(n_inp_value::Int, n_inp_policy::Int, sigma::Alphabet)
     LCSNetwork(value_network, policy_network, opt_value, opt_policy)
 end
 
+# TODO Was für ein NN soll das nun eigentlich sein? Ein problemunabhängiges generisches?
+# Oder das spezialisierte wie ich es in Python implementiert habe?
+# Derzeit ist das weder das eine noch das andere.
+
+# TODO Warum 2 Konstruktoren?
+# TODO Wichtig: Nach außen hin ist das *ein* NN das observation.values als Input bekommt!
 
 """
     LCSNetwork(env)
@@ -657,7 +660,7 @@ function LCSNetwork(env::Environment)
     # value network has only state information as input:
     # 1.) Remaining string lengths (m)
     # 2.) Minimum letter appearances (sigma)
-    n_inp_value = state_space_size(env)
+    n_inp_value = obs_space_size(env)
 
     # action network has observation
     n_inp_action = observation_space_size(env)
@@ -677,7 +680,7 @@ The provided action_mask may or may not be considered
 function forward(network::LCSNetwork, obs_values::Vector{Float32},
     action_mask::Vector{Bool})::Tuple{Vector{Float32}, Float32}
 
-    policy = network.policy_network()
+    logits = network.policy_network()
 
     # TODO Daniel: Check if Chain() returns Float32
     # TODO Daniel: Checke, ob logistische Funktion überhaupt notwendig ist (bei RELU eher nicht)
@@ -686,7 +689,8 @@ function forward(network::LCSNetwork, obs_values::Vector{Float32},
     policy[action_mask] = typemin(Float32)
     # TODO Daniel: Klären, ob policy maskiert werden soll.
     # Wenn nicht, obige Zeile auskommentieren
-    policy = softmax(policy)
+    # GR Nein, nicht maskieren
+    policy = softmax(logits)
 
     value = network.value_network()
 
