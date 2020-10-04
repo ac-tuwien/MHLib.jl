@@ -26,7 +26,7 @@ import MHLib.Environments:
     observation_space_size,
     step!,
     reset!
-import MHLib.RL: PolicyValueNetwork, forward, train!
+import MHLib.RL: PolicyValueFunction, train!
 
 
 
@@ -413,7 +413,7 @@ function set_prior_function!(env::LCSEnvironment, fun::Function)
     env.prior_function = fun
 end
 
-action_space_size(env::LCSEnvironment) = env.inst.sigma
+action_space_size(env::LCSEnvironment) = Int(env.inst.sigma)
 
 observation_space_size(env::LCSEnvironment) =
     env.inst.m + env.inst.sigma + env.inst.sigma * env.inst.m
@@ -597,7 +597,7 @@ Attributes
 - `opt_value`: optimizer for value network
 - `opt_policy`: optimizer for policy network
 """
-mutable struct LCSNetwork <: PolicyValueNetwork
+mutable struct LCSNetwork <: PolicyValueFunction
     value_network::Chain
     action_network::Chain
 
@@ -671,14 +671,13 @@ function LCSNetwork(env::Environment)
 end
 
 """
-    forward(network, obs_values, action_mask)
+    (network)(obs_values, action_mask)
 
 Calculate network in forward direction returning policy and value.
 The provided action_mask is not considered here.
 """
-function forward(network::LCSNetwork, obs_values::Vector{Float32},
-    action_mask::Vector{Bool}) :: Tuple{Vector{Float32}, Float32}
-
+function (network::LCSNetwork)(obs_values::Vector{Float32}, action_mask::Vector{Bool}) ::
+        Tuple{Vector{Float32}, Float32}
     logits = network.policy_network()
 
     # TODO Daniel: Check if Chain() returns Float32

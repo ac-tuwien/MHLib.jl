@@ -11,12 +11,13 @@ using TensorBoardLogger: TBLogger
 using Logging
 using Dates
 using Printf
+using Infiltrator
 
 using MHLib
 using MHLib.Environments
 import MHLib.run!
 
-export Actor, Learner, Agent, EnvironmentLoop
+export Actor, Learner, Agent, EnvironmentLoop, PolicyValueFunction
 
 
 const settings_cfg = ArgParseSettings()
@@ -27,7 +28,7 @@ const settings_cfg = ArgParseSettings()
         arg_type = Int
         default = 1
     "--rl_ldir"
-        help = "RL: directory where to write TensorBoard logs"
+        help = "RL: directory where to write TensorBoard logs or none"
         arg_type = AbstractString
         default = "tblog"
     "--rl_titer"
@@ -173,12 +174,17 @@ created to maintain counts between calls to the `run` method.
 mutable struct EnvironmentLoop
     environment::Environment
     actor::Actor
-    tblogger::AbstractLogger
+    tblogger::Union{AbstractLogger, Nothing}
+    episode_count::Int
 
     function EnvironmentLoop(env::Environment, actor::Actor)
-        subdir = replace("RL-" * string(now()) * tempname(".")[3:end], ":"=>"-")
-        logdir = joinpath(settings[:rl_ldir], subdir)
-        new(env, actor, TBLogger(logdir))
+        if settings[:rl_ldir] !=  "none"
+            subdir = replace("RL-" * string(now()) * tempname(".")[3:end], ":"=>"-")
+            logdir = joinpath(settings[:rl_ldir], subdir)
+            new(env, actor, TBLogger(logdir), 0)
+        else
+            new(env, actor, nothing, 0)
+        end
     end
 end
 
@@ -224,21 +230,25 @@ end
 Perform environment loop for the given number of episodes.
 """
 function run!(el::EnvironmentLoop, num_episodes::Int)
-    episode_count = 0
-    println("episode\tlength\treward\tsteps_s")
-    while episode_count < num_episodes
-        episode_count += 1
+    if el.episode_count == 0
+        println("episode\tlength\treward\tsteps_s")
+    end
+    end_episode = el.episode_count + num_episodes
+    while el.episode_count < end_episode
+        el.episode_count += 1
         results = run_episode!(el)
 
-        if (episode_count-1) % settings[:rl_lfreq] == 0
-            with_logger(el.tblogger) do
-                @info("MHlib.RL",
-                    episode_length = results.episode_length,
-                    reward = results.reward,
-                    steps_per_s = results.steps_per_s)
+        if (el.episode_count-1) % settings[:rl_lfreq] == 0
+            if el.tblogger !== nothing
+                with_logger(el.tblogger) do
+                    @info("MHlib.RL",
+                        episode_length = results.episode_length,
+                        reward = results.reward,
+                        steps_per_s = results.steps_per_s)
+                end
             end
             @printf("%5d\t%6d\t%6.4f\t%6.4f\n",
-                episode_count,
+                el.episode_count,
                 results.episode_length,
                 results.reward,
                 results.steps_per_s)
@@ -247,9 +257,51 @@ function run!(el::EnvironmentLoop, num_episodes::Int)
     return true
 end
 
+#------------------------------------------------------------------------------
+
+"""
+    PolicyValueFunction
+
+Abstract type for a trainable policy/value function.
+
+The function takes as input observation values and an action mask and outputs a policy,
+i.e., a probability distribution over the actions, and a value that
+should approximate the total discounted reward received from the current state
+onwards when taking the best actions.
+This abstract type may be realized by e.g. a table-based approach or a neural network
+as approximator.
+
+A concrete class must implement:
+- `(policy_value_func)(obs_values, action_mask)::Tuple{Vector{Float32}, Float32}`
+- `train!(policy_value_func, obs_values, action_masks, actions, targets)`
+"""
+abstract type PolicyValueFunction end
+
+"""
+    (policy_value_func)(policy_value_func, obs_values, action_mask)
+
+Calculate policy_value_func returning policy and value.
+
+The provided action_mask may or may not be considered.
+"""
+(policy_value_func::PolicyValueFunction)(obs_values::Vector{Float32},
+        action_mask::Vector{Bool})::Tuple{Float32, Vector{Float32}} =
+    error("abstract (policy_value_func)(obs_values, action_mask) called")
+
+"""
+    train!(policy_value_func, obs_values, action_masks, actions, targets)
+
+Train the policy_value_func with the provided data.
+"""
+train!(policy_value_func::PolicyValueFunction, obs_values::AbstractArray{Float32, 2},
+    action_masks::AbstractArray{Bool, 2}, actions::AbstractVector{Int},
+    policies::AbstractArray{Float32, 2}, targets::AbstractVector{Float32}) =
+    error("abstract train!(policy_value_func, obs_values, action_masks, actions, targets) called")
+
+#------------------------------------------------------------------------------
 
 include("ReplayBuffers.jl")
 include("AlphaZeros.jl")
-
+include("GenericNNs.jl")
 
 end  # module

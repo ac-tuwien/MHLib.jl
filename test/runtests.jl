@@ -134,7 +134,7 @@ end
     inst = LCSInstance(3, 10, 4)
     println(inst)
     env = LCSEnvironment(inst)
-    network = DummyNetwork(action_space_size(env))
+    network = DummyPolicyValueFunction(action_space_size(env))
     actor = AZActor(env, network, ReplayBuffer(0, observation_space_size(env),
         action_space_size(env)))
     el = EnvironmentLoop(env, actor)

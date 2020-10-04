@@ -1,87 +1,24 @@
 using MHLib.MCTSs
 
-export AlphaZero, AZActor, PolicyValueNetwork, DummyNetwork
+export AlphaZero, AZActor
 
-"""
-    PolicyValueNetwork
-
-Abstract type for a trainable policy/value function.
-
-The function takes as input observation values and an action mask and outputs a policy,
-i.e., a probability distribution over the actions, and a value that
-should approximate the total discounted reward received from the current state
-onwards when taking the best actions.
-
-A concrete class must implement:
-- `forward(network, obs_values, action_mask)::Tuple{Vector{Float32}, Float32}`
-- `train!(network, obs_values, action_masks, actions, targets)`
-"""
-abstract type PolicyValueNetwork end
-
-"""
-    forward(network, obs_values, action_mask)
-
-Calculate network in forward direction returning policy and value.
-The provided action_mask may or may not be considered.
-"""
-forward(network::PolicyValueNetwork, obs_values::Vector{Float32},
-        action_mask::Vector{Bool})::Tuple{Float32, Vector{Float32}} =
-    error("abstract forward(network, obs_values, action_mask) called")
-
-"""
-    train!(network, obs_values, action_masks, actions, targets)
-
-Train the network with the provided data.
-"""
-train!(network::PolicyValueNetwork, obs_values::AbstractArray{Float32, 2},
-    action_masks::AbstractArray{Bool, 2}, actions::AbstractVector{Int},
-    policies::AbstractArray{Float32, 2}, targets::AbstractVector{Float32}) =
-    error("abstract train!(network, obs_values, action_masks, actions, targets) called")
-
-
-#------------------------------------------------------------------------------
-
-"""
-    DummyNetwork(action_space_size)
-
-A `PolicyValueNetwork` that just returns a uniform policy and random value.
-
-Used just for testing purposes.
-"""
-struct DummyNetwork <: PolicyValueNetwork
-    action_space_size::Int
-end
-
-function forward(network::DummyNetwork, obs_values::Vector{Float32},
-    action_mask::Vector{Bool})::Tuple{Vector{Float32}, Float32}
-    actions = network.action_space_size
-    return fill(Float32(1)/actions, actions), Float32(rand(1:actions))
-end
-
-function train!(network::DummyNetwork, obs_values::AbstractArray{Float32, 2},
-    action_masks::AbstractArray{Bool, 2}, actions::AbstractVector{Int},
-    policies::AbstractArray{Float32, 2}, targets::AbstractVector{Float32})
-    # do nothing
-end
-
-#------------------------------------------------------------------------------
 
 """
     AZActor(environment, network, replay_buffer)
 
-Actor of AlphaZero agent, based on `MCTS` utilizing an `PolicyValueNetwork` for
+Actor of AlphaZero agent, based on `MCTS` utilizing an `PolicyValueFunction` for
 leaf node evaluation.
 """
 mutable struct AZActor <: Actor
     environment::Environment
-    network::PolicyValueNetwork
+    network::PolicyValueFunction
     buffer::ReplayBuffer
     adder::ReplayBufferAdder
 
     prev_observation::Observation
     mcts::MCTS
 
-    function AZActor(env::Environment, network::PolicyValueNetwork,
+    function AZActor(env::Environment, network::PolicyValueFunction,
             buffer::ReplayBuffer = ReplayBuffer(0, observation_space_size(env),
                 action_space_size(env)))
         adder = ReplayBufferAdder(buffer)
@@ -107,7 +44,7 @@ Make a first observation from the environment: create new MCTS incl. policy_valu
 function observe_first!(actor::AZActor, observation::Observation)
     actor.prev_observation = observation
     policy_value_function(obs::Observation)::Tuple =
-        forward(actor.network, obs.values, obs.action_mask)
+        (actor.network)(obs.values, obs.action_mask)
     actor.mcts = MCTS(actor.environment, observation, policy_value_function)
 end
 
@@ -123,7 +60,7 @@ function observe!(actor::AZActor, action::Int, policy::Vector{Float32},
         flush!(actor.adder)
     end
     set_new_root!(actor.mcts, action, observation)
-    prev_observation = observation
+    actor.prev_observation = observation
 end
 
 """
@@ -139,15 +76,15 @@ end
 """
     AZLearner(network, replay_buffer)
 
-Learner of AlphaZero agent, training the `PolicyValueNetwork` used in the actor's MCTS
+Learner of AlphaZero agent, training the `PolicyValueFunction` used in the actor's MCTS
 with data from the replay buffer
 """
 mutable struct AZLearner
-    network::PolicyValueNetwork
+    network::PolicyValueFunction
     buffer::ReplayBuffer
     batch_size::Int
 
-    function AZLearner(network::PolicyValueNetwork, buffer::ReplayBuffer,
+    function AZLearner(network::PolicyValueFunction, buffer::ReplayBuffer,
         batch_size::Int)
         new(network, buffer, batch_size)
     end
@@ -156,11 +93,11 @@ end
 """
     step!(az_learner)
 
-Perform an update step of the `PolicyValueNetwork` with data sampled from the buffer.
+Perform an update step of the `PolicyValueFunction` with data sampled from the buffer.
 """
 function step!(learner::AZLearner)
     training_data = sample(learner.buffer, learner.batch_size)
-    if size(training_data[1], 1) > 0
+    if size(training_data[1], 2) > 0
         train!(learner.network, training_data...)
     end
 end
@@ -186,10 +123,10 @@ mutable struct AlphaZero <: Agent
     num_observations::Int
     learning_steps_per_update::Int
 
-    network::PolicyValueNetwork
+    network::PolicyValueFunction
     replay_buffer::ReplayBuffer
 
-    function AlphaZero(env::Environment, network::PolicyValueNetwork;
+    function AlphaZero(env::Environment, network::PolicyValueFunction;
             replay_capacity = 1000,
             min_observations_for_learning = 100,
             observations_per_learning_step = 1,

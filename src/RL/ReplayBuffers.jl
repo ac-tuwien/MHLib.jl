@@ -31,10 +31,10 @@ mutable struct ReplayBuffer
     targets::Vector{Float32}
 
     function ReplayBuffer(buffer_size, obs_space_size, action_space_size)
-        obs_vals = Array{Float32}(undef, buffer_size, obs_space_size)
-        masks = Array{Bool}(undef, buffer_size, action_space_size)
+        obs_vals = Array{Float32}(undef, obs_space_size, buffer_size)
+        masks = Array{Bool}(undef, action_space_size, buffer_size)
         act = Vector{Int}(undef, buffer_size)
-        pol = Array{Float32}(undef, buffer_size, action_space_size)
+        pol = Array{Float32}(undef, action_space_size, buffer_size)
         targ = Vector{Float32}(undef, buffer_size)
         new(buffer_size, 0, 1, obs_vals, masks, act, pol, targ)
     end
@@ -65,10 +65,10 @@ function append!(buffer::ReplayBuffer, obs_values::Vector{Vector{Float32}},
         return
     end
     for i in 1:length(actions)
-        buffer.obs_values[buffer.oldest, :] = obs_values[i]
-        buffer.action_masks[buffer.oldest, :] = action_masks[i]
+        buffer.obs_values[:, buffer.oldest] = obs_values[i]
+        buffer.action_masks[:, buffer.oldest] = action_masks[i]
         buffer.actions[buffer.oldest] = actions[i]
-        buffer.policies[buffer.oldest, :] = policies[i]
+        buffer.policies[:, buffer.oldest] = policies[i]
         buffer.targets[buffer.oldest] = targets[i]
 
         buffer.oldest += 1
@@ -94,11 +94,10 @@ function sample(buffer::ReplayBuffer, n::Int)
     end
     ind = StatsBase.sample(1:buffer.current_size, n, replace=false)
 
-    # TODO Unnötiges Kopieren vermeiden, einen zB einen View retournieren!
-    obs_values = view(buffer.obs_values, ind, :)
-    action_masks = view(buffer.action_masks, ind, :)
+    obs_values = view(buffer.obs_values, :, ind)
+    action_masks = view(buffer.action_masks, :, ind)
     actions = buffer.actions[ind]
-    policies = view(buffer.policies, ind, :)
+    policies = view(buffer.policies, :, ind)
     targets = buffer.targets[ind]
     obs_values, action_masks, actions, policies, targets
 end
