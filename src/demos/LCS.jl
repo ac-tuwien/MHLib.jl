@@ -41,7 +41,7 @@ const settings_cfg = ArgParseSettings()
         arg_type = Bool
         default = false
     "--lcs_reward_mode"
-        help = "LCS reward mode: direct or smallsteps"
+        help = "LCS reward mode: direct, smallsteps"
         arg_type = String
         default = "smallsteps"
     "--lcs_prior_heuristic"
@@ -90,7 +90,7 @@ Attributes
 - `count[i, j, c]`: number of further appearances of c in s[i] from position j onward
 - `external_result`: result (string length) of an external solver. -1 means "no result"
 """
-struct LCSInstance
+mutable struct LCSInstance
     m::Int
     n::Int
     sigma::Alphabet
@@ -141,8 +141,6 @@ function LCSInstance(file::String)
     end
     n = maximum(length(si) for si in s)
 
-    res = settings[:lcs_use_external_solver] ? call_external_solver(file) : -1
-
     inst = LCSInstance(
         m,
         n,
@@ -151,7 +149,7 @@ function LCSInstance(file::String)
         s,
         zeros(Int, (m, n + 1, sigma)),
         zeros(Int, (m, n + 1, sigma)),
-        res
+        -1
     )
     determine_aux_data_structures(inst)
     return inst
@@ -160,12 +158,19 @@ end
 """
     call_external_solver(file)
 
-Call bin/lcs_external_solver.sh for solving the LCS instance in the given file
-and return solution length.
+Call bin/lcs_external_solver.sh for solving the LCS instance externally.
+
+Store solution length in `external_result`.
+This lower bound for the solution length is used as a baseline and for normalizing
+reward.
 """
-function call_external_solver(file::AbstractString)::Int
-    s = read(`bash bin/lcs_external_solver.sh $file`, String)
-    parse(Int, split(s)[2])
+function call_external_solver(inst::LCSInstance)
+    fname = tempname()
+    save(inst, fname)
+    s = read(`bash bin/lcs_external_solver.sh $fname`, String)
+    inst.external_result = parse(Int, split(s)[2])
+    rm(fname)
+    @assert inst.external_result >= 0
 end
 
 """
@@ -200,12 +205,6 @@ function create_random_seqs!(inst::LCSInstance)
         rand!(inst.s[i], one(Alphabet):inst.sigma)
     end
     determine_aux_data_structures(inst)
-
-    inst.external_result = -1
-    if settings[:lcs_use_external_solver]
-        save(inst, "./data/temp.lcs")
-        inst.external_result = call_external_solver("./data/temp.lcs")
-    end
 end
 
 Base.show(io::IO, inst::LCSInstance) = show(io, MIME"text/plain"(), inst.s)
@@ -229,6 +228,11 @@ function determine_aux_data_structures(inst::LCSInstance)
                 inst.count[i, j, c] = count
             end
         end
+    end
+    if settings[:lcs_use_external_solver]
+        call_external_solver(inst)
+    else
+        inst.external_result = -1
     end
 end
 
@@ -465,13 +469,12 @@ function step!(env::LCSEnvironment, action::Int)
     not_done = any(env.action_mask)
     # println("step: ", c, " appended to ", state.s, " ", not_done)
     reward_mode = settings[:lcs_reward_mode]
+    external_result = env.inst.external_result
     if not_done
         if reward_mode === "direct"
             reward = 0.0f0
         elseif reward_mode === "smallsteps"
-            reward = 0.05f0
-            reward = (env.inst.external_result > 0) ?
-              2.0f0 / env.inst.external_result : 0.05f0
+            reward = 2.0f0 / external_result
         else
             error("Invalid reward_mode $reward_mode")
         end
@@ -480,8 +483,8 @@ function step!(env::LCSEnvironment, action::Int)
         if reward_mode === "direct"
             reward = Float32(length(state.s))
         elseif reward_mode === "smallsteps"
-            reward = (env.inst.external_result > 0) ?
-              -1.0f0 + 2.0f0 / env.inst.external_result : -1.0f0
+            @assert external_result >= 0
+            reward = -1.0f0 + 2.0f0 / external_result
         else
             error("Invalid reward_mode $reward_mode")
         end

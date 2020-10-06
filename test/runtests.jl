@@ -140,3 +140,16 @@ end
     el = EnvironmentLoop(env, actor)
     @test run!(el, 2)
 end
+
+@testset "LCS_AlphaZero" begin
+    parse_settings!([MHLib.RL.settings_cfg, MHLib.MCTSs.settings_cfg,
+        MHLib.LCS.settings_cfg], ["--seed=1"])
+    Random.seed!(1)
+    inst = LCSInstance(3, 10, 4)
+    println(inst)
+    env = LCSEnvironment(inst)
+    network = DensePolicyValueNN(observation_space_size(env), action_space_size(env))
+    actor = AlphaZero(env, network, min_observations_for_learning=20)
+    el = EnvironmentLoop(env, actor)
+    @test run!(el, 10)
+end

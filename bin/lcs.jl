@@ -17,11 +17,6 @@ if endswith(pwd(), "test")
     cd("..")
 end
 
-println("LCS Demo version $(git_version())\nARGS: ", ARGS)
-settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test-04_003_050.lcs")
-parse_settings!([MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg])
-println(get_settings_as_string())
-
 
 """
     mcts_demo()
@@ -50,9 +45,6 @@ function mcts_demo()
     println("Seed: ", settings[:seed])
     println("Number of iterations: ", mcts.num_sims, ", c_uct: ", mcts.c_uct)
 
-    # trace ... Sollen die Root-Nodes gedruckt werden?
-    # trace_rollout ... Sollen die Rollouts gedruckt werden?
-    # trace_actions ... Sollen die Aktionen gedruckt werden?
     actions = iterate_mcts!(mcts, trace = false, trace_rollout = false, trace_actions = true)
     println("Solution: ", length(actions), ' ', actions)
     println("Overall best solution encountered: ", length(mcts.best_solution), ' ',
@@ -65,7 +57,6 @@ end
     iterate_mcts!(env)
 
 Iteratively perform MCTS, taking in each iteration the action with the most visits.
-TODO: trace = true druckt den kompletten Node-Output jeder Iteration aus, fürs debuggen.
 """
 function iterate_mcts!(mcts::MCTS; trace::Bool = false, trace_actions::Bool = false,
     trace_rollout::Bool = false)
@@ -89,56 +80,7 @@ function iterate_mcts!(mcts::MCTS; trace::Bool = false, trace_actions::Bool = fa
 end
 
 
-
-"""
-    mcts_demo_args()
-
-Test function that runs MCTS on a small LCS instance.
-"""
-function mcts_demo_args()
-    # Atom hat als default working directory das vom Package,
-    # das sollten wir hier auch annehmen und beibehalten.
-    # Ausnahme sind die Tests im Directory test,
-    # die dieses Verzeichnis als working directory haben.
-    println("Working directory:" * pwd())
-    # cd("MHLib.jl")
-    # println("Working directory:" * pwd())
-
-    println("Instance: ", settings[:ifile])
-    inst = LCSInstance("data/test-04_003_050.lcs")
-
-    println(inst)
-    env = LCSEnvironment(inst)
-    obs = reset!(env)
-    mcts = MCTS(env, obs)
-    println("Seed: ", settings[:seed])
-    println("Number of simulations: ", mcts.num_sims, ", c_uct: ", mcts.c_uct)
-
-    # trace ... Sollen die Root-Nodes gedruckt werden?
-    # trace_rollout ... Sollen die Rollouts gedruckt werden?
-    # trace_actions ... Sollen die Aktionen gedruckt werden?
-    actions = iterate_mcts!(mcts, trace = false, trace_rollout = false, trace_actions = true)
-    println("Solution: ", length(actions), ' ', actions)
-    println("Overall best solution encountered: ", length(mcts.best_solution), ' ',
-        mcts.best_solution)
-end
-
-
 function lcs_alphazero()
-    # Ignore actual arguments here, using explicitly specified ones
-    parse_settings!([MHLib.RL.settings_cfg, MHLib.MCTSs.settings_cfg,
-        MHLib.LCS.settings_cfg],
-        ["--seed=0",
-        #"--ifile=data/rat-04_010_600.lcs",
-        "--ifile=data/test-04_003_050.lcs",
-        "--mh_mcts_num_sims=100",
-        "--lcs_reward_mode=smallsteps",
-        "--mh_mcts_c_uct=1.0",
-        "--mh_mcts_tree_policy=PUCT",
-        "--lcs_prior_heuristic=UB1",
-        # "--rl_ldir=none",
-        ])
-
     inst = LCSInstance(settings[:ifile])
     n = inst.n
     println(inst)
@@ -161,11 +103,28 @@ function lcs_alphazero()
     println("AlphaZero successfully created, running environment loop")
 
     run!(el, 25)    # episodes without (much) learning yet
-    run!(el, 400)    # episodes with learning
+    run!(el, 200)    # episodes with learning
     println("Done")
 end
 
 
+println("LCS-Alphazero Demo version $(git_version())\nARGS: ", ARGS)
+
+# Ignore actual arguments here, using explicitly specified ones
+settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test-04_003_050.lcs")
+parse_settings!([MHLib.RL.settings_cfg, MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg],
+    ["--seed=0",
+    #"--ifile=data/rat-04_010_600.lcs",
+    "--ifile=data/test-04_003_050.lcs",
+    "--mh_mcts_num_sims=200",
+    "--lcs_reward_mode=smallsteps",
+    "--mh_mcts_c_uct=1.0",
+    "--mh_mcts_tree_policy=PUCT",
+    "--lcs_prior_heuristic=UB1",
+    "--lcs_always_new_seqs=true",
+    "--rl_ldir=none",
+    ])
+println(get_settings_as_string())
+
 # mcts_demo()
-# mcts_demo_args()
 lcs_alphazero()

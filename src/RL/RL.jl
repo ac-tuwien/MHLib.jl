@@ -182,15 +182,17 @@ mutable struct EnvironmentLoop
     actor::Actor
     tblogger::Union{AbstractLogger, Nothing}
     episode_count::Int
+    max_reward::Float32
 
     function EnvironmentLoop(env::Environment, actor::Actor)
+        tblogger = nothing
         if settings[:rl_ldir] !=  "none"
             subdir = replace("RL-" * string(now()) * tempname(".")[3:end], ":"=>"-")
             logdir = joinpath(settings[:rl_ldir], subdir)
-            new(env, actor, TBLogger(logdir), 0)
+            tblogger = TBLogger(logdir)
         else
-            new(env, actor, nothing, 0)
         end
+        new(env, actor, tblogger, 0, -Inf32)
     end
 end
 
@@ -231,6 +233,9 @@ function run_episode!(el::EnvironmentLoop)
         episode_steps += 1
     end
     steps_per_s = episode_steps / (time() - start_time)
+    if episode_reward >= el.max_reward
+        el.max_reward = episode_reward
+    end
     (episode_length=episode_steps, reward=episode_reward, steps_per_s=steps_per_s,
         loss=loss)
 end
@@ -242,7 +247,7 @@ Perform environment loop for the given number of episodes.
 """
 function run!(el::EnvironmentLoop, num_episodes::Int)
     if el.episode_count == 0
-        println("episode\tlength\treward\tsteps_s")
+        println("   episode length     reward  max_reward   steps_s       loss")
     end
     end_episode = el.episode_count + num_episodes
     while el.episode_count < end_episode
@@ -255,14 +260,16 @@ function run!(el::EnvironmentLoop, num_episodes::Int)
                     @info("MHlib.RL",
                         episode_length = results.episode_length,
                         reward = results.reward,
+                        max_reward = el.max_reward,
                         steps_per_s = results.steps_per_s,
                         loss = results.loss)
                 end
             end
-            @printf("%5d\t%6d\t%6.4f\t%6.4f\t%6.4f\n",
+            @printf("%10d %6d %10.4f %10.4f %10.4f %10.4f\n",
                 el.episode_count,
                 results.episode_length,
                 results.reward,
+                el.max_reward,
                 results.steps_per_s,
                 results.loss)
         end
