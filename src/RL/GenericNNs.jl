@@ -26,7 +26,7 @@ end
 function train!(f::DummyPolicyValueFunction, obs_values::AbstractArray{Float32, 2},
     action_masks::AbstractArray{Bool, 2}, actions::AbstractVector{Int},
     policies::AbstractArray{Float32, 2}, targets::AbstractVector{Float32})
-    # do nothing
+    nothing
 end
 
 #------------------------------------------------------------------------------
@@ -79,19 +79,22 @@ function train!(f::DensePolicyValueNN, obs_values::AbstractArray{Float32, 2},
         action_masks::AbstractArray{Bool, 2}, actions::AbstractVector{Int},
         policies::AbstractArray{Float32, 2}, targets::AbstractVector{Float32})
 
-    # println("Train!")
-    logits = f.policy_network(obs_values)
     p_params = params(f.policy_network)
+    local logits, p_loss
     p_gradient = gradient(p_params) do
-        Flux.Losses.logitcrossentropy(logits, policies)
+        logits = f.policy_network(obs_values)
+        p_loss = Flux.Losses.logitcrossentropy(logits, policies)
     end
-    # @infiltrate
     Flux.Optimise.update!(f.opt_policy, p_params, p_gradient)
 
-    values = f.value_network(obs_values)
     v_params = params(f.value_network)
+    local values, v_loss
     v_gradient = gradient(v_params) do
-        Flux.Losses.mse(values, targets)
+        values = f.value_network(obs_values)
+        v_loss = Flux.Losses.mse(values, targets)
     end
     Flux.Optimise.update!(f.opt_value, v_params, v_gradient)
+
+    # println("p/v losses: ", p_loss, " ", v_loss)
+    p_loss + v_loss
 end

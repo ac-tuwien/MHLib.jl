@@ -79,6 +79,8 @@ observe!(::Actor, action::Int, ::Vector{Float32}, ::Observation, ::Float32, ::Bo
     update!(actor)
 
 Perform an update of the actor parameters from past observations.
+
+Return loss if update has taken place or `nothing`.
 """
 update!(::Actor) =
     error("abstract update!(actor) called")
@@ -100,6 +102,8 @@ abstract type Learner end
     step!(learner)
 
 Perform an update step of the learner's parameters.
+
+Return loss if update has taken place or `nothing`.
 """
 step!(::Learner) =
     error("abstract step!(learner) called")
@@ -146,13 +150,15 @@ end
 Updates the learner and the agent if there are enough observations
 """
 function update!(agent::Agent)
+    loss = nothing
     n_obs = agent.num_observations - agent.min_observations_for_learning
     if n_obs >= 0 && n_obs % agent.observations_per_learning_step == 0
         for i in 1:agent.learning_steps_per_update
-            step!(agent.learner)
+            loss = step!(agent.learner)
         end
         update!(agent.actor)
     end
+    loss
 end
 
 
@@ -203,6 +209,7 @@ function run_episode!(el::EnvironmentLoop)
     observe_first!(el.actor, observation)
 
     iter = 0
+    loss = NaN
 
     # perform a whole episode
     while !isfinal
@@ -213,15 +220,19 @@ function run_episode!(el::EnvironmentLoop)
         observation, reward, isfinal = Environments.step!(el.environment, action)
         # println("action: ", action, "->", el.environment.state.p)
 
-        # have the agent observe the timestep and let the actor update itself
+        # have the agent observe the timestep and let the actor update itself, i.e., learn
         observe!(el.actor, action, policy, observation, reward, isfinal)
-        update!(el.actor)
+        l = update!(el.actor)
+        if l != nothing
+            loss = l
+        end
 
         episode_reward += reward
         episode_steps += 1
     end
     steps_per_s = episode_steps / (time() - start_time)
-    (episode_length=episode_steps, reward=episode_reward, steps_per_s=steps_per_s)
+    (episode_length=episode_steps, reward=episode_reward, steps_per_s=steps_per_s,
+        loss=loss)
 end
 
 """
@@ -244,14 +255,16 @@ function run!(el::EnvironmentLoop, num_episodes::Int)
                     @info("MHlib.RL",
                         episode_length = results.episode_length,
                         reward = results.reward,
-                        steps_per_s = results.steps_per_s)
+                        steps_per_s = results.steps_per_s,
+                        loss = results.loss)
                 end
             end
-            @printf("%5d\t%6d\t%6.4f\t%6.4f\n",
+            @printf("%5d\t%6d\t%6.4f\t%6.4f\t%6.4f\n",
                 el.episode_count,
                 results.episode_length,
                 results.reward,
-                results.steps_per_s)
+                results.steps_per_s,
+                results.loss)
         end
     end
     return true
@@ -292,6 +305,8 @@ The provided action_mask may or may not be considered.
     train!(policy_value_func, obs_values, action_masks, actions, targets)
 
 Train the policy_value_func with the provided data.
+
+Return loss before the training step or `nothing`.
 """
 train!(policy_value_func::PolicyValueFunction, obs_values::AbstractArray{Float32, 2},
     action_masks::AbstractArray{Bool, 2}, actions::AbstractVector{Int},

@@ -136,7 +136,8 @@ function lcs_alphazero()
         "--mh_mcts_c_uct=1.0",
         "--mh_mcts_tree_policy=PUCT",
         "--lcs_prior_heuristic=UB1",
-        "--rl_ldir=none"])
+        # "--rl_ldir=none",
+        ])
 
     inst = LCSInstance(settings[:ifile])
     n = inst.n
@@ -144,8 +145,9 @@ function lcs_alphazero()
     env = LCSEnvironment(inst)
     obs = reset!(env)
 
-    network = DummyPolicyValueFunction(action_space_size(env))
-    # network = DensePolicyValueNN(observation_space_size(env), action_space_size(env))
+    # network = DummyPolicyValueFunction(action_space_size(env))
+
+    network = DensePolicyValueNN(observation_space_size(env), action_space_size(env))
     # network = LCSNetwork(env)
 
     # create AlphaZero agent with configuration as in Python implementation
@@ -159,7 +161,7 @@ function lcs_alphazero()
     println("AlphaZero successfully created, running environment loop")
 
     run!(el, 25)    # episodes without (much) learning yet
-    run!(el, 10)    # episodes with learning
+    run!(el, 400)    # episodes with learning
     println("Done")
 end
 
