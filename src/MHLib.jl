@@ -333,22 +333,15 @@ include("Settings.jl")
 include("Schedulers.jl")
 include("GVNSs.jl")
 include("ALNSs.jl")
-include("Environments.jl")
-include("MCTSs.jl")
-include("RL/RL.jl")
 
 include("demos/OneMax.jl")
 include("demos/MAXSAT.jl")
-include("demos/LCS.jl")
 
 
 const all_settings_cfgs = [
         Schedulers.settings_cfg,
         ALNSs.settings_cfg,
-        MCTSs.settings_cfg,
-        RL.settings_cfg,
         OneMax.settings_cfg,
-        LCS.settings_cfg,
     ]
 
 
