@@ -44,12 +44,9 @@ const settings_cfg = ArgParseSettings()
         help = "LCS reward mode: direct, smallsteps"
         arg_type = String
         default = "smallsteps"
-    "--lcs_prior_heuristic"
-        help = "LCS-specific heuristic prior function: none or UB1 or RL (Reinforcement Learning)"
-        arg_type = String
-        default = "none"
+
     "--lcs_use_external_solver"
-        help = "LCS: Should an external solver be used to get a heuristic solution value?"
+        help = "LCS: Should an external solver be used to get an estimated solution length?"
         arg_type = Bool
         default = true
 end
@@ -88,7 +85,8 @@ Attributes
 - `s`: vector of m input sequences of length at most n
 - `succ[i, j, c]`: index of next occurrence of c in s[i] from position j onward
 - `count[i, j, c]`: number of further appearances of c in s[i] from position j onward
-- `external_result`: result (string length) of an external solver. -1 means "no result"
+- `estimated_result`: estimated solution length from an external solver or internally
+    calculated
 """
 mutable struct LCSInstance
     m::Int
@@ -98,7 +96,7 @@ mutable struct LCSInstance
     s::Vector{Vector{Alphabet}}
     succ::Array{Int,3}
     count::Array{Int,3}
-    external_result::Int
+    estimated_result::Int
 end
 
 """
@@ -160,17 +158,16 @@ end
 
 Call bin/lcs_external_solver.sh for solving the LCS instance externally.
 
-Store solution length in `external_result`.
-This lower bound for the solution length is used as a baseline and for normalizing
-reward.
+Store solution length in `estimated_result`.
+This estimation is used as a baseline and for normalizing reward.
 """
 function call_external_solver(inst::LCSInstance)
     fname = tempname()
     save(inst, fname)
     s = read(`bash bin/lcs_external_solver.sh $fname`, String)
-    inst.external_result = parse(Int, split(s)[2])
+    inst.estimated_result = parse(Int, split(s)[2])
     rm(fname)
-    @assert inst.external_result >= 0
+    @assert inst.estimated_result >= 0
 end
 
 """
@@ -212,7 +209,7 @@ Base.show(io::IO, inst::LCSInstance) = show(io, MIME"text/plain"(), inst.s)
 """
     determine_aux_data_structure(inst)
 
-Determine auxiliary data structures succ and count.
+Determine auxiliary data structures `succ`, `count` and `estimated_result`.
 """
 function determine_aux_data_structures(inst::LCSInstance)
     for i = 1:inst.m
@@ -232,7 +229,8 @@ function determine_aux_data_structures(inst::LCSInstance)
     if settings[:lcs_use_external_solver]
         call_external_solver(inst)
     else
-        inst.external_result = -1
+        # a rough estimation of the solution length so far mostly tweaked for m=3, sigma=4
+        inst.estimated_result = trunc(Int, 0.7 * inst.n / log(inst.sigma) / log(inst.m))
     end
 end
 
@@ -352,7 +350,6 @@ Environment for solving the LCS problem.
 
 Attributes
 - `inst`: `LCSInstance` to solve
-- `prior_heuristic`: heuristic to be used to determine priors
 - `prior_function`: function to be used to determine priors
 - `state`: current state
 - `action_mask`: vector indicating currently valid actions
@@ -360,17 +357,7 @@ Attributes
 """
 mutable struct LCSEnvironment <: Environment
     inst::LCSInstance
-
-    # GR TODO: Bitte prior_heuristic und prior_function hier entfernen, das passt hier einfach nich her.
-    # prior_heuristic ist doch eher ein Parameter und generell sollte das LCSEnvironment völlig unabhängig
-    # von irgendeinem Lösungsalgorithmus sein! UB1 besser als normale Funktion definieren, der MCTS
-    # ggfs als Parameter mitgeben, so wie ein Alphazero-Actor seine NN-Funktion auch der MCTS übergibt.
-    prior_heuristic::String
-    prior_function::Function
-
     state::LCSState
-    # TODO Daniel: action_mask ist doppelt definiert (auch in observation)
-    # nur in observation belassen?
     action_mask::Vector{Bool}
     seq_order::Vector{Int}
 
@@ -378,43 +365,26 @@ mutable struct LCSEnvironment <: Environment
         p = ones(Int, inst.m)
         state = LCSState(p, Int[])
         action_mask = ones(Bool, inst.sigma)
-        prior_heuristic = settings[:lcs_prior_heuristic]
-
-        local fun
-        if prior_heuristic === "none"
-            fun = (env::LCSEnvironment, action_values::Vector{<:Real}) -> Float32[]
-            # priors = Float32[]
-        elseif prior_heuristic === "RL"
-            # Remains undefined here, but can be set from outside
-            fun = (env::LCSEnvironment, action_values::Vector{<:Real}) -> error("lcs_prior_heuristic: $(env.prior_heuristic): RL not set!")
-        elseif prior_heuristic === "UB1"
-            function fun_ub(env::LCSEnvironment, action_values::Vector{<:Real})
-                priors = zeros(Float32, env.inst.sigma)
-                p = env.state.p
-                for c = 1:env.inst.sigma
-                    if env.action_mask[c]
-                        p_after_adding_c = [env.inst.succ[i, p[i], c] + 1 for i in 1:env.inst.m]
-                        priors[c] = 1 + sum(remaining_letter_counts(env, p_after_adding_c))
-                    end
-                end
-                # TODO: Rethink again
-                priors[action_mask] = priors[action_mask] .- (minimum(priors[action_mask]) - 1)
-                # priors[action_mask] = 10 .^ priors[action_mask]
-                priors = priors / sum(priors)
-                return priors
-            end
-            fun = fun_ub
-        else
-            error("Invalid parameter lcs_prior_heuristic: $(prior_heuristic)")
-        end
-
-        new(inst, prior_heuristic, fun, state, action_mask, Int[])
+        new(inst, state, action_mask, Int[])
     end
 end
 
-# TODO GR Bitte wie gesagt entfernen:
-function set_prior_function!(env::LCSEnvironment, fun::Function)
-    env.prior_function = fun
+# TODO recycled from constructor, we don't have function references in the environment anymore, this was not clean
+# Problem specific heuristics, if used, need to be provided to the MCTS etc. in some other fashion.
+function ub_heuristic(env::LCSEnvironment, action_values::Vector{<:Real})
+    priors = zeros(Float32, env.inst.sigma)
+    p = env.state.p
+    for c = 1:env.inst.sigma
+        if env.action_mask[c]
+            p_after_adding_c = [env.inst.succ[i, p[i], c] + 1 for i in 1:env.inst.m]
+            priors[c] = 1 + sum(remaining_letter_counts(env, p_after_adding_c))
+        end
+    end
+    # TODO: Rethink again
+    priors[action_mask] = priors[action_mask] .- (minimum(priors[action_mask]) - 1)
+    # priors[action_mask] = 10 .^ priors[action_mask]
+    priors = priors / sum(priors)
+    return priors
 end
 
 action_space_size(env::LCSEnvironment) = Int(env.inst.sigma)
@@ -449,7 +419,6 @@ function reset!(env::LCSEnvironment)::Observation
     get_observation(env)
 end
 
-
 """
     step!(env, action)
 
@@ -469,12 +438,12 @@ function step!(env::LCSEnvironment, action::Int)
     not_done = any(env.action_mask)
     # println("step: ", c, " appended to ", state.s, " ", not_done)
     reward_mode = settings[:lcs_reward_mode]
-    external_result = env.inst.external_result
+    estimated_result = env.inst.estimated_result
     if not_done
         if reward_mode === "direct"
             reward = 0.0f0
         elseif reward_mode === "smallsteps"
-            reward = 2.0f0 / external_result
+            reward = 2.0f0 / estimated_result
         else
             error("Invalid reward_mode $reward_mode")
         end
@@ -483,16 +452,14 @@ function step!(env::LCSEnvironment, action::Int)
         if reward_mode === "direct"
             reward = Float32(length(state.s))
         elseif reward_mode === "smallsteps"
-            @assert external_result >= 0
-            reward = -1.0f0 + 2.0f0 / external_result
+            @assert estimated_result >= 0
+            reward = -1.0f0 + 2.0f0 / estimated_result
         else
             error("Invalid reward_mode $reward_mode")
         end
         obs = Observation(
             zeros(Float32, observation_space_size(env)),
-            ones(Bool, inst.sigma),
-            Float32[]
-        )
+            ones(Bool, inst.sigma))
     end
     return obs, reward, !not_done
 end
@@ -583,11 +550,8 @@ function get_observation(env::LCSEnvironment)::Observation
     # values are sorted according to order, priors and action_mask not!
 
     action_mask = copy(env.action_mask)
-    # TODO Achtung: Es wird action_mask von env für die Berechnung der priors herangezogen!
 
-    priors = env.prior_function(env, values)
-
-    return Observation(values, action_mask, priors)
+    return Observation(values, action_mask)
 end
 
 
@@ -603,7 +567,6 @@ Attributes
 mutable struct LCSNetwork <: PolicyValueFunction
     value_network::Chain
     action_network::Chain
-
     opt_value::ADAM
     opt_action::ADAM
 end
@@ -642,6 +605,7 @@ end
 # TODO Was für ein NN soll das nun eigentlich sein? Ein problemunabhängiges generisches?
 # Oder das spezialisierte wie ich es in Python implementiert habe?
 # Derzeit ist das weder das eine noch das andere.
+# Inzwischen habe ich ein generisches NN in GeneticNNs implementiert.
 # Bitte hier das NN meiner Python-Implementierung, das auch im Dokument beschrieben ist,
 # ganz exakt nachbilden!
 

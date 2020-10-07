@@ -286,8 +286,6 @@ end
     rollout!(mcts, leaf)
 
 Perform rollout always taking random actions until the episode is done, return total reward.
-
-The episode is not done in the current leaf, i.e., at least one action can be performed.
 """
 function rollout!(mcts::MCTS{TEnv}, leaf::Node; trace::Bool = false) :: Float32 where
         {TEnv <: Environment}
@@ -301,43 +299,38 @@ function rollout!(mcts::MCTS{TEnv}, leaf::Node; trace::Bool = false) :: Float32 
     solution = Int[]
 
     while !done
-        if length(obs.priors) > 0
-            # TODO remove parameter rollout_policy, no priors in observations
-            if mcts.rollout_policy === "random"
-                # Sample one action according to the current priors
-                action = StatsBase.sample(Vector(1:n_actions)[obs.action_mask],
-                    Weights(obs.priors[obs.action_mask]))
-            elseif mcts.rollout_policy === "epsilon-greedy"
-                @assert 0 <= mcts.epsilon <= 1
-                if rand() < mcts.epsilon
-                    # Sample one action completely at random
-                    action = rand(Vector(1:n_actions)[obs.action_mask])
-                else
-                    # Take an action with highest prior value
-                    masked_priors = obs.priors[:]
-                    masked_priors[.~obs.action_mask] .= typemin(Float32)
-                    action = argmax_rand(masked_priors)
-                end
-            else
-                error("Invalid mcts_rollout_policy " * mcts.rollout_policy)
-            end
-        else
+        # if length(obs.priors) > 0
+        #     # TODO no priors in observations anymore, optionally use heuristic function passed to MCTS in constructor
+        #     if mcts.rollout_policy === "random"
+        #         # Sample one action according to the current priors
+        #         # action = StatsBase.sample(Vector(1:n_actions)[obs.action_mask],
+        #         #    Weights(obs.priors[obs.action_mask]))
+        #         action = StatsBase.sample(Vector(1:n_actions)[obs.action_mask])
+        #     # elseif mcts.rollout_policy === "epsilon-greedy"
+        #     #     @assert 0 <= mcts.epsilon <= 1
+        #     #     if rand() < mcts.epsilon
+        #     #         # Sample one action completely at random
+        #     #         action = rand(Vector(1:n_actions)[obs.action_mask])
+        #     #     else
+        #     #         # Take an action with highest prior value
+        #     #         masked_priors = obs.priors[:]
+        #     #         masked_priors[.~obs.action_mask] .= typemin(Float32)
+        #     #         action = argmax_rand(masked_priors)
+        #     #     end
+        #     else
+        #         error("Invalid mcts_rollout_policy " * mcts.rollout_policy)
+        #     end
+        # else
             # If the priors are uniform => espilon-greedy makes no sense
             action = rand(Vector(1:n_actions)[obs.action_mask])
-        end
-
-        if trace
-            println("rollout!: child_priors: ", string(child_priors), ", priors: ",
-                obs.priors, ", Action: ", action)
-            println(string(leaf))
-        end
+        # end
 
         # Apply a step with the given action
         obs, reward, done = step!(env, action)
         append!(solution, action)
         value += reward
     end
-    # TODO should be rebplaced by generic reward check
+    # TODO to be replaced by generic reward check
     if length(solution)+length(leaf.state.s) > length(mcts.best_action_sequence)
         copy!(mcts.best_action_sequence, [leaf.state.s; solution])
     end

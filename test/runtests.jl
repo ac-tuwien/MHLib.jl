@@ -129,7 +129,7 @@ end
 
 @testset "LCS_AZActor" begin
     parse_settings!([MHLib.RL.settings_cfg, MHLib.MCTSs.settings_cfg,
-        MHLib.LCS.settings_cfg], ["--seed=1"])
+        MHLib.LCS.settings_cfg], ["--seed=1", "--lcs_use_external_solver=false"])
     Random.seed!(1)
     inst = LCSInstance(3, 10, 4)
     println(inst)
@@ -143,7 +143,7 @@ end
 
 @testset "LCS_AlphaZero" begin
     parse_settings!([MHLib.RL.settings_cfg, MHLib.MCTSs.settings_cfg,
-        MHLib.LCS.settings_cfg], ["--seed=1"])
+        MHLib.LCS.settings_cfg], ["--seed=1", "--lcs_use_external_solver=false"])
     Random.seed!(1)
     inst = LCSInstance(3, 10, 4)
     println(inst)

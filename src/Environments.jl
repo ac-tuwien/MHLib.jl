@@ -36,16 +36,10 @@ Observation of a state in the environment, from which predictions are made.
 Attributes
 - values::Vector{Float32}: Observed values
 - action_mask::Vector{Bool}: Boolean vector indicating valid actions
-
-TODO GR: Weg hier mit den Priors, das war ein unschöner Hack.
-Priors sind etwas sehr MCTS-Spezifisches und LCS sollte davon nichts wissen müssen.
-Der Typ könnte anstattdessen um eine Funktion `heuristic` erweitert werden, die optional eine
-problemspezifische heuristische Policy zurückliefert,
 """
 struct Observation
     values::Vector{Float32}
     action_mask::Vector{Bool}
-    priors::Vector{Float32}
 end
 
 

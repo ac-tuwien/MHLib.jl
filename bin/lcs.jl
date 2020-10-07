@@ -33,7 +33,6 @@ function mcts_demo()
         "--lcs_reward_mode=smallsteps",
         "--mh_mcts_c_uct=0.5",
         "--mh_mcts_tree_policy=PUCT",
-        "--lcs_prior_heuristic=UB1",
         "--mh_mcts_rollout_policy=epsilon-greedy",
         "--mh_mcts_epsilon_greedy_epsilon=0.2"])
     # inst = LCSInstance(3, 8, 4)  # Mit UCB, c_uct = 1, seed = 160569761 kommt [3] heraus (!)
@@ -120,7 +119,6 @@ parse_settings!([MHLib.RL.settings_cfg, MHLib.MCTSs.settings_cfg, MHLib.LCS.sett
     "--lcs_reward_mode=smallsteps",
     "--mh_mcts_c_uct=1.0",
     "--mh_mcts_tree_policy=PUCT",
-    "--lcs_prior_heuristic=UB1",
     "--lcs_always_new_seqs=true",
     "--rl_ldir=none",
     ])
