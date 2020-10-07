@@ -22,7 +22,7 @@ const settings_cfg = ArgParseSettings()
         default = "alns"
 end
 
-println("MAXSAT Demo\nARGS: ", ARGS)
+println("MAXSAT Demo version $(git_version())\nARGS: ", ARGS)
 settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/maxsat-adv1.cnf")
 # settings_new_default_value(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
 parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.ALNSs.settings_cfg, settings_cfg])

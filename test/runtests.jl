@@ -5,9 +5,16 @@ using MHLib.Schedulers
 using MHLib.GVNSs
 using MHLib.ALNSs
 using MHLib.MCTSs
+using MHLib.Environments
+using MHLib.RL
 using MHLib.OneMax
 using MHLib.MAXSAT
 using MHLib.LCS
+
+
+if endswith(pwd(), "test")
+    cd("..")
+end
 
 
 @testset "OneMaxSolution" begin
@@ -57,7 +64,7 @@ end
 
 @testset "GVNS-MAXSAT.jl" begin
     parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1"])
-    inst = MAXSATInstance("../data/maxsat-simple.cnf")
+    inst = MAXSATInstance("data/maxsat-simple.cnf")
     sol = MAXSATSolution(inst)
     println(sol)
     # methods = [MHMethod("con", construct!, 0),
@@ -82,7 +89,7 @@ end
 
 @testset "ALNS-MAXSAT.jl" begin
     parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.ALNSs.settings_cfg], ["--seed=1"])
-    inst = MAXSATInstance("../data/maxsat-simple.cnf")
+    inst = MAXSATInstance("data/maxsat-simple.cnf")
     sol = MAXSATSolution(inst)
     println(sol)
     # methods = [MHMethod("con", construct!, 0),
@@ -106,15 +113,43 @@ end
 end
 
 @testset "LCS_MCTS" begin
-    inst = LCSInstance("../data/test-04_003_050.lcs")
-    @test length(inst.s[1]) == 50
     parse_settings!([MHLib.MCTSs.settings_cfg, MHLib.LCS.settings_cfg], ["--seed=1"])
+    inst = LCSInstance("data/test-04_003_050.lcs")
+    @test length(inst.s[1]) == 50
     Random.seed!(1)
     inst = LCSInstance(3, 10, 4)
     println(inst)
     sol = LCSSolution(inst)
     @test obj(sol) == 0
     env = LCSEnvironment(inst)
-    mcts = MCTS{LCSEnvironment}(env)
-    @test perform_mcts!(mcts) == 4
+    obs = reset!(env)
+    mcts = MCTS(env, obs)
+    @test perform_mcts!(mcts)[1] == 4
+end
+
+@testset "LCS_AZActor" begin
+    parse_settings!([MHLib.RL.settings_cfg, MHLib.MCTSs.settings_cfg,
+        MHLib.LCS.settings_cfg], ["--seed=1"])
+    Random.seed!(1)
+    inst = LCSInstance(3, 10, 4)
+    println(inst)
+    env = LCSEnvironment(inst)
+    network = DummyPolicyValueFunction(action_space_size(env))
+    actor = AZActor(env, network, ReplayBuffer(0, observation_space_size(env),
+        action_space_size(env)))
+    el = EnvironmentLoop(env, actor)
+    @test run!(el, 2)
+end
+
+@testset "LCS_AlphaZero" begin
+    parse_settings!([MHLib.RL.settings_cfg, MHLib.MCTSs.settings_cfg,
+        MHLib.LCS.settings_cfg], ["--seed=1"])
+    Random.seed!(1)
+    inst = LCSInstance(3, 10, 4)
+    println(inst)
+    env = LCSEnvironment(inst)
+    network = DensePolicyValueNN(observation_space_size(env), action_space_size(env))
+    actor = AlphaZero(env, network, min_observations_for_learning=20)
+    el = EnvironmentLoop(env, actor)
+    @test run!(el, 10)
 end

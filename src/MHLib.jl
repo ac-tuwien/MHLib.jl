@@ -10,7 +10,7 @@ using Base: copy, copy!, length
 
 export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
-    run!,
+    run!, git_version,
 
     # settings
     settings
@@ -45,7 +45,7 @@ to_maximize(::Type) = true
 to_maximize(s::Solution) = to_maximize(typeof(s))
 
 
-print(s::Solution) = error("abstract string(s) called")
+print(s::Solution) = error("abstract print(s) called")
 
 
 """
@@ -68,7 +68,7 @@ end
 Actually calculate the objective value of the given solution.
 """
 calc_objective(::Solution) =
-    error("calc_objective not implemented for concrete solution")
+    error("abstract calc_objective(solution) called")
 
 
 """
@@ -318,23 +318,35 @@ General function for performing an optimization algorithm in MHLib.
 function run!
 end
 
+"""
+    git_version()
+
+Return git version information of current directory.
+"""
+function git_version() :: String
+    chomp(read(`git describe --abbrev=4 --dirty --always --tags`, String))
+end
+
 #-----------------------------------------------------------
 
-include("settings.jl")
+include("Settings.jl")
 include("Schedulers.jl")
 include("GVNSs.jl")
 include("ALNSs.jl")
 include("Environments.jl")
 include("MCTSs.jl")
+include("RL/RL.jl")
 
 include("demos/OneMax.jl")
 include("demos/MAXSAT.jl")
 include("demos/LCS.jl")
 
+
 const all_settings_cfgs = [
         Schedulers.settings_cfg,
         ALNSs.settings_cfg,
         MCTSs.settings_cfg,
+        RL.settings_cfg,
         OneMax.settings_cfg,
         LCS.settings_cfg,
     ]
