@@ -200,7 +200,7 @@ export BoolVectorSolution, initialize!, k_random_flips!, k_flip_neighborhood_sea
 """
     BoolVectorSolution
 
-An abstract solution encoded by a fixed-length boolean vector.
+An abstract solution encoded by a fixed length boolean vector.
 """
 abstract type BoolVectorSolution <: VectorSolution{Bool} end
 
