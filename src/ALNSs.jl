@@ -15,7 +15,9 @@ using MHLib.Schedulers
 using StatsBase
 using ArgParse
 
-export ALNS, run!, get_number_to_destroy
+import MHLib.run!
+
+export ALNS, get_number_to_destroy
 
 #=
 TODO:

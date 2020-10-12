@@ -5,9 +5,16 @@ version = "0.1.0"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
-Atom = "c52e3926-4ff0-5f6e-af25-54175e0327b1"
-Juno = "e5e0dc1b-0480-54bc-9374-aad01c23163d"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Infiltrator = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"
+Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+ArgParse = "1"
+Infiltrator = "0.3"
+StatsBase = "0.33"
+julia = "1"

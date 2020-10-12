@@ -1,10 +1,13 @@
-"""Demo application solving the multi-dimensional knapsack problem (MKP).
+"""
+    MKP
+
+Demo application solving the multi-dimensional knapsack problem (MKP).
 
 Given are a set of n items, m resources, and a capacity for each resource.
 Each item has a price and requires from each resource a certain amount.
-Find a subset of the items with maximum total price that does not exceed the resources' capacities.
+Find a subset of the items with maximum total price that does not exceed the resources'
+capacities.
 """
-
 module MKP
 
 import Base: copy, copy!, fill!
@@ -13,20 +16,39 @@ using ArgParse
 using MHLib
 using MHLib.Schedulers
 import MHLib.Schedulers: construct!, local_improve!, shaking!
-import MHLib: calc_objective, element_removed_delta_eval!, element_added_delta_eval!, may_be_extendible
+import MHLib: calc_objective, element_removed_delta_eval!, element_added_delta_eval!,
+    may_be_extendible
 
 export MKPInstance, MKPSolution
 
+"""
+    MKPInstance
+
+Instance oof a multidimensional knapsack problem.
+
+- n: number of elements
+- m: number of resources
+- p: vector of prizes of elements
+- r: resource consumption values of each each element
+- b: capacities of resources
+- r_min: TODO
+- obj_opt: TODO
+"""
 struct MKPInstance
     n::Int
     m::Int
     p::Vector{Int}
-    r::Array{Int,2}
+    r::Array{Int, 2}
     b::Vector{Int}
     r_min::Int
     obj_opt::Float64
 end
 
+"""
+    MKPInstance(file_name)
+
+Read MKP instance from file.
+"""
 function MKPInstance(file_name::String)
     local n::Int
     local m::Int
@@ -57,7 +79,13 @@ function MKPInstance(file_name::String)
     MKPInstance(n, m, p, r, b, r_min, obj_opt)
 end
 
+"""
+    MKPSolution
 
+Solution to an MKP Instance represented as a SubsetVectorSolution.
+
+Vector y contains the consumed amounts of the resources.
+"""
 mutable struct MKPSolution <: SubsetVectorSolution{Int}
     inst::MKPInstance
     obj_val::Int
@@ -68,8 +96,10 @@ mutable struct MKPSolution <: SubsetVectorSolution{Int}
     sel::Int
 end
 
+
 MKPSolution(inst::MKPInstance) =
     MKPSolution(inst, -1, false, collect(1:inst.n), zeros(inst.m), Set{Int}(1:inst.n), 0)
+
 
 function copy!(s1::S, s2::S) where {S <: MKPSolution}
     s1.inst = s2.inst
@@ -82,7 +112,8 @@ function copy!(s1::S, s2::S) where {S <: MKPSolution}
 end
 
 copy(s::MKPSolution) =
-    MKPSolution(s.inst, -1, false, Base.copy(s.x[:]), Base.copy(s.y[:]), Base.copy(s.all_elements), s.sel)
+    MKPSolution(s.inst, -1, false, Base.copy(s.x[:]), Base.copy(s.y[:]),
+        Base.copy(s.all_elements), s.sel)
 
 Base.show(io::IO, s::MKPSolution) =
     println(io, "Solution: ", s.x)
@@ -94,7 +125,13 @@ function calc_objective(s::MKPSolution)
     return 0
 end
 
-function calc_y(s::MKPSolution)
+
+"""
+    calc_y!(s)
+
+Calculate consumed amounts of resources for current solution.
+"""
+function calc_y!(s::MKPSolution)
     if s.sel > 0
         s.y = sum(s.inst.r[:, s.x[:s.sel]], dims=2)
     end
@@ -113,26 +150,46 @@ function check(s::MKPSolution, unsorted=false)
     end
 end
 
-function clear(s::MKPSolution)
+function clear!(s::MKPSolution)
     fill!(s.y, 0)
     invoke(clear, Tuple{SubsetVectorSolution}, s)
 end
 
+"""
+    construct!(s)
+
+Construct new solution by random initialization.
+"""
 function construct!(s::MKPSolution, par::Int, result::Result)
     initialize!(s)
 end
 
+"""
+    local_improve!(s, par, result)
+
+Perform two-exchange local search followed by random fill.
+"""
 function local_improve!(s::MKPSolution, par::Int, result::Result)
     if !two_exchange_random_fill_neighborhood_search!(s, false)
         result.changed = false
     end
 end
 
+"""
+    shaking!(s, par, result)
+
+Perform shaking by removing par randomly selected elements followed ba a random fill.
+"""
 function shaking!(s::MKPSolution, par::Int, result::Result)
     remove_some!(s, par)
     fill!(s, nothing)
 end
 
+"""
+    may_be_extendible(s)
+
+Quick check if the solution may be extended by adding further elements.
+"""
 function may_be_extendible(s::MKPSolution)
     return all((s.y .+ s.inst.r_min) .<= s.inst.b) && s.sel < length(s.x)
 end
