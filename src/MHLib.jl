@@ -7,6 +7,7 @@ module MHLib
 
 using Random
 using Base: copy, copy!, length
+import Base: fill!
 
 export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
@@ -333,10 +334,11 @@ include("Settings.jl")
 include("Schedulers.jl")
 include("GVNSs.jl")
 include("ALNSs.jl")
+include("SubsetVectorSolutions.jl")
 
 include("demos/OneMax.jl")
 include("demos/MAXSAT.jl")
-
+include("demos/MKP.jl")
 
 const all_settings_cfgs = [
         Schedulers.settings_cfg,
