@@ -54,7 +54,7 @@ const settings_cfg = ArgParseSettings()
     "--mh_checkit"
         help = "call check() for each solution after each method application"
         arg_type = Bool
-        default = true
+        default = false
 end
 
 
