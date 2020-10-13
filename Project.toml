@@ -1,12 +1,13 @@
 name = "MHLib"
 uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
 authors = ["Guenther Raidl <raidl@ac.tuwien.ac.at>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Infiltrator = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"
+LightGraphs = "093fc24a-ae57-5d10-9952-331d41423f4d"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"

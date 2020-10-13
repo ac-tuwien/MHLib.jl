@@ -27,7 +27,7 @@ const settings_cfg = ArgParseSettings()
         arg_type = Int
         default = 100
     "--mh_lnewinc"
-        help = "write iteration log if new incumbent solution"
+        help = "write iteration log only if new incumbent solution"
         arg_type = Bool
         default = true
     "--mh_lfreq"
@@ -54,7 +54,7 @@ const settings_cfg = ArgParseSettings()
     "--mh_checkit"
         help = "call check() for each solution after each method application"
         arg_type = Bool
-        default = false
+        default = true
 end
 
 
@@ -122,7 +122,7 @@ MHMethodStatistics() = MHMethodStatistics(0,0.0,0,0.0,0.0)
 """
     Scheduler
 
-Struct for metaheuristics that work by iteratively applying certain methods/operations.
+Type for metaheuristics that work by iteratively applying certain methods/operations.
 
 Attributes
 - `incumbent`: incumbent solution, i.e., initial solution and always best solution so far
@@ -136,6 +136,7 @@ Attributes
 - `time_start`: starting time of algorithm
 - `run_time`: overall runtime (set when terminating)
 - `own_settings`: own settings object with possibly individualized parameter values
+- `checkit`: if set check() is called for each solution after each method application
 """
 mutable struct Scheduler
     incumbent::Solution
@@ -149,6 +150,7 @@ mutable struct Scheduler
     run_time::Float64
     # logger = logging.getLogger("pymhlib") TODO
     # iter_logger = logging.getLogger("pymhlib_iter")
+    checkit::Bool
 end
 
 
@@ -165,7 +167,7 @@ valid initial solution; otherwise it is assumed to be uninitialized.
 function Scheduler(sol::Solution, methods::Vector{MHMethod}, consider_initial_sol=false)
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
     s = Scheduler(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
-        time(), 0.0)
+        time(), 0.0, settings[:mh_checkit])
     log_iteration_header(s)
     if s.incumbent_valid
         log_iteration(s, '-', NaN, sol, true, true, None)
@@ -238,8 +240,9 @@ function perform_method!(s::Scheduler, method::MHMethod, sol::Solution;
     t_start = time()
     method.func(sol, method.par, res)
     t_end = time()
-    # if __debug__ and self.own_settings.mh_checkit: TODO
-    #     sol.check()
+    if s.checkit
+        check(sol)
+    end
     ms = s.method_stats[method.name]
     ms.applications += 1
     ms.netto_time += t_end - t_start
@@ -377,7 +380,7 @@ A line is written if in_any_case is set or in dependence of
 """
 function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::Solution,
     new_incumbent::Bool, in_any_case::Bool, log_info::String="")
-    log = in_any_case || new_incumbent && settings[:mh_lnewinc]
+    log = in_any_case || new_incumbent || !settings[:mh_lnewinc]
     if !log
         lfreq = settings[:mh_lfreq]
         if lfreq > 0 && sched.iteration % lfreq == 0
@@ -418,16 +421,14 @@ end
 
 
 """
-    update_stats_for_method_pair!(scheduler, destroy, repair, sol, res, obj_old, t_destroy, t_repair)
+    update_stats_for_method_pair!(sched, dest, repair, sol, res, obj_old, t_dest, t_repair)
 
-Update statistics, incumbent and check termination condition after having performed a destroy+repair.
+Update statistics, incumbent and check termination condition after having performed a
+    destroy+repair.
 """
 function update_stats_for_method_pair!(scheduler::Scheduler, destroy::MHMethod,
-     repair::MHMethod, sol::Solution, res::Result, obj_old, t_destroy::Float64, t_repair::Float64)
-     #= TODO
-     if __debug__ and self.own_settings.mh_checkit:
-         sol.check()
-     =#
+         repair::MHMethod, sol::Solution, res::Result, obj_old, t_destroy::Float64,
+         t_repair::Float64)
      ms_destroy = scheduler.method_stats[destroy.name]
      ms_destroy.applications += 1
      ms_destroy.netto_time += t_destroy

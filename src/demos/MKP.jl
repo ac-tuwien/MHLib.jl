@@ -26,13 +26,13 @@ export MKPInstance, MKPSolution
 
 Instance oof a multidimensional knapsack problem.
 
-- n: number of elements
-- m: number of resources
-- p: vector of prizes of elements
-- r: resource consumption values of each each element
-- b: capacities of resources
-- r_min: TODO
-- obj_opt: TODO
+- `n`: number of elements
+- `m`: number of resources
+- `p: vector of prizes of elements
+- `r`: resource consumption values of each each element
+- `b`: capacities of resources
+- `r_min`: minimum resource consumption value of any rlement
+- `obj_opt`: optimal solution value (if known)
 """
 struct MKPInstance
     n::Int
@@ -84,7 +84,8 @@ end
 
 Solution to an MKP Instance represented as a SubsetVectorSolution.
 
-Vector y contains the consumed amounts of the resources.
+Attributes in addition to those needed by `SubsetVectorSolution`
+- `y`: consumed amounts of the resources
 """
 mutable struct MKPSolution <: SubsetVectorSolution{Int}
     inst::MKPInstance
@@ -96,10 +97,8 @@ mutable struct MKPSolution <: SubsetVectorSolution{Int}
     sel::Int
 end
 
-
 MKPSolution(inst::MKPInstance) =
     MKPSolution(inst, -1, false, collect(1:inst.n), zeros(inst.m), Set{Int}(1:inst.n), 0)
-
 
 function copy!(s1::S, s2::S) where {S <: MKPSolution}
     s1.inst = s2.inst
@@ -112,22 +111,18 @@ function copy!(s1::S, s2::S) where {S <: MKPSolution}
 end
 
 copy(s::MKPSolution) =
-    MKPSolution(s.inst, -1, false, Base.copy(s.x[:]), Base.copy(s.y[:]),
+    MKPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]), Base.copy(s.y[:]),
         Base.copy(s.all_elements), s.sel)
 
 Base.show(io::IO, s::MKPSolution) =
-    println(io, "Solution: ", s.x)
+    println(io, "MKP Solution: ", s.x)
 
-function calc_objective(s::MKPSolution)
-    if s.sel > 0
-        return sum(s.inst.p[s.x[1:s.sel]])
-    end
-    return 0
-end
+calc_objective(s::MKPSolution) =
+    s.sel > 0 ? sum(s.inst.p[s.x[1:s.sel]]) : 0
 
 
 """
-    calc_y!(s)
+    calc_y!(mkp_solution)
 
 Calculate consumed amounts of resources for current solution.
 """
@@ -139,7 +134,7 @@ function calc_y!(s::MKPSolution)
 end
 
 function check(s::MKPSolution, unsorted=false)
-    invoke(calc_objective, Tuple{SubsetVectorSolution,Bool}, s, unsorted)
+    invoke(check, Tuple{SubsetVectorSolution, Bool}, s, unsorted)
     y_old = s.y
     calc_y(s)
     if any(y_old .!= s.y)
@@ -156,7 +151,7 @@ function clear!(s::MKPSolution)
 end
 
 """
-    construct!(s)
+    construct!(mkp_solution, par, result)
 
 Construct new solution by random initialization.
 """
@@ -165,7 +160,7 @@ function construct!(s::MKPSolution, par::Int, result::Result)
 end
 
 """
-    local_improve!(s, par, result)
+    local_improve!(mkp_solution, par, result)
 
 Perform two-exchange local search followed by random fill.
 """
@@ -176,7 +171,7 @@ function local_improve!(s::MKPSolution, par::Int, result::Result)
 end
 
 """
-    shaking!(s, par, result)
+    shaking!(mkp_solution, par, result)
 
 Perform shaking by removing par randomly selected elements followed ba a random fill.
 """
@@ -186,15 +181,15 @@ function shaking!(s::MKPSolution, par::Int, result::Result)
 end
 
 """
-    may_be_extendible(s)
+    may_be_extendible(mkp_solution)
 
 Quick check if the solution may be extended by adding further elements.
 """
-function may_be_extendible(s::MKPSolution)
-    return all((s.y .+ s.inst.r_min) .<= s.inst.b) && s.sel < length(s.x)
-end
+may_be_extendible(s::MKPSolution) =
+    all((s.y .+ s.inst.r_min) .<= s.inst.b) && s.sel < length(s.x)
 
-function element_removed_delta_eval!(s::MKPSolution; update_obj_val::Bool=true, allow_infeasible::Bool=false)
+function element_removed_delta_eval!(s::MKPSolution; update_obj_val::Bool=true,
+        allow_infeasible::Bool=false)
     elem = s.x[s.sel+1]
     s.y .-= s.inst.r[:, elem]
     if update_obj_val
@@ -203,7 +198,8 @@ function element_removed_delta_eval!(s::MKPSolution; update_obj_val::Bool=true, 
     return true
 end
 
-function element_added_delta_eval!(s::MKPSolution; update_obj_val::Bool=true, allow_infeasible::Bool=false)
+function element_added_delta_eval!(s::MKPSolution; update_obj_val::Bool=true,
+        allow_infeasible::Bool=false)
     elem = s.x[s.sel]
     y_new = s.y .+ s.inst.r[:, elem]
     feasible = all(y_new .<= s.inst.b)

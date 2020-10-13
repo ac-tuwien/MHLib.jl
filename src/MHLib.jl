@@ -336,9 +336,11 @@ include("GVNSs.jl")
 include("ALNSs.jl")
 include("SubsetVectorSolutions.jl")
 
+include("demos/Graphs.jl")
 include("demos/OneMax.jl")
 include("demos/MAXSAT.jl")
 include("demos/MKP.jl")
+include("demos/MISP.jl")
 
 const all_settings_cfgs = [
         Schedulers.settings_cfg,
