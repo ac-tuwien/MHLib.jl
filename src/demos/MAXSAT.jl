@@ -96,7 +96,7 @@ mutable struct MAXSATSolution <: BoolVectorSolution
 end
 
 """
-    MAXSATSolution(::MAXSATInstance)
+    MAXSATSolution(maxsat_instance)
 
 Create a solution object for the given `MAXSATInstance`.
 """
@@ -111,17 +111,16 @@ function copy!(s1::S, s2::S) where {S <: MAXSATSolution}
     s1.destroyed[:] = s2.destroyed
 end
 
-
 copy(s::MAXSATSolution) =
-    MAXSATSolution(s.inst, -1, false, Base.copy(s.x[:]), Base.copy(s.destroyed[:]))
-
+    MAXSATSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]),
+        Base.copy(s.destroyed[:]))
 
 Base.show(io::IO, s::MAXSATSolution) =
-    println(io, "Solution: ", s.x)
+    println(io, "MAXSAT Solution: ", s.x)
 
 
 """
-    calc_objective(::MAXSATSolution)
+    calc_objective(maxsat_solution)
 
 Count the number of satisfied clauses.
 """
@@ -140,7 +139,7 @@ end
 
 
 function flip_variable!(s::MAXSATSolution, pos::Int)::Int
-    obj_val = obj(s)
+    obj(s)
     val = !s.x[pos]
     s.x[pos] = val
     for clause in s.inst.variable_usage[pos]
@@ -150,21 +149,21 @@ function flip_variable!(s::MAXSATSolution, pos::Int)::Int
             if v == 0 break end
             if abs(v) == pos
                 val_fulfills_now = (v>0 ? val : !val)
-            elseif s.x[abs(v)] == (v>0 ? 1 : 0)
+            elseif s.x[abs(v)] == (v>0)
                 fulfilled_by_other = true
                 break  # clause fulfilled by other variable, no change
             end
         end
         if !fulfilled_by_other
-            obj_val += (val_fulfills_now ? 1 : -1)
+            s.obj_val += (val_fulfills_now ? 1 : -1)
         end
     end
-    return obj_val
+    return s.obj_val
 end
 
 
 """
-    destroy(sol, par, result)
+    destroy(maxsat_solution, par, result)
 
 Destroy operator for ALNS selects par*ALNS.get_number_to_destroy positions uniformly
 at random for removal.
@@ -181,7 +180,7 @@ end
 
 
 """
-    repair!(sol, par, result)
+    repair!(maxsat_solution, par, result)
 
 Repair operator for ALNS assigns new random values to all positions in sol.destroyed.
 """
