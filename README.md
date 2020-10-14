@@ -81,16 +81,17 @@ Further modules:
 
 #### Demos
 
-For demonstration purposes, simple metaheuristic approaches are provided in the `demos`
+For demonstration purposes, simple metaheuristic approaches are provided in the `test`
 subdirectory for the following well-known combinatorial optimization problems.
-They can be statet by respective scripts in the `bin` folder.
+They can be startet as shown in the respective sections of `runtests.jl`.
 
-It is recommended to take such a demo as template or solving your own problem.
+It is recommended to take such a demo as template for solving your own problem.
 
 - `OneMax`: basic test problem in which the goal is to set all digits in a binary
     string to `true`
 - `MAXSAT`: maximum satisfiability problem based on `BinaryVectorSolution`
 - `MKP`: multi-constrained knapsack problem based on `SubsetVectorSolution`
+- `MISP`: maximum independent set problem based on `SubsetVectorSolution`
 
 
 ### Changelog
@@ -98,7 +99,7 @@ It is recommended to take such a demo as template or solving your own problem.
 Major changes over major releases:
 
 #### Version 0.1.1
-- `SubsetVectorSolution` and `MKP` added
+- `SubsetVectorSolution`, `MKP`, and `MISP` added
 
 #### Version 0.1.0
 - Initial version

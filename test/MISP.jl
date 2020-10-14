@@ -12,9 +12,10 @@ using Random
 using StatsBase
 using LightGraphs
 
+using ..Graphs
+
 using MHLib
 using MHLib.Schedulers
-using MHLib.Graphs
 import MHLib.Schedulers: construct!, local_improve!, shaking!
 import MHLib: calc_objective, element_removed_delta_eval!, element_added_delta_eval!,
     may_be_extendible, check

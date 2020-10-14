@@ -6,19 +6,25 @@ using MHLib.Schedulers
 using MHLib.GVNSs
 using MHLib.ALNSs
 
-using MHLib.OneMax
-using MHLib.MAXSAT
-using MHLib.MKP
-using MHLib.MISP
+include("Graphs.jl")
+include("OneMax.jl")
+include("MAXSAT.jl")
+include("MKP.jl")
+include("MISP.jl")
 
+using .Graphs
+using .OneMax
+using .MAXSAT
+using .MKP
+using .MISP
 
-if endswith(pwd(), "test")
-    cd("..")
+# always run this code in the test directory
+if !endswith(pwd(), "test")
+    cd("test")
 end
 
-
 @testset "OneMaxSolution" begin
-    parse_settings!([MHLib.OneMax.settings_cfg], ["--seed=1"])
+    parse_settings!([OneMax.settings_cfg], ["--seed=1"])
     println(get_settings_as_string())
     s1 = OneMaxSolution(5)
     initialize!(s1)
@@ -38,7 +44,7 @@ end
 end
 
 @testset "GVNS-OneMax.jl" begin
-    parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.OneMax.settings_cfg],
+    parse_settings!([MHLib.Schedulers.settings_cfg, OneMax.settings_cfg],
         ["--seed=1"])
     sol = OneMaxSolution(10)
     println(sol)
