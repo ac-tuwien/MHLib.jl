@@ -1,8 +1,8 @@
 #!/usr/bin/env julia
 """
-    maxsat
+    maxsat-demo
 
-Demo program for solving the MAXSAT problem.
+Standalone demo program for solving the MAXSAT problem.
 """
 
 using ArgParse
@@ -10,8 +10,10 @@ using MHLib
 using MHLib.Schedulers
 using MHLib.GVNSs
 using MHLib.ALNSs
-using MHLib.MAXSAT
-using MHLib.LCS
+
+include("MAXSAT.jl")
+using .MAXSAT
+
 
 const settings_cfg = ArgParseSettings()
 
