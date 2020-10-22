@@ -1,6 +1,6 @@
 export SubsetVectorSolution, clear!, initialize!, remove_some!,
     two_exchange_random_fill_neighborhood_search!, element_removed_delta_eval!,
-    element_added_delta_eval!, may_be_extendible
+    element_added_delta_eval!, may_be_extendible, unselected_elems_in_x
 
 """
     SubsetVectorSolution
@@ -12,8 +12,13 @@ elements, the back part the unselected ones.
 A concrete type must implementthe following attributes:
 - `x`: Vector of different elements, first the selected ones, then the not selected ones.
 - `sel`: Integer indicating the number of selected elements
+- `all_elements`: complete set of which a subset shall be selected (only needs to be implemented if unselected elements are not maintained behind the selected ones)
 """
 abstract type SubsetVectorSolution{T} <: VectorSolution{T} end
+
+"""A flag for specifying if unselected elements are maintained in x[sel+1:end], i.e., behind the selected ones."""
+unselected_elems_in_x(::Type) = true
+unselected_elems_in_x(s::SubsetVectorSolution) = unselected_elems_in_x(typeof(s))
 
 function clear!(s::SubsetVectorSolution)
     s.sel = 0
@@ -123,8 +128,14 @@ function check(s::SubsetVectorSolution, unsorted::Bool=true)
     if !(1 <= s.sel <= length(s.x))
         error("Invalid attribute sel in solution: $(s.sel)")
     end
-    if !allunique(s.x)
-        error("Missing/equal elements in solution: $(s.x) (sorted: $(sort(s.x)))")
+    if unselected_elems_in_x(s)
+        if !allunique(s.x)
+            error("Missing/equal elements in solution: $(s.x) (sorted: $(sort(s.x)))")
+        end
+    else
+        if !allunique(s.x[begin:s.sel])
+            error("Missing/equal elements in solution: $(s.x[begin:s.sel]) (sorted: $(sort(s.x[begin:s.sel])))")
+        end
     end
     if !unsorted && !issorted(s.x)
         error("Solution not sorted: $(s.x[1:s.sel])")
@@ -174,10 +185,10 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
         shuffle!(pool[1:end])
 
         # search v (the deleted item) and place it at the front of the extension pool
-        #v_pos = findall(pool.==v)[1]
-        #if v_pos != 1
-        #    pool[1], pool[v_pos] = pool[v_pos], pool[1]
-        #end
+        v_pos = findall(pool.==v)
+        if length(v_pos) > 0 && v_pos[1] != 1
+            pool[1], pool[v_pos[1]] = pool[v_pos[1]], pool[1]
+        end
         # enumerate over all items in the extension pool except for v
         for (j, vu) in enumerate(pool[2:end])
 
@@ -233,13 +244,13 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
     return false
 end
 
-"""
-    get_extension_pool(subset_vector_solution)
 
-Return a list of yet unselected elements that may possibly be added.
-"""
+"""Return a list of yet unselected elements that may possibly be added."""
 function get_extension_pool(s::SubsetVectorSolution)
-    return @view s.x[s.sel+1:end]
+    if unselected_elems_in_x(s)
+        return @view s.x[s.sel+1:end]
+    end
+    return collect(setdiff(Set(s.all_elements), Set(s.x[begin:s.sel])))
 end
 
 """

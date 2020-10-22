@@ -18,8 +18,7 @@ using MHLib
 using MHLib.Schedulers
 import MHLib.Schedulers: construct!, local_improve!, shaking!
 import MHLib: calc_objective, element_removed_delta_eval!, element_added_delta_eval!,
-    may_be_extendible, check
-
+    may_be_extendible, check, unselected_elems_in_x
 import Base: copy, copy!, show
 
 export MISPInstance, MISPSolution
@@ -82,11 +81,14 @@ mutable struct MISPSolution <: SubsetVectorSolution{Int}
     obj_val_valid::Bool
     x::Vector{Int}
     sel::Int
+    all_elements::Set{Int}
     covered::Vector{Int}
 end
 
 MISPSolution(inst::MISPInstance) =
-    MISPSolution(inst, -1, false, collect(1:inst.n), 0, zeros(Int, inst.n))
+    MISPSolution(inst, -1, false, collect(1:inst.n), 0, Set(1:inst.n), zeros(Int, inst.n))
+
+unselected_elems_in_x(::MISPSolution) = false
 
 function copy!(s1::S, s2::S) where {S <: MISPSolution}
     s1.inst = s2.inst
@@ -94,12 +96,12 @@ function copy!(s1::S, s2::S) where {S <: MISPSolution}
     s1.obj_val_valid = s2.obj_val_valid
     s1.x[:] = s2.x
     s1.sel = s2.sel
+    s1.all_elements = s2.all_elements
     s1.covered[:] = s2.covered
 end
 
 copy(s::MISPSolution) =
-    MISPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]), s.sel,
-        Base.copy(s.covered[:]))
+    MISPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]), s.sel, s.all_elements, Base.copy(s.covered[:]))
 
 Base.show(io::IO, s::MISPSolution) =
     println(io, "MISP Solution: ", s.x)
