@@ -1,24 +1,42 @@
 export SubsetVectorSolution, clear!, initialize!, remove_some!,
     two_exchange_random_fill_neighborhood_search!, element_removed_delta_eval!,
-    element_added_delta_eval!, may_be_extendible, unselected_elems_in_x
+    element_added_delta_eval!, may_be_extendible, unselected_elems_in_x, all_elements
 
 """
     SubsetVectorSolution
 
 A type for solutions that are arbitrary cardinality subsets of a given set
 represented in vector form. The front part represents the selected
-elements, the back part the unselected ones.
+elements, the back part optionally the unselected ones.
 
-A concrete type must implementthe following attributes:
-- `x`: Vector of different elements, first the selected ones, then the not selected ones.
+A concrete type must implement the following:
+- `x`: Vector of different elements, first the selected ones, then optionally the not
+    selected ones.
 - `sel`: Integer indicating the number of selected elements
-- `all_elements`: complete set of which a subset shall be selected (only needs to be implemented if unselected elements are not maintained behind the selected ones)
+- `all_elements(solution)`: complete set of which a subset shall be selected;
+    only neededed if unselected elements are not maintained behind the selected ones
 """
 abstract type SubsetVectorSolution{T} <: VectorSolution{T} end
 
-"""A flag for specifying if unselected elements are maintained in x[sel+1:end], i.e., behind the selected ones."""
-unselected_elems_in_x(::Type) = true
-unselected_elems_in_x(s::SubsetVectorSolution) = unselected_elems_in_x(typeof(s))
+"""
+    unselected_elems_in_x(subset_vector_solution)
+
+Indicator function for specifying if unselected elements are maintained in
+`x[sel+1:end]`, i.e., behind the selected ones.
+The default is that this is the case, otherwise override the function for your type.
+"""
+unselected_elems_in_x(::SubsetVectorSolution) = true
+
+"""
+    all_elements(subset_vector_solution)
+
+Return a set with all elements.
+
+Needs to be defined in a concrete type if the unselected elements are not stored in `x`
+behind the selected ones, i.e., when `unselected_elems_in_x==true`.
+"""
+all_elements(s::SubsetVectorSolution) =
+    error("Abstract all_elements(subset_vector_solution called")
 
 function clear!(s::SubsetVectorSolution)
     s.sel = 0
@@ -244,13 +262,16 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
     return false
 end
 
+"""
+    get_extension_pool(subset_vector_solution)
 
-"""Return a list of yet unselected elements that may possibly be added."""
+Return a list of yet unselected elements that may possibly be added.
+"""
 function get_extension_pool(s::SubsetVectorSolution)
     if unselected_elems_in_x(s)
         return @view s.x[s.sel+1:end]
     end
-    return collect(setdiff(Set(s.all_elements), Set(s.x[begin:s.sel])))
+    return collect(setdiff(all_elements(s), Set(s.x[begin:s.sel])))
 end
 
 """

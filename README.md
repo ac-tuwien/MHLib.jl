@@ -53,8 +53,8 @@ functions for them:
     An abstract solution encoded by a boolean vector.
 _ `SubsetVectorSolution`:
     A solution that is an arbitrary cardinality subset of a given set
-    of integers represented in vector form. The front part represents the selected
-    elements, the back part the unselected ones.
+    represented in vector form. The front part represents the selected
+    elements, the back part optionally the unselected ones.
 
 Moreover, the main module provides:
 - `git_version()`:

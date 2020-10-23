@@ -18,7 +18,7 @@ using MHLib
 using MHLib.Schedulers
 import MHLib.Schedulers: construct!, local_improve!, shaking!
 import MHLib: calc_objective, element_removed_delta_eval!, element_added_delta_eval!,
-    may_be_extendible, check, unselected_elems_in_x
+    may_be_extendible, check, unselected_elems_in_x, all_elements
 import Base: copy, copy!, show
 
 export MISPInstance, MISPSolution
@@ -37,12 +37,14 @@ Attributes
 - `n`: number of nodes
 - `m` number of edges
 - `p`: prices (weights) of items
+- `all_nodes`: set of all nodes
 """
 struct MISPInstance
     graph
     n::Int
     m::Int
     p::Vector{Int}
+    all_nodes::Set{Int}
 end
 
 
@@ -58,7 +60,7 @@ function MISPInstance(name::AbstractString)
     n = nv(graph)
     m = ne(graph)
     p = ones(Int, n)
-    MISPInstance(graph, n, m, p)
+    MISPInstance(graph, n, m, p, Set(1:n))
 end
 
 function show(io::IO, inst::MISPInstance)
@@ -71,6 +73,9 @@ end
 
 Solution to a MISP instance.
 
+It is a `SubsetVectorSolution` in which we do not store unselected elements in the
+solution vector behind the selected ones, but instead use the set `all_elements`.
+
 Attributes in addition to those needed by `SubsetVectorSolution`:
 - `covered`: for each node the number of selected neighbor nodes plus one if the node
     itself is selected
@@ -81,27 +86,28 @@ mutable struct MISPSolution <: SubsetVectorSolution{Int}
     obj_val_valid::Bool
     x::Vector{Int}
     sel::Int
-    all_elements::Set{Int}
     covered::Vector{Int}
 end
 
 MISPSolution(inst::MISPInstance) =
-    MISPSolution(inst, -1, false, collect(1:inst.n), 0, Set(1:inst.n), zeros(Int, inst.n))
+    MISPSolution(inst, -1, false, collect(1:inst.n), 0, zeros(Int, inst.n))
 
 unselected_elems_in_x(::MISPSolution) = false
 
-function copy!(s1::S, s2::S) where {S <: MISPSolution}
+all_elements(s::MISPSolution) = s.inst.all_nodes
+
+function copy!(s1::MISPSolution, s2::MISPSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
     s1.x[:] = s2.x
     s1.sel = s2.sel
-    s1.all_elements = s2.all_elements
     s1.covered[:] = s2.covered
 end
 
 copy(s::MISPSolution) =
-    MISPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]), s.sel, s.all_elements, Base.copy(s.covered[:]))
+    MISPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]), s.sel,
+        Base.copy(s.covered[:]))
 
 Base.show(io::IO, s::MISPSolution) =
     println(io, "MISP Solution: ", s.x)
