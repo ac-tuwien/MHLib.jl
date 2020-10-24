@@ -25,6 +25,7 @@ Vienna, Austria, since 2020.
 
 #### Contributors:
 - [Günther Raidl](https://www.ac.tuwien.ac.at/raidl) (primarily responsible)
+- Nikolaus Frohner
 - Thomas Jatschka
 - Fabio Oberweger
 
@@ -51,6 +52,8 @@ functions for them:
     An abstract solution encoded by a vector of some user-provided type.
 - `BoolVectorSolution`:
     An abstract solution encoded by a boolean vector.
+- `PermutationSolution`:
+    An abstract solution representing permutations of a fixed number of elements.
 _ `SubsetVectorSolution`:
     A solution that is an arbitrary cardinality subset of a given set
     represented in vector form. The front part represents the selected
@@ -90,6 +93,7 @@ It is recommended to take such a demo as template for solving your own problem.
 - `OneMax`: basic test problem in which the goal is to set all digits in a binary
     string to `true`
 - `MAXSAT`: maximum satisfiability problem based on `BinaryVectorSolution`
+- `TSP`: traveling salesperson problem based on `PermutationSolution`
 - `MKP`: multi-constrained knapsack problem based on `SubsetVectorSolution`
 - `MISP`: maximum independent set problem based on `SubsetVectorSolution`
 
@@ -99,7 +103,7 @@ It is recommended to take such a demo as template for solving your own problem.
 Major changes over major releases:
 
 #### Version 0.1.1
-- `SubsetVectorSolution`, `MKP`, and `MISP` added
+- `PermutationSolution`, `SubsetVectorSolution`, `TSP`, `MKP`, and `MISP` added
 
 #### Version 0.1.0
 - Initial version
