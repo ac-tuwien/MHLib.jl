@@ -42,13 +42,14 @@ Create a GVNS.
 
 Create a GVNS for the given solution with the given construction,
 local improvement, and shaking methods provides as `Vector{MHMethod}`.
-If `consider_initial_sol`, consider the given solution as valid initial solution;
+If `consider_initial_sol` is true, consider the given solution as valid initial solution;
 otherwise it is assumed to be uninitialized.
 """
 function GVNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_li::Vector{MHMethod},
-    meths_sh::Vector{MHMethod}; consider_initial_sol::Bool=false)
+        meths_sh::Vector{MHMethod}; consider_initial_sol::Bool=false)
     # TODO own_settings
-    GVNS(Scheduler(sol, [meths_ch; meths_li; meths_sh]), meths_ch, meths_li, meths_sh)
+    GVNS(Scheduler(sol, [meths_ch; meths_li; meths_sh], consider_initial_sol),
+        meths_ch, meths_li, meths_sh)
 end
 
 

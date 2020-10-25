@@ -27,7 +27,7 @@ const settings_cfg = ArgParseSettings()
         arg_type = Int
         default = 100
     "--mh_lnewinc"
-        help = "write iteration log only if new incumbent solution"
+        help = "always write iteration log if new incumbent solution"
         arg_type = Bool
         default = true
     "--mh_lfreq"
@@ -116,7 +116,7 @@ mutable struct MHMethodStatistics
     brutto_time::Float64
 end
 
-MHMethodStatistics() = MHMethodStatistics(0,0.0,0,0.0,0.0)
+MHMethodStatistics() = MHMethodStatistics(0, 0.0, 0, 0.0, 0.0)
 
 
 """
@@ -130,13 +130,13 @@ Attributes
 - `incumbent_valid`: true if incumbent is a valid solution to be considered
 - `incumbent_iteration`: iteration in which incumbent was found
 - `incumbent_time`: time at which incumbent was found
-- `methods`: vector of all MHMethods
-- `method_stats`: dict of MHMethodStatistics for each MHMethod
+- `methods`: vector of all `MHMethods`
+- `method_stats`: dict of `MHMethodStatistics` for each `MHMethod`
 - `iteration`: overall number of method applications
 - `time_start`: starting time of algorithm
 - `run_time`: overall runtime (set when terminating)
 - `own_settings`: own settings object with possibly individualized parameter values
-- `checkit`: if set check() is called for each solution after each method application
+- `checkit`: if set `check()` is called for each solution after each method application
 """
 mutable struct Scheduler
     incumbent::Solution
@@ -153,29 +153,28 @@ mutable struct Scheduler
     checkit::Bool
 end
 
-
 """
     Scheduler(solution, methods, consider_initial_sol)
 
 Create a `MHMethod` scheduler.
 
 Create a Scheduler for the given solution with the given methods provides as
-`Vector{MHMethod}`. If `consider_initial_sol`, consider the given solution as
+`Vector{MHMethod}`. If `consider_initial_sol` is true, consider the given solution as
 valid initial solution; otherwise it is assumed to be uninitialized.
 
 """
-function Scheduler(sol::Solution, methods::Vector{MHMethod}, consider_initial_sol=false)
+function Scheduler(sol::Solution, methods::Vector{MHMethod},
+        consider_initial_sol::Bool=false)
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
     s = Scheduler(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
         time(), 0.0, settings[:mh_checkit])
     log_iteration_header(s)
     if s.incumbent_valid
-        log_iteration(s, '-', NaN, sol, true, true, None)
+        log_iteration(s, "-", NaN, sol, true, true, "")
         # TODO s.own_settings = OwnSettings(own_settings) if own_settings else settings
     end
     s
 end
-
 
 """
     update_incumbent!(scheduler, solution, current_time)
@@ -226,7 +225,7 @@ end
 """
     perform_method!(scheduler, method, solution; delayed_success=false)::Result
 
-Perform method on given solution and return Results object.
+Perform method on given solution and return `Results` object.
 
 Also updates incumbent, iteration and the method's statistics in method_stats.
 Furthermore checks the termination condition and eventually sets terminate in the
@@ -344,8 +343,8 @@ end
 Write iteration log header.
 """
 function log_iteration_header(sched::Scheduler)
-    s = "I  iteration             best          obj_old          obj_new" *
-        "         time_method               info"
+    s = "I     iter             best          obj_old          obj_new" *
+        "        time              method info"
     # TODO iter_logger.info(sched, s)
     println(s)
 end
@@ -356,16 +355,14 @@ const LOG10_2 = log10(2)
 const LOG10_5 = log10(5)
 
 function is_logarithmic_number(x::Int)::Bool
-
     lr = log10(x) % 1
     abs(lr) < EPS || abs(lr-LOG10_2) < EPS || abs(lr-LOG10_5) < EPS
-    true
 end
 
 
 """
-    log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::Solution,
-        new_incumbent::Bool, in_any_case::Bool, log_info::String="")
+    log_iteration(scheduler, method_name, obj_old, new_sol, new_incumbent, in_any_case,
+        log_info)
 
 Writes iteration log info.
 
@@ -379,18 +376,18 @@ A line is written if in_any_case is set or in dependence of
 `log_info`: customize log info optionally added if not ""
 """
 function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::Solution,
-    new_incumbent::Bool, in_any_case::Bool, log_info::String="")
-    log = in_any_case || new_incumbent || !settings[:mh_lnewinc]
+        new_incumbent::Bool, in_any_case::Bool, log_info::String="")
+    log = in_any_case || new_incumbent && settings[:mh_lnewinc]
     if !log
         lfreq = settings[:mh_lfreq]
         if lfreq > 0 && sched.iteration % lfreq == 0
             log = true
-        elseif lfreq < 0 && is_logarithmic_number(sched, sched.iteration)
+        elseif lfreq < 0 && is_logarithmic_number(sched.iteration)
             log = true
         end
     end
     if log
-        s = @sprintf("%10d %16.5f %16.6f %16.5f%12.4f%20s %s",
+        s = @sprintf("%10d %16.5f %16.5f %16.5f%12.4f%20s %s",
             sched.iteration, obj(sched.incumbent), obj_old, obj(new_sol),
             time()-sched.time_start, method_name, log_info)
         # TODO self.iter_logger.info(s)
@@ -419,12 +416,11 @@ function perform_method_pair!(scheduler::Scheduler, destroy::MHMethod, repair::M
     return res
 end
 
-
 """
     update_stats_for_method_pair!(sched, dest, repair, sol, res, obj_old, t_dest, t_repair)
 
 Update statistics, incumbent and check termination condition after having performed a
-    destroy+repair.
+destroy+repair.
 """
 function update_stats_for_method_pair!(scheduler::Scheduler, destroy::MHMethod,
          repair::MHMethod, sol::Solution, res::Result, obj_old, t_destroy::Float64,
@@ -497,71 +493,57 @@ end
              f"{total_netto_time:9.4f} {self.sdiv(total_netto_time, self.run_time)*100:10.4f} " \
              f"{total_brutto_time:10.4f} {self.sdiv(total_brutto_time, self.run_time)*100:11.4f}\n"
         self.logger.info(LogLevel.indent(s))
-
-
-
-
 =#
 
 #--------------------- Diverse generic Scheduler methods -----------------------
 
-
 """
-    construct!(::Solution, par, result)
+    construct!(solution, par, result)
 
 Scheduler method that constructs a new solution.
 Will usually be specialized for a specific problem.
 """
-function construct!(s::Solution, par::Int, result::Result)
+construct!(s::Solution, par::Int, result::Result) =
     initialize!(s)
-end
-
 
 """
-    local_improve!(::Solution, par, result)
+    local_improve!(solution, par, result)
 
 Scheduler method that tries to locally improve the solution.
 Will usually be specialized for a specific problem.
 This abstract implementation just throws an exception.
 """
-function local_improve!(s::Solution, par::Int, result::Result)
+local_improve!(s::Solution, par::Int, result::Result) =
     error("Abstract method local_improve! called")
-end
-
 
 """
-    shaking!(::Solution, par, result)
+    shaking!(solution, par, result)
 
 Scheduler method that performs shaking.
 Will usually be specialized for a specific problem.
 This abstract implementation just throws an exception.
 """
-function shaking!(s::Solution, par::Int, result::Result)
+shaking!(s::Solution, par::Int, result::Result) =
     error("Abstract method local_improve! called")
-end
-
 
 """
-    local_improve!(::BoolVectorSolution, par, result)
+    local_improve!(bool_vector_solution, par, result)
 
 Scheduler method that tries to locally improve the solution.
-Perform one k_flip_neighborhood_search.
+Perform one `k_flip_neighborhood_search`.
 """
-function local_improve!(s::BoolVectorSolution, par::Int, result::Result)
+local_improve!(s::BoolVectorSolution, par::Int, result::Result) =
     k_flip_neighborhood_search!(s, par, false)
-end
-
 
 """
-    shaking!(::BoolVectorSolution, par, result)
+    shaking!(bool_vector_solution, par, result)
 
 Scheduler method that performs shaking.
 Will usually be specialized for a specific problem.
 This abstract implementation just throws an exception.
 """
-function shaking!(s::BoolVectorSolution, par::Int, result::Result)
+shaking!(s::BoolVectorSolution, par::Int, result::Result) =
     k_random_flips!(s, par)
-end
 
 
 end  # module

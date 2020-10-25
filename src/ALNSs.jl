@@ -122,28 +122,27 @@ end
 
 
 """
-    ALNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMethod},
-        meths_re::Vector{MHMethod}, consider_initial_sol::Bool=false)
+    ALNS(sol::Solution, meths_ch, meths_de, meths_re, consider_initial_sol)
 
 Create an ALNS.
 
 Create a GVNS for the given solution with the given construction,
-and repair methods provided as Vector{MHMethod}.
-If consider_initial_sol, consider the given solution as valid initial solution;
+and repair methods provided as `Vector{MHMethod}`.
+If `consider_initial_sol`, consider the given solution as valid initial solution;
 otherwise it is assumed to be uninitialized.
 """
 function ALNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMethod},
-    meths_re::Vector{MHMethod}, consider_initial_sol::Bool=false)
+        meths_re::Vector{MHMethod}, consider_initial_sol::Bool=false)
     # TODO own_settings
     temperature = obj(sol) * settings[:mh_alns_init_temp_factor] + 0.000000001
     score_data = Dict(m.name => ScoreData() for m in vcat(meths_de, meths_re))
-    ALNS(Scheduler(sol, [meths_ch; meths_de; meths_re]), meths_ch, meths_de, meths_re,
-        score_data, temperature, 0)
+    ALNS(Scheduler(sol, [meths_ch; meths_de; meths_re], consider_initial_sol),
+        meths_ch, meths_de, meths_re, score_data, temperature, 0)
 end
 
 
 """
-    select_method(meths::Vector{MHMethod}, weights::Vector{Float64})
+    select_method(meths, weights)
 
 Randomly select a method from the given list with probabilities proportional to the given
 weights. If weights is nothing, uniform probability is used.
@@ -154,7 +153,7 @@ end
 
 
 """
-    select_method_pair(alns::ALNS)
+    select_method_pair(alns)
 
 Select a destroy and repair method pair according to current weights.
 """
@@ -168,9 +167,9 @@ end
 
 
 """
-    metropolis_criterion(alns::ALNS, sol_new::Solution, sol_current::Solution)
+    metropolis_criterion(alns, sol_new, sol_current)
 
-Apply Metropolis criterion, return True when sol_new should be accepted.
+Apply Metropolis criterion, return true when `sol_new` should be accepted.
 """
 function metropolis_criterion(alns::ALNS, sol_new::Solution, sol_current::Solution)
     if is_better(sol_new, sol_current)
@@ -181,7 +180,7 @@ end
 
 
 """
-    cool_down!(alns::ALNS)
+    cool_down!(alns)
 
 Apply geometric cooling.
 """
@@ -191,11 +190,8 @@ end
 
 
 """
-    get_number_to_destroy(num_elements::Int, own_settings=settings,
-        dest_min_abs::Union{Float64, Nothing}=nothing,
-        dest_min_ratio::Union{Float64, Nothing}=nothing,
-        dest_max_abs::Union{Float64, Nothing}=nothing,
-        dest_max_ratio::Union{Float64, Nothing}=nothing)
+    get_number_to_destroy(num_elements, own_settings,
+        dest_min_abs, dest_min_ratio, dest_max_abs, dest_max_ratio)
 
 Randomly sample the number of elements to destroy in the destroy operator based on the
 parameter settings.
@@ -225,7 +221,7 @@ end
 
 
 """
-    update_operator_weights!(alns::ALNS)
+    update_operator_weights!(alns)
 
 Update operator weights at segment ends and re-initialize scores.
 """
@@ -248,8 +244,8 @@ end
 
 
 """
-    update_after_destroy_and_repair_performed!(alns::ALNS, destroy::MHMethod,
-        repair::MHMethod, sol_new::Solution, sol_incumbent::Solution, sol::Solution)
+    update_after_destroy_and_repair_performed!(alns, destroy, repair, sol_new,
+        sol_incumbent, sol)
 
 Update current solution, incumbent, and all operator score data according to performed
 destroy+repair.
@@ -283,9 +279,9 @@ end
 
 
 """
-    alns!(alns::ALNS, sol::Solution)
+    alns!(alns, sol)
 
-Perform adaptive large neighborhood search (ALNS) on a given solution.
+Perform adaptive large neighborhood search (ALNS) on the given solution.
 """
 function alns!(alns::ALNS, sol::Solution)
     alns.next_segment = alns.scheduler.iteration + settings[:mh_alns_segment_size]
@@ -307,7 +303,7 @@ end
 
 
 """
-    run!(alns::ALNS)
+    run!(alns)
 
 Perform the construction heuristics followed by the ALNS.
 """
