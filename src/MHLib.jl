@@ -337,6 +337,9 @@ include("ALNSs.jl")
 include("SubsetVectorSolutions.jl")
 include("PermutationSolutions.jl")
 
+include("../test/Graphs.jl")
+include("../test/graph-coloring.jl")
+
 const all_settings_cfgs = [
         Schedulers.settings_cfg,
         ALNSs.settings_cfg,
