@@ -173,11 +173,11 @@ end
 """
     shaking!(mkp_solution, par, result)
 
-Perform shaking by removing par randomly selected elements followed ba a random fill.
+Perform shaking by removing `par` randomly selected elements followed ba a random fill.
 """
 function shaking!(s::MKPSolution, par::Int, result::Result)
     remove_some!(s, par)
-    fill!(s, nothing)
+    fill!(s)
 end
 
 """

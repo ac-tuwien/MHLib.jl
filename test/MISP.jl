@@ -136,7 +136,7 @@ function check(s::MISPSolution, unsorted::Bool=true)
 end
 
 function clear(s::MISPSolution)
-    fill!(s.covered, nothing)
+    fill!(s.covered)
     invoke(clear, Tuple{SubsetVectorSolution}, s)
 end
 
@@ -167,7 +167,7 @@ Perform shaking by removing par randomly selected elements followed ba a random 
 """
 function shaking!(s::MISPSolution, par::Int, result::Result)
     remove_some!(s, par)
-    fill!(s, nothing)
+    fill!(s)
 end
 
 """
