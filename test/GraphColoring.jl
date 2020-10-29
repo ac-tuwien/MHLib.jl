@@ -7,8 +7,9 @@ Given a graph and an number of colors, color each node with one color so that
 the number of adjacent nodes having the same color is minimized.
 """
 
-module GraphColoring
+module GraphColorings
 
+using ArgParse
 using Random
 using StatsBase
 using LightGraphs
@@ -23,6 +24,15 @@ import Base: copy, copy!, show
 
 export GraphColoringInstance, GraphColoringSolution
 
+
+const settings_cfg = ArgParseSettings()
+
+@add_arg_table! settings_cfg begin
+    "--gcp_colors"
+        help = "number of colors for the graph coloring problem"
+        arg_type = Int
+        default = 3
+end
 
 
 """
@@ -118,7 +128,7 @@ Check if s is a valid solution.
 Raises an error if a problem is detected.
 """
 function check(s::GraphColoringSolution)
-    if (length(s.x) != s.inst.n)
+    if length(s.x) != s.inst.n
         error("Invalid length of solution")
     end
     if sum(s.x .> s.inst.colors) >= 1

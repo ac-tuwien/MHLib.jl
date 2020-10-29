@@ -338,7 +338,7 @@ include("SubsetVectorSolutions.jl")
 include("PermutationSolutions.jl")
 
 include("../test/Graphs.jl")
-include("../test/graph-coloring.jl")
+include("../test/GraphColoring.jl")
 
 const all_settings_cfgs = [
         Schedulers.settings_cfg,

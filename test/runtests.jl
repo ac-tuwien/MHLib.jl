@@ -12,6 +12,7 @@ include("MAXSAT.jl")
 include("MKP.jl")
 include("MISP.jl")
 include("TSP.jl")
+include("GraphColoring.jl")
 
 using .Graphs
 using .OneMax
@@ -19,6 +20,7 @@ using .MAXSAT
 using .MKP
 using .MISP
 using .TSP
+using .GraphColorings
 
 # always run this code in the test directory
 if !endswith(pwd(), "test")
@@ -26,7 +28,8 @@ if !endswith(pwd(), "test")
 end
 
 # testsets to perform:
-only_testsets = ARGS
+# only_testsets = ARGS
+only_testsets = ["GVNS-GraphColoring"]
 # only_testsets = ["GVNS-TSP"]
 
 if isempty(only_testsets) || "OneMaxSolution" in only_testsets
@@ -160,8 +163,7 @@ end
 
 if isempty(only_testsets) || "GVNS-TSP" in only_testsets
     @testset "GVNS-TSP.jl" begin
-        parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=10", "--mh_titer=300",
-            "--mh_lfreq=-1", "--mh_lnewinc=false"])
+        parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=10", "--mh_titer=300"]) # "--mh_lfreq=-1", "--mh_lnewinc=false"])
         inst = TSPInstance("data/xqf131.tsp")
         sol = TSPSolution(inst)
         initialize!(sol)
@@ -176,5 +178,37 @@ if isempty(only_testsets) || "GVNS-TSP" in only_testsets
         GVNSs.run!(search)
         main_results(search.scheduler)
         @test obj(sol) >= 0
+    end
+end
+
+if isempty(only_testsets) || "GVNS-GraphColoring" in only_testsets
+    @testset "GVNS-GraphColoring.jl" begin
+        # parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1", "--mh_titer=50",
+        #     "--mh_lfreq=-1", "--mh_lnewinc=false"])
+        # parse_settings!([MHLib.settings_cfg], ["--ifile=test/data/test.col"])
+        # parse_settings!([MHLib.GraphColoring.settings_cfg], ["gcp_colors=3"])
+
+        settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test.col")
+        settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 50)
+        settings_new_default_value!(MHLib.GraphColorings.settings_cfg, "gcp_colors", 3)
+        parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.GraphColorings.settings_cfg])
+
+        inst = GraphColoringInstance(settings[:ifile])
+        sol = GraphColoringSolution(inst)
+        println(sol)
+
+        @test obj(sol) >= 0
+        @test sol.obj_val_valid
+        @test !to_maximize(sol)
+
+        alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+            [MHMethod("li1", local_improve!, 1)],
+            [MHMethod("sh$i", shaking!, i) for i in 1:5])
+
+        run!(alg)
+        main_results(alg.scheduler)
+        check(sol)
+
+        @test obj(sol) == 0
     end
 end
