@@ -76,7 +76,6 @@ Get all parameters and their values as descriptive multi-line string.
 """
 function get_settings_as_string()
     s = "Settings:\n"
-
     for (par, value) in sort(collect(settings), by=x->x[1])
         s *= "--$par=$value\n"
     end

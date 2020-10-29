@@ -197,23 +197,10 @@ Randomly sample the number of elements to destroy in the destroy operator based 
 parameter settings.
 """
 function get_number_to_destroy(num_elements::Int, own_settings=settings,
-    dest_min_abs::Union{Float64, Nothing}=nothing,
-    dest_min_ratio::Union{Float64, Nothing}=nothing,
-    dest_max_abs::Union{Float64, Nothing}=nothing,
-    dest_max_ratio::Union{Float64, Nothing}=nothing)
-
-    if dest_min_abs == nothing
-        dest_min_abs = own_settings[:mh_alns_dest_min_abs]
-    end
-    if dest_min_ratio == nothing
-        dest_min_ratio = own_settings[:mh_alns_dest_min_ratio]
-    end
-    if dest_max_abs == nothing
-        dest_max_abs = own_settings[:mh_alns_dest_max_abs]
-    end
-    if dest_max_ratio == nothing
-        dest_max_ratio = own_settings[:mh_alns_dest_max_ratio]
-    end
+    dest_min_abs::Float64=own_settings[:mh_alns_dest_min_abs],
+    dest_min_ratio::Float64=own_settings[:mh_alns_dest_min_ratio],
+    dest_max_abs::Float64=own_settings[:mh_alns_dest_max_abs],
+    dest_max_ratio::Float64=own_settings[:mh_alns_dest_max_ratio])
     a = max(dest_min_abs, Int(floor(dest_min_ratio * num_elements)))
     b = min(dest_max_abs, Int(floor(dest_max_ratio * num_elements)))
     return b >= a ? rand(a:b) : b+1
