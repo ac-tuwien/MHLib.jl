@@ -182,12 +182,36 @@ if isempty(only_testsets) || "GVNS-TSP" in only_testsets
 end
 
 if isempty(only_testsets) || "GVNS-GraphColoring" in only_testsets
-    @testset "GVNS-GraphColoring.jl" begin
-        # parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1", "--mh_titer=50",
-        #     "--mh_lfreq=-1", "--mh_lnewinc=false"])
-        # parse_settings!([MHLib.settings_cfg], ["--ifile=test/data/test.col"])
-        # parse_settings!([MHLib.GraphColoring.settings_cfg], ["gcp_colors=3"])
+    @testset "GVNS-GraphColoring1.jl" begin
+        settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/fpsol2.i.1.col")
+        # settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test.col")
+        settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
+        settings_new_default_value!(MHLib.GraphColorings.settings_cfg, "gcp_colors", 3)
+        parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.GraphColorings.settings_cfg])
 
+        inst = GraphColoringInstance(settings[:ifile])
+        sol = GraphColoringSolution(inst)
+        println(sol)
+
+        @test obj(sol) >= 0
+        @test sol.obj_val_valid
+        @test !to_maximize(sol)
+
+        alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+            [MHMethod("li1", local_improve!, 1)],
+            [MHMethod("sh$i", shaking!, i) for i in 1:5])
+
+        run!(alg)
+        method_statistics(alg.scheduler)
+        main_results(alg.scheduler)
+        check(sol)
+
+        @test obj(sol) >= 0
+    end
+end
+
+if isempty(only_testsets) || "GVNS-GraphColoring" in only_testsets
+    @testset "GVNS-GraphColoring2.jl" begin
         settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test.col")
         settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 50)
         settings_new_default_value!(MHLib.GraphColorings.settings_cfg, "gcp_colors", 3)
@@ -206,6 +230,7 @@ if isempty(only_testsets) || "GVNS-GraphColoring" in only_testsets
             [MHMethod("sh$i", shaking!, i) for i in 1:5])
 
         run!(alg)
+        method_statistics(alg.scheduler)
         main_results(alg.scheduler)
         check(sol)
 
