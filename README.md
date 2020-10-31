@@ -92,6 +92,7 @@ It is recommended to take such a demo as template for solving your own problem.
 
 - `OneMax`: basic test problem in which the goal is to set all digits in a binary
     string to `true`
+- `GraphColoring`: graph coloring problem based on `VectorSolution`
 - `MAXSAT`: maximum satisfiability problem based on `BinaryVectorSolution`
 - `TSP`: traveling salesperson problem based on `PermutationSolution`
 - `MKP`: multi-constrained knapsack problem based on `SubsetVectorSolution`
@@ -103,7 +104,10 @@ It is recommended to take such a demo as template for solving your own problem.
 Major changes over major releases:
 
 #### Version 0.1.1
-- `PermutationSolution`, `SubsetVectorSolution`, `TSP`, `MKP`, and `MISP` added
+- `GraphColoring`, `PermutationSolution`, `SubsetVectorSolution`, `TSP`, `MKP`, 
+    and `MISP` demos added
+- statistics output of method applications in scheduler
+- polishing of docstrings and code
 
 #### Version 0.1.0
 - Initial version

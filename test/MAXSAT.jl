@@ -116,7 +116,7 @@ copy(s::MAXSATSolution) =
         Base.copy(s.destroyed[:]))
 
 Base.show(io::IO, s::MAXSATSolution) =
-    println(io, "MAXSAT Solution: ", s.x)
+    println(io, s.x)
 
 
 """

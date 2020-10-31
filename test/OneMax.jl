@@ -44,7 +44,7 @@ end
 calc_objective(s::OneMaxSolution) = sum(s.x)
 
 Base.show(io::IO, s::OneMaxSolution) =
-    println(io, "OneMax Solution: ", s.x)
+    println(io, s.x)
 
 function copy!(s1::S, s2::S) where {S <: OneMaxSolution}
     s1.obj_val = s2.obj_val

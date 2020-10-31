@@ -115,7 +115,7 @@ copy(s::MKPSolution) =
         Base.copy(s.all_elements), s.sel)
 
 Base.show(io::IO, s::MKPSolution) =
-    println(io, "MKP Solution: ", s.x)
+    println(io, s.x)
 
 calc_objective(s::MKPSolution) =
     s.sel > 0 ? sum(s.inst.p[s.x[1:s.sel]]) : 0

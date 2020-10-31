@@ -6,7 +6,6 @@ Demo application solving the graph coloring problem.
 Given a graph and an number of colors, color each node with one color so that
 the number of adjacent nodes having the same color is minimized.
 """
-
 module GraphColorings
 
 using ArgParse
@@ -108,7 +107,7 @@ copy(s::GraphColoringSolution) =
     GraphColoringSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]))
 
 Base.show(io::IO, s::GraphColoringSolution) =
-    println(io, "Graph Coloring Solution: ", s.x)
+    println(io, s.x)
 
 function calc_objective(s::GraphColoringSolution)
     violations = 0

@@ -110,7 +110,7 @@ copy(s::MISPSolution) =
         Base.copy(s.covered[:]))
 
 Base.show(io::IO, s::MISPSolution) =
-    println(io, "MISP Solution: ", s.x)
+    println(io, s.x)
 
 calc_objective(s::MISPSolution) =
     s.sel > 0 ? sum(s.inst.p[s.x[1:s.sel]]) : 0

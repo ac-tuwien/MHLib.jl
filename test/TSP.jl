@@ -109,7 +109,7 @@ copy(s::TSPSolution) =
     TSPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]), s.n)
 
 Base.show(io::IO, s::TSPSolution) =
-    println(io, "TSP Solution: ", s.x)
+    println(io, s.x)
 
 calc_objective(s::TSPSolution) =
     sum(map(i -> s.inst.d[s.x[i],s.x[(i%s.inst.n)+1]], 1:s.n))
