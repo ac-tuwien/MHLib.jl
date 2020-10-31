@@ -28,51 +28,51 @@ TODO:
 const settings_cfg = ArgParseSettings()
 
 @add_arg_table! settings_cfg begin
-    "--mh_alns_segment_size"
+    "--alns_segment_size"
         help = "ALNS segment size"
         arg_type = Int
         default = 100
-    "--mh_alns_dest_min_abs"
+    "--alns_dest_min_abs"
         help = "ALNS minimum number of elements to destroy"
         arg_type = Int
         default = 5
-    "--mh_alns_dest_max_abs"
+    "--alns_dest_max_abs"
         help = "ALNS maximum number of elements to destroy"
         arg_type = Int
         default = 100
-    "--mh_alns_dest_min_ratio"
+    "--alns_dest_min_ratio"
         help = "ALNS minimum ratio of elements to destroy"
         arg_type = Float64
         default = 0.1
-    "--mh_alns_dest_max_ratio"
+    "--alns_dest_max_ratio"
         help = "ALNS maximum ratio of elements to destroy"
         arg_type = Float64
         default = 0.35
-    "--mh_alns_gamma"
+    "--alns_gamma"
         help = "ALNS reaction factor for updating the method weights"
         arg_type = Float64
         default = 0.0
-    "--mh_alns_sigma1"
+    "--alns_sigma1"
         help = "ALNS score for new global best solution"
         arg_type = Int
         default = 10
-    "--mh_alns_sigma2"
+    "--alns_sigma2"
         help = "ALNS score for better than current solution"
         arg_type = Int
         default = 9
-    "--mh_alns_sigma3"
+    "--alns_sigma3"
         help = "ALNS score for worse accepted solution"
         arg_type = Int
         default = 3
-    "--mh_alns_init_temp_factor"
+    "--alns_init_temp_factor"
         help = "ALNS factor for determining initial temperature"
         arg_type = Float64
         default = 0.0
-    "--mh_alns_temp_dec_factor"
+    "--alns_temp_dec_factor"
         help = "ALNS factor for decreasing the temperature"
         arg_type = Float64
         default = 0.99
-    "--mh_alns_logscores"
+    "--alns_logscores"
         help = "ALNS write out log information on scores"
         arg_type = Bool
         default = true
@@ -134,7 +134,7 @@ otherwise it is assumed to be uninitialized.
 function ALNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMethod},
         meths_re::Vector{MHMethod}, consider_initial_sol::Bool=false)
     # TODO own_settings
-    temperature = obj(sol) * settings[:mh_alns_init_temp_factor] + 0.000000001
+    temperature = obj(sol) * settings[:alns_init_temp_factor] + 0.000000001
     score_data = Dict(m.name => ScoreData() for m in vcat(meths_de, meths_re))
     ALNS(Scheduler(sol, [meths_ch; meths_de; meths_re], consider_initial_sol),
         meths_ch, meths_de, meths_re, score_data, temperature, 0)
@@ -185,7 +185,7 @@ end
 Apply geometric cooling.
 """
 function cool_down!(alns::ALNS)
-    alns.temperature *= settings[:mh_alns_temp_dec_factor]
+    alns.temperature *= settings[:alns_temp_dec_factor]
 end
 
 
@@ -197,10 +197,10 @@ Randomly sample the number of elements to destroy in the destroy operator based 
 parameter settings.
 """
 function get_number_to_destroy(num_elements::Int, own_settings=settings,
-    dest_min_abs::Float64=own_settings[:mh_alns_dest_min_abs],
-    dest_min_ratio::Float64=own_settings[:mh_alns_dest_min_ratio],
-    dest_max_abs::Float64=own_settings[:mh_alns_dest_max_abs],
-    dest_max_ratio::Float64=own_settings[:mh_alns_dest_max_ratio])
+    dest_min_abs::Int=own_settings[:alns_dest_min_abs],
+    dest_min_ratio::Float64=own_settings[:alns_dest_min_ratio],
+    dest_max_abs::Int=own_settings[:alns_dest_max_abs],
+    dest_max_ratio::Float64=own_settings[:alns_dest_max_ratio])
     a = max(dest_min_abs, Int(floor(dest_min_ratio * num_elements)))
     b = min(dest_max_abs, Int(floor(dest_max_ratio * num_elements)))
     return b >= a ? rand(a:b) : b+1
@@ -216,8 +216,8 @@ function update_operator_weights!(alns::ALNS)
     if alns.scheduler.iteration == alns.next_segment
         # TODO: log_scores()
         # update operator weights
-        alns.next_segment = alns.scheduler.iteration + settings[:mh_alns_segment_size]
-        gamma = settings[:mh_alns_gamma]
+        alns.next_segment = alns.scheduler.iteration + settings[:alns_segment_size]
+        gamma = settings[:alns_gamma]
         for m in vcat(alns.meths_de, alns.meths_re)
             data = alns.score_data[m.name]
             if data.applied > 0
@@ -246,15 +246,15 @@ function update_after_destroy_and_repair_performed!(alns::ALNS, destroy::MHMetho
     score = 0
     if is_better(sol_new, sol_incumbent)
         # print("better than incumbent")
-        score = settings[:mh_alns_sigma1]
+        score = settings[:alns_sigma1]
         copy!(sol_incumbent, sol_new)
         copy!(sol, sol_new)
     elseif is_better(sol_new, sol)
         # print("better than current")
-        score = settings[:mh_alns_sigma2]
+        score = settings[:alns_sigma2]
         copy!(sol, sol_new)
     elseif is_better(sol, sol_new) && metropolis_criterion(alns, sol_new, sol)
-        score = settings[:mh_alns_sigma3]
+        score = settings[:alns_sigma3]
         # print("accepted although worse")
         copy!(sol, sol_new)
     elseif sol_new != sol
@@ -271,7 +271,7 @@ end
 Perform adaptive large neighborhood search (ALNS) on the given solution.
 """
 function alns!(alns::ALNS, sol::Solution)
-    alns.next_segment = alns.scheduler.iteration + settings[:mh_alns_segment_size]
+    alns.next_segment = alns.scheduler.iteration + settings[:alns_segment_size]
     sol_incumbent = copy(sol)
     sol_new = copy(sol)
     while true

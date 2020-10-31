@@ -11,12 +11,13 @@ module Schedulers
 using ArgParse
 using Printf
 using Random
+using DataStructures  # SortedDict for method_stats
 using MHLib
 # import MHLib: @add_arg_table!, settings, settings_cfg, Solution, obj
 
 export Result, MHMethod, MHMethodStatistics, Scheduler, perform_method!,
     next_method, update_incumbent!, check_termination, perform_sequentially!,
-    main_results, delayed_success_update!, log_iteration, log_iteration_header,
+    main_results, method_statistics, delayed_success_update!, log_iteration, log_iteration_header,
     construct!, local_improve!, shaking!, perform_method_pair!
 
 const settings_cfg = ArgParseSettings()
@@ -144,10 +145,10 @@ mutable struct Scheduler
     incumbent_iteration::Int
     incumbent_time::Float64
     methods::Vector{MHMethod}
-    method_stats::Dict{String,MHMethodStatistics}
+    method_stats::SortedDict{String,MHMethodStatistics}
     iteration::Int
     time_start::Float64
-    run_time::Float64
+    run_time::Union{Float64, Missing}
     # logger = logging.getLogger("pymhlib") TODO
     # iter_logger = logging.getLogger("pymhlib_iter")
     checkit::Bool
@@ -167,7 +168,7 @@ function Scheduler(sol::Solution, methods::Vector{MHMethod},
         consider_initial_sol::Bool=false)
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
     s = Scheduler(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
-        time(), 0.0, settings[:mh_checkit])
+        time(), missing, settings[:mh_checkit])
     log_iteration_header(s)
     if s.incumbent_valid
         log_iteration(s, "-", NaN, sol, true, true, "")
@@ -450,50 +451,75 @@ function update_stats_for_method_pair!(scheduler::Scheduler, destroy::MHMethod,
      end
 end
 
-#=
-    @staticmethod
-    def sdiv(x, y):
-        """Safe division: return x/y if y!=0 and nan otherwise."""
-        if y == 0:
-            return float('nan')
-        else:
-            return x/y
 
-    def method_statistics(self):
-        """Write overall statistics."""
-        if not self.run_time:
-            self.run_time = time.process_time() - self.time_start
-        s = f"Method statistics:\n"
-        s += f"S  method    iter   succ succ-rate%    tot-obj-gain    avg-obj-gain rel-succ%  net-time  " \
-             f"net-time%  brut-time  brut-time%\n"
+"""
+    sdiv(x::Real, y::Real)
 
-        total_applications = 0
-        total_netto_time = 0.0
-        total_successes = 0
-        total_brutto_time = 0.0
-        total_obj_gain = 0.0
-        for ms in self.method_stats.values():
-            total_applications += ms.applications
-            total_netto_time += ms.netto_time
-            total_successes += ms.successes
-            total_brutto_time += ms.brutto_time
-            total_obj_gain += ms.obj_gain
+Safe division: return x/y if y!=0 and nan otherwise.
+"""
+function sdiv(x::Real, y::Real)
+    if y == 0
+        return NaN
+    else
+        return x / y
+    end
+end
 
-        for name, ms in self.method_stats.items():
-            s += f"S {name:>7} {ms.applications:7d} {ms.successes:6d} " \
-                 f"{self.sdiv(ms.successes, ms.applications)*100:10.4f} " \
-                 f"{ms.obj_gain:15.5f} {self.sdiv(ms.obj_gain, ms.applications):15.5f} " \
-                 f"{self.sdiv(ms.successes, total_successes)*100:9.4f} " \
-                 f"{ms.netto_time:9.4f} {self.sdiv(ms.netto_time, self.run_time)*100:10.4f} " \
-                 f"{ms.brutto_time:10.4f} {self.sdiv(ms.brutto_time, self.run_time)*100:11.4f}\n"
-        s += f"S {'SUM/AVG':>7} {total_applications:7d} {total_successes:6d} " \
-             f"{self.sdiv(total_successes, total_applications)*100:10.4f} " \
-             f"{total_obj_gain:15.5f} {self.sdiv(total_obj_gain, total_applications):15.5f} " \
-             f"{self.sdiv(self.sdiv(total_successes, len(self.method_stats)), total_successes)*100:9.4f} " \
-             f"{total_netto_time:9.4f} {self.sdiv(total_netto_time, self.run_time)*100:10.4f} " \
-             f"{total_brutto_time:10.4f} {self.sdiv(total_brutto_time, self.run_time)*100:11.4f}\n"
-        self.logger.info(LogLevel.indent(s))
-=#
+
+"""
+    method_statistics(s::Scheduler)
+
+Write overall statistics.
+"""
+function method_statistics(s::Scheduler)
+
+    if s.run_time === missing
+        s.run_time = time() - s.time_start
+    end
+
+    total_applications = 0
+    total_netto_time = 0.0
+    total_successes = 0
+    total_brutto_time = 0.0
+    total_obj_gain = 0.0
+
+    for ms in values(s.method_stats)
+        total_applications += ms.applications
+        total_netto_time += ms.netto_time
+        total_successes += ms.successes
+        total_brutto_time += ms.brutto_time
+        total_obj_gain += ms.obj_gain
+    end
+
+    res = "\nMethod statistics\n" *
+          "S  method    iter  succ  succ-rate%  tot-obj-gain  avg-obj-gain  rel-succ%  net-time  " *
+          "net-time%  brut-time  brut-time%\n"
+
+    for key in keys(s.method_stats)
+        e = s.method_stats[key]
+        temp = ("S  " * key * "       ")[1:11]
+        res *=@sprintf("%s%6d%6d%12.5f%14.5f%14.5f%11.5f%10.5f%11.5f%11.5f%12.5f",
+          temp, e.applications, e.successes, sdiv(e.successes, e.applications) * 100,
+          e.obj_gain, sdiv(e.obj_gain, e.applications),
+          sdiv(e.successes, total_successes) * 100,
+          e.netto_time, sdiv(e.netto_time, s.run_time) * 100,
+          e.brutto_time, sdiv(e.brutto_time, s.run_time) * 100)
+        res *= "\n"
+    end
+
+    temp = ("S  SUM/AVG       ")[1:11]
+    res *=@sprintf("%s%6d%6d%12.5f%14.5f%14.5f%11.5f%10.5f%11.5f%11.5f%12.5f",
+      temp, total_applications, total_successes, sdiv(total_successes, total_applications) * 100,
+      total_obj_gain, sdiv(total_obj_gain, total_applications),
+      sdiv(sdiv(total_successes, length(s.method_stats)), total_successes) * 100,
+      total_netto_time, sdiv(total_netto_time, s.run_time) * 100,
+      total_brutto_time, sdiv(total_brutto_time, s.run_time) * 100)
+    res *= "\n"
+
+    println(res)
+    # self.logger.info(LogLevel.indent(s))
+end
+
 
 #--------------------- Diverse generic Scheduler methods -----------------------
 

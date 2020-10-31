@@ -1,8 +1,9 @@
 #!/usr/bin/env julia
 """
-    maxsat-demo
+    maxsat_demo
 
 Standalone demo program for solving the MAXSAT problem.
+For other demos see runtests.jl
 """
 
 using ArgParse
@@ -14,6 +15,10 @@ using MHLib.ALNSs
 include("MAXSAT.jl")
 using .MAXSAT
 
+# always run this code in the test directory
+if !endswith(pwd(), "test")
+    cd("test")
+end
 
 const settings_cfg = ArgParseSettings()
 
@@ -48,6 +53,7 @@ function maxsat()
         error("Invalid parameter alg $(settings[:alg])")
     end
     run!(alg)
+    method_statistics(alg.scheduler)
     main_results(alg.scheduler)
     check(sol)
 end
