@@ -10,14 +10,11 @@ capacities.
 """
 module MKP
 
-import Base: copy, copy!, fill!
 using ArgParse
 
 using MHLib
 using MHLib.Schedulers
-import MHLib.Schedulers: construct!, local_improve!, shaking!
-import MHLib: calc_objective, element_removed_delta_eval!, element_added_delta_eval!,
-    may_be_extendible
+using MHLib.SubsetVectorSolutions
 
 export MKPInstance, MKPSolution
 
@@ -100,7 +97,7 @@ end
 MKPSolution(inst::MKPInstance) =
     MKPSolution(inst, -1, false, collect(1:inst.n), zeros(inst.m), Set{Int}(1:inst.n), 0)
 
-function copy!(s1::S, s2::S) where {S <: MKPSolution}
+function Base.copy!(s1::S, s2::S) where {S <: MKPSolution}
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
@@ -110,14 +107,14 @@ function copy!(s1::S, s2::S) where {S <: MKPSolution}
     s1.sel = s2.sel
 end
 
-copy(s::MKPSolution) =
+Base.copy(s::MKPSolution) =
     MKPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]), Base.copy(s.y[:]),
         Base.copy(s.all_elements), s.sel)
 
 Base.show(io::IO, s::MKPSolution) =
     println(io, s.x)
 
-calc_objective(s::MKPSolution) =
+MHLib.calc_objective(s::MKPSolution) =
     s.sel > 0 ? sum(s.inst.p[s.x[1:s.sel]]) : 0
 
 
@@ -128,15 +125,15 @@ Calculate consumed amounts of resources for current solution.
 """
 function calc_y!(s::MKPSolution)
     if s.sel > 0
-        s.y = sum(s.inst.r[:, s.x[:s.sel]], dims=2)
+        s.y = vec(sum(s.inst.r[begin:end, s.x[1:s.sel]], dims=2))
     end
     return 0
 end
 
-function check(s::MKPSolution, unsorted=false)
+function MHLib.check(s::MKPSolution, unsorted::Bool=false)
     invoke(check, Tuple{SubsetVectorSolution, Bool}, s, unsorted)
     y_old = s.y
-    calc_y(s)
+    calc_y!(s)
     if any(y_old .!= s.y)
         error("Solution had invalid y values: $(s.y) $(s.y_old)")
     end
@@ -155,7 +152,7 @@ end
 
 Construct new solution by random initialization.
 """
-function construct!(s::MKPSolution, par::Int, result::Result)
+function MHLib.Schedulers.construct!(s::MKPSolution, par::Int, result::Result)
     initialize!(s)
 end
 
@@ -164,7 +161,7 @@ end
 
 Perform two-exchange local search followed by random fill.
 """
-function local_improve!(s::MKPSolution, par::Int, result::Result)
+function MHLib.Schedulers.local_improve!(s::MKPSolution, par::Int, result::Result)
     if !two_exchange_random_fill_neighborhood_search!(s, false)
         result.changed = false
     end
@@ -175,9 +172,9 @@ end
 
 Perform shaking by removing `par` randomly selected elements followed ba a random fill.
 """
-function shaking!(s::MKPSolution, par::Int, result::Result)
+function MHLib.Schedulers.shaking!(s::MKPSolution, par::Int, result::Result)
     remove_some!(s, par)
-    fill!(s)
+    fillup!(s)
 end
 
 """
@@ -185,11 +182,11 @@ end
 
 Quick check if the solution may be extended by adding further elements.
 """
-may_be_extendible(s::MKPSolution) =
+MHLib.SubsetVectorSolutions.may_be_extendible(s::MKPSolution) =
     all((s.y .+ s.inst.r_min) .<= s.inst.b) && s.sel < length(s.x)
 
-function element_removed_delta_eval!(s::MKPSolution; update_obj_val::Bool=true,
-        allow_infeasible::Bool=false)
+function MHLib.SubsetVectorSolutions.element_removed_delta_eval!(s::MKPSolution; 
+        update_obj_val::Bool=true, allow_infeasible::Bool=false)
     elem = s.x[s.sel+1]
     s.y .-= s.inst.r[:, elem]
     if update_obj_val
@@ -198,8 +195,8 @@ function element_removed_delta_eval!(s::MKPSolution; update_obj_val::Bool=true,
     return true
 end
 
-function element_added_delta_eval!(s::MKPSolution; update_obj_val::Bool=true,
-        allow_infeasible::Bool=false)
+function MHLib.SubsetVectorSolutions.element_added_delta_eval!(s::MKPSolution; 
+        update_obj_val::Bool=true, allow_infeasible::Bool=false)
     elem = s.x[s.sel]
     y_new = s.y .+ s.inst.r[:, elem]
     feasible = all(y_new .<= s.inst.b)

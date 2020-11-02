@@ -15,8 +15,6 @@ using MHLib.Schedulers
 using StatsBase
 using ArgParse
 
-import MHLib.run!
-
 export ALNS, get_number_to_destroy
 
 #=
@@ -294,7 +292,7 @@ end
 
 Perform the construction heuristics followed by the ALNS.
 """
-function run!(alns::ALNS)
+function MHLib.run!(alns::ALNS)
     sol = copy(alns.scheduler.incumbent)
     @assert alns.scheduler.incumbent_valid || !isempty(alns.meths_ch)
     perform_sequentially!(alns.scheduler, sol, alns.meths_ch)

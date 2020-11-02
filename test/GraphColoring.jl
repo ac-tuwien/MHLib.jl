@@ -6,7 +6,7 @@ Demo application solving the graph coloring problem.
 Given a graph and an number of colors, color each node with one color so that
 the number of adjacent nodes having the same color is minimized.
 """
-module GraphColorings
+module GraphColoring
 
 using ArgParse
 using Random
@@ -15,11 +15,7 @@ using LightGraphs
 
 using MHLib
 using MHLib.Schedulers
-using MHLib.Graphs
-
-import MHLib.Schedulers: construct!, local_improve!, shaking!
-import MHLib: calc_objective, check, to_maximize
-import Base: copy, copy!, show
+using ..Graphs
 
 export GraphColoringInstance, GraphColoringSolution
 
@@ -91,25 +87,25 @@ mutable struct GraphColoringSolution <: VectorSolution{Int}
     x::Vector{Int}
 end
 
-to_maximize(::GraphColoringSolution) = false
+MHLib.to_maximize(::GraphColoringSolution) = false
 
 GraphColoringSolution(inst::GraphColoringInstance) =
     GraphColoringSolution(inst, -1, false, fill(1, inst.n))
 
-function copy!(s1::GraphColoringSolution, s2::GraphColoringSolution)
+function Base.copy!(s1::GraphColoringSolution, s2::GraphColoringSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
     s1.x[:] = s2.x
 end
 
-copy(s::GraphColoringSolution) =
+Base.copy(s::GraphColoringSolution) =
     GraphColoringSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]))
 
 Base.show(io::IO, s::GraphColoringSolution) =
     println(io, s.x)
 
-function calc_objective(s::GraphColoringSolution)
+function MHLib.calc_objective(s::GraphColoringSolution)
     violations = 0
     for e in edges(s.inst.graph)
         if s.x[src(e)] == s.x[dst(e)]
@@ -126,7 +122,7 @@ end
 Check if s is a valid solution.
 Raises an error if a problem is detected.
 """
-function check(s::GraphColoringSolution)
+function MHLib.check(s::GraphColoringSolution)
     if length(s.x) != s.inst.n
         error("Invalid length of solution")
     end
@@ -143,7 +139,7 @@ end
 
 Constructs a new solution. Here we just call initialize!.
 """
-function construct!(s::GraphColoringSolution, par::Int, result::Result)
+function MHLib.Schedulers.construct!(s::GraphColoringSolution, par::Int, result::Result)
     initialize!(s)
 end
 
@@ -156,7 +152,7 @@ Performs one iteration of a local search following a first improvement strategy.
 The neighborhood used is defined by all solutions that can be created by changing the color
 of a vertex involved in a conflict.
 """
-function local_improve!(s::GraphColoringSolution, par::Int, result::Result)
+function MHLib.Schedulers.local_improve!(s::GraphColoringSolution, par::Int, result::Result)
     n = length(s.x)
     order = sample(1:n, n, replace = false)
     for p in order
@@ -191,7 +187,7 @@ end
 Perform shaking by randomly assigning a different color
 to 'par' many random vertices that are involved in conflicts.
 """
-function shaking!(s::GraphColoringSolution, par::Int, result::Result)
+function MHLib.Schedulers.shaking!(s::GraphColoringSolution, par::Int, result::Result)
     under_conflict = Vector{Int}()
     result.changed = false
 

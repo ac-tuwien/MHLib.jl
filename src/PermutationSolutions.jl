@@ -1,4 +1,15 @@
-export PermutationSolution, clear!, initialize!, two_opt_neighborhood_search!, random_two_exchange_move!
+"""
+    PermutationSolutions
+
+A module for solutions that are represented by a permutation of distinct elements.
+"""
+module PermutationSolutions
+
+using Random
+using MHLib
+
+export PermutationSolution, clear!, initialize!, two_opt_neighborhood_search!, 
+    random_two_exchange_move!
 
 """
     PermutationSolution
@@ -21,7 +32,7 @@ end
 
 Random construction of a new solution by applying fill to an initially empty solution.
 """
-function initialize!(s::PermutationSolution)
+function MHLib.initialize!(s::PermutationSolution)
     clear!(s)
     shuffle!(s.x)
     invalidate!(s)
@@ -32,7 +43,7 @@ end
 
 Check correctness of permutation solution
 """
-function check(s::PermutationSolution)
+function MHLib.check(s::PermutationSolution)
     length(s.x) == s.n && allunique(s.x)
 end
 
@@ -121,3 +132,5 @@ function random_two_exchange_move!(s::PermutationSolution)
     s.x[p1], s.x[p2] = s.x[p2], s.x[p1]
     invalidate!(s)
 end
+
+end  # module

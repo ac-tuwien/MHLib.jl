@@ -13,12 +13,11 @@ using Printf
 using Random
 using DataStructures  # SortedDict for method_stats
 using MHLib
-# import MHLib: @add_arg_table!, settings, settings_cfg, Solution, obj
 
 export Result, MHMethod, MHMethodStatistics, Scheduler, perform_method!,
     next_method, update_incumbent!, check_termination, perform_sequentially!,
-    main_results, method_statistics, delayed_success_update!, log_iteration, log_iteration_header,
-    construct!, local_improve!, shaking!, perform_method_pair!
+    main_results, method_statistics, delayed_success_update!, log_iteration, 
+    log_iteration_header, construct!, local_improve!, shaking!, perform_method_pair!
 
 const settings_cfg = ArgParseSettings()
 

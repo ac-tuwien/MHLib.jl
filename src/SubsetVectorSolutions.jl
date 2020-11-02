@@ -1,4 +1,16 @@
-export SubsetVectorSolution, clear!, initialize!, remove_some!,
+"""
+    SubsetVectorSolutions
+
+A module for solutions that are arbitrary cardinality subsets of a given set
+represented in vector form. The front part represents the selected
+elements, the back part optionally the unselected ones.
+"""
+module SubsetVectorSolutions
+
+using Random
+using MHLib
+
+export SubsetVectorSolution, clear!, remove_some!, fillup!,
     two_exchange_random_fill_neighborhood_search!, element_removed_delta_eval!,
     element_added_delta_eval!, may_be_extendible, unselected_elems_in_x, all_elements
 
@@ -55,7 +67,7 @@ function sort_sel!(s::SubsetVectorSolution)
 end
 
 """
-    fill!(subset_vector_solution, pool, random_order)
+    fillup!(subset_vector_solution, pool, random_order)
 
 Scans elements from pool (by default in random order) and selects those whose inclusion is
 feasible.
@@ -67,7 +79,8 @@ If `random_order` is set, the elements in the pool are processed in random order
 Uses `element_added_delta_eval()`.
 Reorders elements in `pool` so that the selected ones appear in `pool[begin:return-value]`.
 """
-function fill!(s::SubsetVectorSolution{T}, pool::AbstractVector{T}=get_extension_pool(s),
+function fillup!(s::SubsetVectorSolution{T}, 
+        pool::AbstractVector{T}=get_extension_pool(s),
         random_order::Bool=true) where {T}
     if !may_be_extendible(s)
         return 0
@@ -123,11 +136,11 @@ end
 """
     initialize!(subset_vector_solution)
 
-Random construction of a new solution by applying fill to an initially empty solution.
+Random construction of a new solution by applying `fillup!` to an initially empty solution.
 """
-function initialize!(s::SubsetVectorSolution)
+function MHLib.initialize!(s::SubsetVectorSolution)
     clear!(s)
-    fill!(s)
+    fillup!(s)
     invalidate!(s)
 end
 
@@ -138,7 +151,7 @@ Check correctness of solution; throw an exception if error detected.
 
 - `unsorted`: if set, it is not checked if the solution is sorted
 """
-function check(s::SubsetVectorSolution, unsorted::Bool=true)
+function MHLib.check(s::SubsetVectorSolution, unsorted::Bool=true)
     if !(1 <= s.sel <= length(s.x))
         error("Invalid attribute sel in solution: $(s.sel)")
     end
@@ -148,10 +161,11 @@ function check(s::SubsetVectorSolution, unsorted::Bool=true)
         end
     else
         if !allunique(s.x[begin:s.sel])
-            error("Missing/equal elements in solution: $(s.x[begin:s.sel]) (sorted: $(sort(s.x[begin:s.sel])))")
+            error("Missing/equal elements in solution: $(s.x[begin:s.sel]) " * 
+                "(sorted: $(sort(s.x[begin:s.sel])))")
         end
     end
-    if !unsorted && !issorted(s.x)
+    if !unsorted && !issorted(s.x[begin:s.sel])
         error("Solution not sorted: $(s.x[1:s.sel])")
     end
     if s.obj_val_valid
@@ -166,10 +180,10 @@ end
 """
     two_exchange_random_fill_neighborhood_search!(subset_vector_solution, best_improvement)
 
-Search 2-exchange neighborhood followed by `fill!()` with random ordering.
+Search 2-exchange neighborhood followed by `fillup!()` with random ordering.
 
 Each selected location is tried to be exchanged with each unselected one followed by a
-`fill!()`.
+`fillup!()`.
 
 The neighborhood is searched in a randomized fashion.
 Overload the methods `element_removed_delta_eval` and `element_added_delta_eval` for an
@@ -218,7 +232,7 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
                 random_fill_applied = false
                 if may_be_extendible(s)
                     self_backup = copy(s)
-                    fill!(s)
+                    fillup!(s)
                     random_fill_applied = true
                 end
                 if is_better(s,best)
@@ -285,19 +299,21 @@ end
 Element `x[sel]` has been removed in the solution, if feasible update other solution data,
 else revert.
 
-This is a helper function for delta-evaluating solutions when searching a neighborhood that needs
-to be overloaded for a concrete problem.
-It can be assumed that the solution was in a correct state with a valid objective value in `obj_val`
-*before* the already applied move, `obj_val_valid` therefore is true.
+This is a helper function for delta-evaluating solutions when searching a neighborhood that 
+needs to be overloaded for a concrete problem.
+It can be assumed that the solution was in a correct state with a valid objective value in 
+`obj_val` *before* the already applied move, `obj_val_valid` therefore is true.
 The default implementation just calls `invalidate!()` and returns true.
 
-- `update_obj_val`: if set, the objective value should also be updated or invalidate needs to be called
-- `allow_infeasible`: if set and the solution is infeasible, the move is nevertheless accepted and
-    the update of other data done
+- `update_obj_val`: if set, the objective value should also be updated or invalidate needs 
+    to be called
+- `allow_infeasible`: if set and the solution is infeasible, the move is nevertheless 
+    accepted and the update of other data done
 
 Returns true if feasible, false if infeasible.
 """
-function element_removed_delta_eval!(s::SubsetVectorSolution; update_obj_val::Bool=true, allow_infeasible::Bool=false)
+function element_removed_delta_eval!(s::SubsetVectorSolution; update_obj_val::Bool=true, 
+        allow_infeasible::Bool=false)
     if update_obj_val
         invalidate!(s)
     end
@@ -307,23 +323,28 @@ end
 """
     element_added_delta_eval!(subset_vector_solution)
 
-Element `x[sel-1]`` was added to a solution, if feasible update further solution data, else revert.
+Element `x[sel-1]`` was added to a solution, if feasible update further solution data, 
+else revert.
 
-This is a helper function for delta-evaluating solutions when searching a neighborhood that needs
-to be overloaded for a concrete problem.
-It can be assumed that the solution was in a correct state with a valid objective value in `obj_val`
-*before* the already applied move, `obj_val_valid` therefore is true.
+This is a helper function for delta-evaluating solutions when searching a neighborhood 
+that needs to be overloaded for a concrete problem.
+It can be assumed that the solution was in a correct state with a valid objective value 
+in `obj_val` *before* the already applied move, `obj_val_valid` therefore is true.
 The default implementation just calls `invalidate!()` and returns true.
 
-- `update_obj_val`: if set, the objective value should also be updated or invalidate needs to be called
-- `allow_infeasible`: if set and the solution is infeasible, the move is nevertheless accepted and
-    the update of other data done
+- `update_obj_val`: if set, the objective value should also be updated or invalidate 
+    needs to be called
+- `allow_infeasible`: if set and the solution is infeasible, the move is nevertheless 
+    accepted and the update of other data done
 
 Returns true if feasible, false if infeasible.
 """
-function element_added_delta_eval!(s::SubsetVectorSolution; update_obj_val::Bool=true, allow_infeasible::Bool=false)
+function element_added_delta_eval!(s::SubsetVectorSolution; update_obj_val::Bool=true, 
+        allow_infeasible::Bool=false)
     if update_obj_val
         invalidate!(s)
     end
     return true
 end
+
+end  # module

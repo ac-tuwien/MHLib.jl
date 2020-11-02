@@ -12,10 +12,7 @@ using Random
 using StatsBase
 using MHLib
 using MHLib.Schedulers
-import MHLib.ALNSs: get_number_to_destroy
-
-import Base: copy, copy!, show
-import MHLib: calc_objective, flip_variable!
+using MHLib.ALNSs
 
 export MAXSATInstance, MAXSATSolution, destroy!, repair!
 
@@ -103,7 +100,7 @@ Create a solution object for the given `MAXSATInstance`.
 MAXSATSolution(inst::MAXSATInstance) =
     MAXSATSolution(inst, -1, false, Vector{Bool}(undef, inst.n), [])
 
-function copy!(s1::S, s2::S) where {S <: MAXSATSolution}
+function Base.copy!(s1::S, s2::S) where {S <: MAXSATSolution}
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
@@ -111,7 +108,7 @@ function copy!(s1::S, s2::S) where {S <: MAXSATSolution}
     s1.destroyed[:] = s2.destroyed
 end
 
-copy(s::MAXSATSolution) =
+Base.copy(s::MAXSATSolution) =
     MAXSATSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]),
         Base.copy(s.destroyed[:]))
 
@@ -124,7 +121,7 @@ Base.show(io::IO, s::MAXSATSolution) =
 
 Count the number of satisfied clauses.
 """
-function calc_objective(s::MAXSATSolution)::Int
+function MHLib.calc_objective(s::MAXSATSolution)::Int
     satisfied = 0
     for clause in s.inst.clauses
         for v in clause
@@ -138,7 +135,7 @@ function calc_objective(s::MAXSATSolution)::Int
 end
 
 
-function flip_variable!(s::MAXSATSolution, pos::Int)::Int
+function MHLib.flip_variable!(s::MAXSATSolution, pos::Int)::Int
     obj(s)
     val = !s.x[pos]
     s.x[pos] = val

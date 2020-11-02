@@ -14,13 +14,12 @@ include("MISP.jl")
 include("TSP.jl")
 include("GraphColoring.jl")
 
-using .Graphs
 using .OneMax
 using .MAXSAT
 using .MKP
 using .MISP
 using .TSP
-using .GraphColorings
+using .GraphColoring
 
 # always run this code in the test directory
 if !endswith(pwd(), "test")
@@ -30,7 +29,7 @@ end
 # testsets to perform:
 only_testsets = ARGS
 # only_testsets = ["GVNS-GraphColoring"]
-# only_testsets = ["GVNS-TSP"]
+# only_testsets = ["GVNS-MKP"]
 
 if isempty(only_testsets) || "OneMaxSolution" in only_testsets
     @testset "OneMaxSolution" begin
@@ -118,7 +117,8 @@ end
 
 if isempty(only_testsets) || "GVNS-MKP" in only_testsets
     @testset "GVNS-MKP.jl" begin
-        parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1", "--mh_titer=25"])
+        parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1", "--mh_titer=25", 
+            "--mh_checkit=true"])
         inst = MKPInstance("data/mknapcb5-01.txt")
         sol = MKPSolution(inst)
         println(sol)
@@ -169,7 +169,8 @@ end
 
 if isempty(only_testsets) || "GVNS-TSP" in only_testsets
     @testset "GVNS-TSP.jl" begin
-        parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=10", "--mh_titer=300"]) # "--mh_lfreq=-1", "--mh_lnewinc=false"])
+        parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=10", "--mh_titer=300"]) 
+            # "--mh_lfreq=-1", "--mh_lnewinc=false"])
         inst = TSPInstance("data/xqf131.tsp")
         sol = TSPSolution(inst)
         initialize!(sol)
@@ -192,8 +193,8 @@ if isempty(only_testsets) || "GVNS-GraphColoring" in only_testsets
         settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/fpsol2.i.1.col")
         # settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test.col")
         settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
-        settings_new_default_value!(MHLib.GraphColorings.settings_cfg, "gcp_colors", 3)
-        parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.GraphColorings.settings_cfg])
+        settings_new_default_value!(GraphColoring.settings_cfg, "gcp_colors", 3)
+        parse_settings!([MHLib.Schedulers.settings_cfg, GraphColoring.settings_cfg])
 
         inst = GraphColoringInstance(settings[:ifile])
         sol = GraphColoringSolution(inst)
@@ -214,12 +215,12 @@ if isempty(only_testsets) || "GVNS-GraphColoring" in only_testsets
     end
 end
 
-if isempty(only_testsets) || "GVNS-GraphColoring" in only_testsets
+if isempty(only_testsets) || "GVNS-GraphColoring2" in only_testsets
     @testset "GVNS-GraphColoring2.jl" begin
         settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test.col")
         settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 50)
-        settings_new_default_value!(MHLib.GraphColorings.settings_cfg, "gcp_colors", 3)
-        parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.GraphColorings.settings_cfg])
+        settings_new_default_value!(GraphColoring.settings_cfg, "gcp_colors", 3)
+        parse_settings!([MHLib.Schedulers.settings_cfg, GraphColoring.settings_cfg])
         inst = GraphColoringInstance(settings[:ifile])
         sol = GraphColoringSolution(inst)
         println(sol)

@@ -7,12 +7,10 @@ This problem is just for simple demonstration/debugging purposes.
 """
 module OneMax
 
-import Base: copy, copy!
 using ArgParse
 
 using MHLib
 using MHLib.Schedulers
-import MHLib: calc_objective
 
 export OneMaxSolution
 
@@ -41,18 +39,18 @@ mutable struct OneMaxSolution <: BoolVectorSolution
         new(s.obj_val, s.obj_val_valid, copy(s.x))
 end
 
-calc_objective(s::OneMaxSolution) = sum(s.x)
+MHLib.calc_objective(s::OneMaxSolution) = sum(s.x)
 
 Base.show(io::IO, s::OneMaxSolution) =
     println(io, s.x)
 
-function copy!(s1::S, s2::S) where {S <: OneMaxSolution}
+function Base.copy!(s1::S, s2::S) where {S <: OneMaxSolution}
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
     s1.x[:] = s2.x
 end
 
-copy(s::OneMaxSolution) = deepcopy(s)
+Base.copy(s::OneMaxSolution) = deepcopy(s)
 
 
 end  # module

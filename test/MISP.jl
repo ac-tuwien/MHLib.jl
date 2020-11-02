@@ -11,15 +11,12 @@ module MISP
 using Random
 using StatsBase
 using LightGraphs
+using MHLib
+using MHLib.Schedulers
+using MHLib.SubsetVectorSolutions
 
 using ..Graphs
 
-using MHLib
-using MHLib.Schedulers
-import MHLib.Schedulers: construct!, local_improve!, shaking!
-import MHLib: calc_objective, element_removed_delta_eval!, element_added_delta_eval!,
-    may_be_extendible, check, unselected_elems_in_x, all_elements
-import Base: copy, copy!, show
 
 export MISPInstance, MISPSolution
 
@@ -63,7 +60,7 @@ function MISPInstance(name::AbstractString)
     MISPInstance(graph, n, m, p, Set(1:n))
 end
 
-function show(io::IO, inst::MISPInstance)
+function Base.show(io::IO, inst::MISPInstance)
     println(io, "n=$(inst.n), m=$(inst.m)")
 end
 
@@ -94,9 +91,9 @@ MISPSolution(inst::MISPInstance) =
 
 unselected_elems_in_x(::MISPSolution) = false
 
-all_elements(s::MISPSolution) = s.inst.all_nodes
+MHLib.SubsetVectorSolutions.all_elements(s::MISPSolution) = s.inst.all_nodes
 
-function copy!(s1::MISPSolution, s2::MISPSolution)
+function Base.copy!(s1::MISPSolution, s2::MISPSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
@@ -105,17 +102,17 @@ function copy!(s1::MISPSolution, s2::MISPSolution)
     s1.covered[:] = s2.covered
 end
 
-copy(s::MISPSolution) =
+Base.copy(s::MISPSolution) =
     MISPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]), s.sel,
         Base.copy(s.covered[:]))
 
 Base.show(io::IO, s::MISPSolution) =
     println(io, s.x)
 
-calc_objective(s::MISPSolution) =
+MHLib.calc_objective(s::MISPSolution) =
     s.sel > 0 ? sum(s.inst.p[s.x[1:s.sel]]) : 0
 
-function check(s::MISPSolution, unsorted::Bool=true)
+function MHLib.check(s::MISPSolution, unsorted::Bool=true)
     invoke(check, Tuple{SubsetVectorSolution, Bool}, s, unsorted)
     selected = Set(s.x[1:s.sel])
     for e in edges(s.inst.graph)
@@ -145,7 +142,7 @@ end
 
 Construct new solution by random initialization.
 """
-function construct!(s::MISPSolution, par::Int, result::Result)
+function MHLib.Schedulers.construct!(s::MISPSolution, par::Int, result::Result)
     initialize!(s)
 end
 
@@ -154,7 +151,7 @@ end
 
 Perform two-exchange local search followed by random fill.
 """
-function local_improve!(s::MISPSolution, par::Int, result::Result)
+function MHLib.Schedulers.local_improve!(s::MISPSolution, par::Int, result::Result)
     if !two_exchange_random_fill_neighborhood_search!(s, false)
         result.changed = false
     end
@@ -165,9 +162,9 @@ end
 
 Perform shaking by removing par randomly selected elements followed ba a random fill.
 """
-function shaking!(s::MISPSolution, par::Int, result::Result)
+function MHLib.Schedulers.shaking!(s::MISPSolution, par::Int, result::Result)
     remove_some!(s, par)
-    fill!(s)
+    fillup!(s)
 end
 
 """
@@ -175,11 +172,11 @@ end
 
 Quick check if the solution may possibly be extended by adding further elements.
 """
-may_be_extendible(s::MISPSolution) =
+MHLib.SubsetVectorSolutions.may_be_extendible(s::MISPSolution) =
     any(s.covered .== 0)
 
-function element_removed_delta_eval!(s::MISPSolution; update_obj_val::Bool=true,
-        allow_infeasible::Bool=false)
+function MHLib.SubsetVectorSolutions.element_removed_delta_eval!(s::MISPSolution; 
+        update_obj_val::Bool=true, allow_infeasible::Bool=false)
     u = s.x[s.sel+1]
     s.covered[u] -= 1
     for v in neighbors(s.inst.graph, u)
@@ -191,8 +188,8 @@ function element_removed_delta_eval!(s::MISPSolution; update_obj_val::Bool=true,
     return true
 end
 
-function element_added_delta_eval!(s::MISPSolution; update_obj_val::Bool=true,
-        allow_infeasible::Bool=false)
+function MHLib.SubsetVectorSolutions.element_added_delta_eval!(s::MISPSolution; 
+        update_obj_val::Bool=true, allow_infeasible::Bool=false)
     u = s.x[s.sel]
     if allow_infeasible || s.covered[u] == 0
         # accept

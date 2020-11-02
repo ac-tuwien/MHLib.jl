@@ -13,10 +13,7 @@ using StatsBase
 
 using MHLib
 using MHLib.Schedulers
-import MHLib.Schedulers: construct!, local_improve!, shaking!, to_maximize
-import MHLib: calc_objective, check, two_opt_move_delta_eval
-
-import Base: copy, copy!, show
+using MHLib.PermutationSolutions
 
 export TSPInstance, TSPSolution
 
@@ -74,7 +71,7 @@ function TSPInstance(file_name::AbstractString)
    TSPInstance(n, d)
 end
 
-function show(io::IO, inst::TSPInstance)
+function Base.show(io::IO, inst::TSPInstance)
     println(io, "n=$(inst.n), d=$(inst.d)")
 end
 
@@ -92,12 +89,12 @@ mutable struct TSPSolution <: PermutationSolution{Int}
     n::Int
 end
 
-to_maximize(::TSPSolution) = false
+MHLib.to_maximize(::TSPSolution) = false
 
 TSPSolution(inst::TSPInstance) =
     TSPSolution(inst, -1, false, collect(1:inst.n), inst.n)
 
-function copy!(s1::S, s2::S) where {S <: TSPSolution}
+function Base.copy!(s1::S, s2::S) where {S <: TSPSolution}
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
@@ -105,13 +102,13 @@ function copy!(s1::S, s2::S) where {S <: TSPSolution}
     s1.n = s2.n
 end
 
-copy(s::TSPSolution) =
+Base.copy(s::TSPSolution) =
     TSPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]), s.n)
 
 Base.show(io::IO, s::TSPSolution) =
     println(io, s.x)
 
-calc_objective(s::TSPSolution) =
+MHLib.calc_objective(s::TSPSolution) =
     sum(map(i -> s.inst.d[s.x[i],s.x[(i%s.inst.n)+1]], 1:s.n))
 
 """
@@ -119,7 +116,7 @@ calc_objective(s::TSPSolution) =
 
 Construct new solution by random initialization.
 """
-function construct!(s::TSPSolution, par::Int, result::Result)
+function MHLib.Schedulers.construct!(s::TSPSolution, par::Int, result::Result)
     initialize!(s)
 end
 
@@ -128,7 +125,7 @@ end
 
 Perform two-opt local search.
 """
-function local_improve!(s::TSPSolution, par::Int, result::Result)
+function MHLib.Schedulers.local_improve!(s::TSPSolution, par::Int, result::Result)
     if !two_opt_neighborhood_search!(s, false)
         result.changed = false
     end
@@ -139,7 +136,7 @@ end
 
 Perform shaking by making a random 2-exchange move
 """
-function shaking!(s::TSPSolution, par::Int, result::Result)
+function MHLib.Schedulers.shaking!(s::TSPSolution, par::Int, result::Result)
     random_two_exchange_move!(s)
 end
 
@@ -148,7 +145,8 @@ end
 
 Return efficiently the delta in the objective value when 2-opt move would be applied.
 """
-function two_opt_move_delta_eval(s::TSPSolution, p1::Integer, p2::Integer)
+function MHLib.PermutationSolutions.two_opt_move_delta_eval(s::TSPSolution, p1::Integer, 
+        p2::Integer)
     @assert 1 <= p1 < p2 <= s.n
     if p1 == 1 && p2 == s.n
         # reversing the whole solution has no effect

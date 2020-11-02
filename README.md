@@ -103,6 +103,11 @@ It is recommended to take such a demo as template for solving your own problem.
 
 Major changes over major releases:
 
+#### Version 0.1.2
+- `PermutationSolution` and `SubsetVectorSolution` put into own module
+- some cleaning in MKP
+- most import statements replaced by qualified function definitions
+
 #### Version 0.1.1
 - `GraphColoring`, `PermutationSolution`, `SubsetVectorSolution`, `TSP`, `MKP`, 
     and `MISP` demos added

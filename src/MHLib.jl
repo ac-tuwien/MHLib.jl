@@ -6,10 +6,8 @@
 module MHLib
 
 using Random
-using Base: copy, copy!, length
-import Base: fill!
 
-export Solution, to_maximize, obj, calc_objective, invalidate!, is_equal,
+export Solution, to_maximize, obj, initialize!, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
     run!, git_version,
 
@@ -26,7 +24,8 @@ An abstract solution to an optimization problem.
 Concrete subtypes need to implement:
 - `obj_val`: objective value of solution, usually some numerical type
 - `obj_val_valid::Bool`: indicates if obj_val is valid
-- `calc_objective(::Solution): calculate and return objective value of solution
+- `calc_objective(::Solution)`: calculate and return objective value of solution
+- `initialize!(::Solution)`: initialize solution in some meaningful way
 - `to_maximize(::Type)`: for minimization this method must return false
 - `copy!(::Solution, ::Solution)`: make first solution a copy of the second
 - `copy(::Solution)`: return an independent copy of the solution
@@ -45,9 +44,8 @@ This default implementation returns true.
 to_maximize(::Type) = true
 to_maximize(s::Solution) = to_maximize(typeof(s))
 
-
-print(s::Solution) = error("abstract print(s) called")
-
+initialize!(s::Solution) =
+    error("Abstract initialize!(::Solution) called")
 
 """
     obj(::Solution)
@@ -166,7 +164,7 @@ end
 
 #----------------------------- VectorSolution ------------------------------
 
-export VectorSolution, copy!, length
+export VectorSolution
 
 """
     VectorSolution
@@ -194,7 +192,7 @@ is_equal(s1::VectorSolution, s2::VectorSolution) =
 
 #----------------------------- BoolVectorSolution ------------------------------
 
-export BoolVectorSolution, initialize!, k_random_flips!, k_flip_neighborhood_search!,
+export BoolVectorSolution, k_random_flips!, k_flip_neighborhood_search!,
     flip_variable!
 
 
@@ -337,8 +335,6 @@ include("ALNSs.jl")
 include("SubsetVectorSolutions.jl")
 include("PermutationSolutions.jl")
 
-include("../test/Graphs.jl")
-include("../test/GraphColoring.jl")
 
 const all_settings_cfgs = [
         Schedulers.settings_cfg,

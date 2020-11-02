@@ -12,8 +12,6 @@ module GVNSs
 using MHLib
 using MHLib.Schedulers
 
-import MHLib.run!
-
 export GVNS, vnd!, gvns!
 
 
@@ -128,7 +126,7 @@ end
 
 Actually performs the construction heuristics followed by the GVNS.
 """
-function run!(gvns::GVNS)
+function MHLib.run!(gvns::GVNS)
     sol = copy(gvns.scheduler.incumbent)
     @assert gvns.scheduler.incumbent_valid || !isempty(gvns.meths_ch)
     perform_sequentially!(gvns.scheduler, sol, gvns.meths_ch)
