@@ -22,9 +22,7 @@ using .TSP
 using .GraphColoring
 
 # always run this code in the test directory
-if !endswith(pwd(), "test")
-    cd("test")
-end
+cd(@__DIR__)
 
 # testsets to perform:
 only_testsets = ARGS

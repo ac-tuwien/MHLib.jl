@@ -16,9 +16,7 @@ include("MAXSAT.jl")
 using .MAXSAT
 
 # always run this code in the test directory
-if !endswith(pwd(), "test")
-    cd("test")
-end
+cd(@__DIR__)
 
 const settings_cfg = ArgParseSettings()
 

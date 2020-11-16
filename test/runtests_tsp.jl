@@ -11,9 +11,7 @@ include("TSP.jl")
 using .TSP
 
 # always run this code in the test directory
-if !endswith(pwd(), "test")
-    cd("test")
-end
+cd(@__DIR__)
 
 @testset "Random-Init-TSP.jl" begin
     parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1", "--mh_titer=10"])
