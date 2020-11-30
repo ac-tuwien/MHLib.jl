@@ -41,7 +41,8 @@ end
     @assert !to_maximize(sol)
 
     local_search = GVNS(sol, [MHMethod("con", construct!, 0)],
-        [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], consider_initial_sol=true)
+        [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], 
+        consider_initial_sol = true)
     GVNSs.run!(local_search)
     main_results(local_search.scheduler)
     

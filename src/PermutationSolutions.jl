@@ -52,9 +52,9 @@ end
 
 Systematic search of the 2-opt neighborhood, i.e., consider all inversions of subsequences.
 
-The neighborhood is searched in a randomized ordering. Boolean Parameter best_improvement defines
-whether best improvement or next improvement step functions is used. Returns true if better solution
-has been found.
+The neighborhood is searched in a randomized ordering. Boolean Parameter best_improvement 
+defines whether best improvement or next improvement step functions is used. Returns true 
+if a better solution has been found.
 """
 function two_opt_neighborhood_search!(s::PermutationSolution, best_improvement::Bool)
     order = randperm(s.n)
@@ -65,19 +65,17 @@ function two_opt_neighborhood_search!(s::PermutationSolution, best_improvement::
 
     for (idx, p1) in enumerate(order[1:end-1])
         for p2 in order[idx+1:end]
-            if p1 > p2
-                p1, p2 = p2, p1
-                delta = two_opt_move_delta_eval(s, p1, p2)
-                if is_better_obj(s, delta, best_delta)
-                    if !best_improvement
-                        apply_two_opt_move!(s, p1, p2)
-                        s.obj_val += delta
-                        return true
-                    end
-                    best_delta = delta
-                    best_p1 = p1
-                    best_p2 = p2
+            pa, pb = p1 < p2 ? (p1, p2) : (p2, p1)
+            delta = two_opt_move_delta_eval(s, pa, pb)
+            if is_better_obj(s, delta, best_delta)
+                if !best_improvement
+                    apply_two_opt_move!(s, pa, pb)
+                    s.obj_val += delta
+                    return true
                 end
+                best_delta = delta
+                best_p1 = pa
+                best_p2 = pb
             end
         end
     end

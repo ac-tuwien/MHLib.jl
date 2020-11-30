@@ -101,7 +101,10 @@ It is recommended to take such a demo as template for solving your own problem.
 
 ### Changelog
 
-Major changes over major releases:
+Major changes in releases:
+
+#### Version 0.1.3
+- bug fix in 2-opt neighborhood search of `PermutationSolution`
 
 #### Version 0.1.2
 - `PermutationSolution` and `SubsetVectorSolution` put into own module
