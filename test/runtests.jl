@@ -26,6 +26,10 @@ cd(@__DIR__)
 
 # testsets to perform:
 only_testsets = ARGS
+# Ignore DEBUG_MODE=... argument provided by VSCode
+if length(only_testsets) >= 1 && startswith(only_testsets[1], "DEBUG_MODE")
+    only_testsets = only_testsets[2:end]
+end
 # only_testsets = ["GVNS-GraphColoring"]
 # only_testsets = ["GVNS-MKP"]
 
@@ -192,7 +196,7 @@ if isempty(only_testsets) || "GVNS-GraphColoring" in only_testsets
         # settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test.col")
         settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
         settings_new_default_value!(GraphColoring.settings_cfg, "gcp_colors", 3)
-        parse_settings!([MHLib.Schedulers.settings_cfg, GraphColoring.settings_cfg])
+        parse_settings!([MHLib.Schedulers.settings_cfg, GraphColoring.settings_cfg], [])
 
         inst = GraphColoringInstance(settings[:ifile])
         sol = GraphColoringSolution(inst)
@@ -218,7 +222,7 @@ if isempty(only_testsets) || "GVNS-GraphColoring2" in only_testsets
         settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test.col")
         settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 50)
         settings_new_default_value!(GraphColoring.settings_cfg, "gcp_colors", 3)
-        parse_settings!([MHLib.Schedulers.settings_cfg, GraphColoring.settings_cfg])
+        parse_settings!([MHLib.Schedulers.settings_cfg, GraphColoring.settings_cfg], [])
         inst = GraphColoringInstance(settings[:ifile])
         sol = GraphColoringSolution(inst)
         println(sol)
