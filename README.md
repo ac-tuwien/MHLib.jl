@@ -1,4 +1,4 @@
-## `MHLib.jl` - A Toolbox for Metaheuristics and Hybrid Optimization Methods
+# `MHLib.jl` - A Toolbox for Metaheuristics and Hybrid Optimization Methods
 
 Build status:
 [![Build Status](https://travis-ci.com/ac-tuwien/MHLib.jl.svg?branch=master)](https://travis-ci.com/ac-tuwien/MHLib.jl)
@@ -23,13 +23,13 @@ as efficient implementations due to Julia's highly effective just-in-time-compil
 [Algorithms and Complexity Group of TU Wien](https://www.ac.tuwien.ac.at),
 Vienna, Austria, since 2020.
 
-#### Contributors:
+### Contributors:
 - [Günther Raidl](https://www.ac.tuwien.ac.at/raidl) (primarily responsible)
 - Nikolaus Frohner
 - Thomas Jatschka
 - Fabio Oberweger
 
-### Installation
+## Installation
 
 Major versions of `pymhlib` can be installed from the Julia REPL via
 
@@ -40,7 +40,7 @@ installed via
 
     ] add https://github.com/ac-tuwien/MHLib.jl.git
 
-### Major Components
+## Major Components
 
 Note that `MHLib.jl` is still far behind the capabilities of the Python `pymhlib`.
 
@@ -65,7 +65,7 @@ Moreover, the main module provides:
 - `settings`:
     Global settings that can be defined independently per module in a distributed
     way, while values for these parameters can be provided as program arguments or in
-    configuration files. Most `pyhmlib` modules rely on this mechanism for their external
+    configuration files. Most `pymhlib` modules rely on this mechanism for their external
     parameters.
 
 Further modules:
@@ -82,11 +82,11 @@ Further modules:
     A framework for adaptive large neighborhood search (ALNS).
 
 
-#### Demos
+## Demos
 
 For demonstration purposes, simple metaheuristic approaches are provided in the `test`
 subdirectory for the following well-known combinatorial optimization problems.
-They can be startet as shown in the respective sections of `runtests.jl`.
+They can be started as shown in the respective sections of `runtests.jl`.
 
 It is recommended to take such a demo as template for solving your own problem.
 
@@ -98,24 +98,6 @@ It is recommended to take such a demo as template for solving your own problem.
 - `MKP`: multi-constrained knapsack problem based on `SubsetVectorSolution`
 - `MISP`: maximum independent set problem based on `SubsetVectorSolution`
 
+## News
 
-### Changelog
-
-Major changes in releases:
-
-#### Version 0.1.3
-- bug fix in 2-opt neighborhood search of `PermutationSolution`
-
-#### Version 0.1.2
-- `PermutationSolution` and `SubsetVectorSolution` put into own module
-- some cleaning in MKP
-- most import statements replaced by qualified function definitions
-
-#### Version 0.1.1
-- `GraphColoring`, `PermutationSolution`, `SubsetVectorSolution`, `TSP`, `MKP`, 
-    and `MISP` demos added
-- statistics output of method applications in scheduler
-- polishing of docstrings and code
-
-#### Version 0.1.0
-- Initial version
+See [CHANGELOG.md](CHANGELOG.md)
