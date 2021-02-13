@@ -1,13 +1,20 @@
 using Test
 using Random
 
-using MHLib
-using MHLib.Schedulers
-using MHLib.GVNSs
-using MHLib.ALNSs
+if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
+    include("../src/MHLib.jl")
+    using .MHLib
+    using .MHLib.Schedulers
+    using .MHLib.GVNSs
+    using .MHLib.ALNSs
+else
+    using MHLib
+    using MHLib.Schedulers
+    using MHLib.GVNSs
+    using MHLib.ALNSs
+end
 
 include("TSP.jl")
-
 using .TSP
 
 # always run this code in the test directory

@@ -4,7 +4,7 @@
 Major changes in releases:
 
 ## Upcoming
-- own environment for `test`, separate CHANGELOG.md
+- hack for seeing symbols in testrun.jl; separate CHANGELOG.md
 
 ## Version 0.1.3
 - bug fix in 2-opt neighborhood search of `PermutationSolution`
