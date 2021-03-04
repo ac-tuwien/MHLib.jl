@@ -343,7 +343,7 @@ end
 Write iteration log header.
 """
 function log_iteration_header(sched::Scheduler)
-    s = "I     iter             best          obj_old          obj_new" *
+    s = "I       iter             best          obj_old          obj_new" *
         "        time              method info"
     # TODO iter_logger.info(sched, s)
     println(s)
@@ -387,7 +387,7 @@ function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::
         end
     end
     if log
-        s = @sprintf("%10d %16.5f %16.5f %16.5f%12.4f%20s %s",
+        s = @sprintf("I %10d %16.5f %16.5f %16.5f%12.4f%20s %s",
             sched.iteration, obj(sched.incumbent), obj_old, obj(new_sol),
             time()-sched.time_start, method_name, log_info)
         # TODO self.iter_logger.info(s)
