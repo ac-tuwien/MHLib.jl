@@ -1,9 +1,32 @@
 {
     "cSpell.words": [
         "ALNSs",
+        "COORD",
         "GVNSs",
         "MISP",
+        "candits",
+        "checkit",
+        "deepcopy",
+        "deleteat",
+        "eachline",
+        "elems",
+        "eval",
         "fabio",
-        "oberweger"
+        "fillup",
+        "fpsol",
+        "ifile",
+        "isdefined",
+        "isempty",
+        "lfreq",
+        "lnewinc",
+        "mknapcb",
+        "oberweger",
+        "onemax",
+        "println",
+        "sched",
+        "startswith",
+        "struct",
+        "trunc",
+        "typeof"
     ]
 }

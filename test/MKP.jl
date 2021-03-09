@@ -28,7 +28,7 @@ Instance oof a multidimensional knapsack problem.
 - `p: vector of prizes of elements
 - `r`: resource consumption values of each each element
 - `b`: capacities of resources
-- `r_min`: minimum resource consumption value of any rlement
+- `r_min`: minimum resource consumption value of any element
 - `obj_opt`: optimal solution value (if known)
 """
 struct MKPInstance
