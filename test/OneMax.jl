@@ -44,7 +44,7 @@ MHLib.calc_objective(s::OneMaxSolution) = sum(s.x)
 Base.show(io::IO, s::OneMaxSolution) =
     println(io, s.x)
 
-function Base.copy!(s1::S, s2::S) where {S <: OneMaxSolution}
+function Base.copy!(s1::OneMaxSolution, s2::OneMaxSolution)
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
     s1.x[:] = s2.x

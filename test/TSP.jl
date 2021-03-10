@@ -94,7 +94,7 @@ MHLib.to_maximize(::TSPSolution) = false
 TSPSolution(inst::TSPInstance) =
     TSPSolution(inst, -1, false, collect(1:inst.n), inst.n)
 
-function Base.copy!(s1::S, s2::S) where {S <: TSPSolution}
+function Base.copy!(s1::TSPSolution, s2::TSPSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid

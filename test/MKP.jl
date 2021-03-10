@@ -97,7 +97,7 @@ end
 MKPSolution(inst::MKPInstance) =
     MKPSolution(inst, -1, false, collect(1:inst.n), zeros(inst.m), Set{Int}(1:inst.n), 0)
 
-function Base.copy!(s1::S, s2::S) where {S <: MKPSolution}
+function Base.copy!(s1::MKPSolution, s2::MKPSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid

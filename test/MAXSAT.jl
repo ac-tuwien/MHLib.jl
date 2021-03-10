@@ -100,7 +100,7 @@ Create a solution object for the given `MAXSATInstance`.
 MAXSATSolution(inst::MAXSATInstance) =
     MAXSATSolution(inst, -1, false, Vector{Bool}(undef, inst.n), [])
 
-function Base.copy!(s1::S, s2::S) where {S <: MAXSATSolution}
+function Base.copy!(s1::MAXSATSolution, s2::MAXSATSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
