@@ -6,7 +6,7 @@ A module for solutions that are represented by a permutation of distinct element
 module PermutationSolutions
 
 using Random
-using MHLib
+using ..MHLib
 
 export PermutationSolution, clear!, initialize!, two_opt_neighborhood_search!, 
     random_two_exchange_move!
@@ -16,9 +16,7 @@ export PermutationSolution, clear!, initialize!, two_opt_neighborhood_search!,
 
 A type for solutions that are represented by a permutation of distinct elements.
 
-A concrete type must implement the attributes of a vector solution and a fixed length n
-    The permutation of the elements is defined by the ordering in the vector.
-- `n`: Number of permuted elements
+A concrete type must implement the attributes of a vector solution.
 """
 abstract type PermutationSolution{T} <: VectorSolution{T} end
 
@@ -41,10 +39,11 @@ end
 """
     check(permutation_solution)
 
-Check correctness of permutation solution
+Check correctness of permutation solution.
 """
-function MHLib.check(s::PermutationSolution)
-    length(s.x) == s.n && allunique(s.x)
+function MHLib.check(s::PermutationSolution{T}) where T
+    allunique(s.x)
+    invoke(check, Tuple{VectorSolution{T}}, s)
 end
 
 """
@@ -57,7 +56,7 @@ defines whether best improvement or next improvement step functions is used. Ret
 if a better solution has been found.
 """
 function two_opt_neighborhood_search!(s::PermutationSolution, best_improvement::Bool)
-    order = randperm(s.n)
+    order = randperm(length(s))
 
     best_delta = 0
     best_p1 = nothing
@@ -96,7 +95,7 @@ Perform two-opt move on given solution defined as inversion of subsequence start
     until including position p2
 """
 function apply_two_opt_move!(s::PermutationSolution, p1::Integer, p2::Integer)
-    @assert 1 <= p1 <= p2 <= s.n
+    @assert 1 <= p1 <= p2 <= length(s)
     reverse!(s.x, p1, p2)
 end
 
@@ -126,7 +125,7 @@ end
 Perform a random two exchange move, invalidating the solution.
 """
 function random_two_exchange_move!(s::PermutationSolution)
-    p1, p2 = randperm(s.n)
+    p1, p2 = randperm(length(s))
     s.x[p1], s.x[p2] = s.x[p2], s.x[p1]
     invalidate!(s)
 end

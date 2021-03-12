@@ -86,30 +86,28 @@ mutable struct TSPSolution <: PermutationSolution{Int}
     obj_val::Int
     obj_val_valid::Bool
     x::Vector{Int}
-    n::Int
 end
 
 MHLib.to_maximize(::TSPSolution) = false
 
 TSPSolution(inst::TSPInstance) =
-    TSPSolution(inst, -1, false, collect(1:inst.n), inst.n)
+    TSPSolution(inst, -1, false, collect(1:inst.n))
 
 function Base.copy!(s1::TSPSolution, s2::TSPSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
     s1.x[:] = s2.x
-    s1.n = s2.n
 end
 
 Base.copy(s::TSPSolution) =
-    TSPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]), s.n)
+    TSPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]))
 
 Base.show(io::IO, s::TSPSolution) =
     println(io, s.x)
 
 MHLib.calc_objective(s::TSPSolution) =
-    sum(map(i -> s.inst.d[s.x[i],s.x[(i%s.inst.n)+1]], 1:s.n))
+    sum(map(i -> s.inst.d[s.x[i],s.x[(i%s.inst.n)+1]], 1:s.inst.n))
 
 """
     construct!(tsp_solution, par, result)
@@ -147,19 +145,20 @@ Return efficiently the delta in the objective value when 2-opt move would be app
 """
 function MHLib.PermutationSolutions.two_opt_move_delta_eval(s::TSPSolution, p1::Integer, 
         p2::Integer)
-    @assert 1 <= p1 < p2 <= s.n
-    if p1 == 1 && p2 == s.n
+    @assert 1 <= p1 < p2 <= length(s)
+    if p1 == 1 && p2 == length(s)
         # reversing the whole solution has no effect
         return 0
     end
-    prev = mod1(p1 - 1, s.n)
-    nxt = mod1(p2 + 1, s.n)
+    prev = mod1(p1 - 1, length(s))
+    nxt = mod1(p2 + 1, length(s))
 
     x_p1 = s.x[p1]
     x_p2 = s.x[p2]
     x_prev = s.x[prev]
     x_next = s.x[nxt]
-    delta = s.inst.d[x_prev,x_p2] + s.inst.d[x_p1,x_next] - s.inst.d[x_prev,x_p1] - s.inst.d[x_p2,x_next]
+    delta = s.inst.d[x_prev,x_p2] + s.inst.d[x_p1,x_next] - s.inst.d[x_prev,x_p1] - 
+        s.inst.d[x_p2,x_next]
 end
 
 end  # module

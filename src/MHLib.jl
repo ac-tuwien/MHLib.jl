@@ -60,15 +60,21 @@ function obj(s::Solution)
     s.obj_val
 end
 
-
 """
     calc_objective(::Solution)
 
-Actually calculate the objective value of the given solution.
+(Re-)calculate the objective value of the given solution and return it.
 """
 calc_objective(::Solution) =
-    error("abstract calc_objective(solution) called")
+    error("Abstract calc_objective(solution) called")
 
+
+"""
+    cached_obj!(::Solution, value)
+
+Store a new value as cached objective value if caching is used.
+"""
+function cached_obj(::Solution, value) end
 
 """
     invalidate!(::Solution)
@@ -155,8 +161,7 @@ function check(s::Solution)::Nothing
         old_obj = s.obj_val
         invalidate!(s)
         if old_obj != obj(s)
-            error("Solution has wrong objective value: $old_obj, " *
-                  "should be $(obj(s))")
+            error("Solution has wrong objective value: $old_obj, should be $(obj(s))")
         end
     end
 end
@@ -241,7 +246,7 @@ Perform one major iteration of a k-flip local search, i.e., search one neighborh
 
 If `best_improvement` is set, the neighborhood is completely searched and a best neighbor is
 kept; otherwise the search terminates in a first-improvement manner, i.e., keeping a first
-encountered better solution. The new bjective value is returned.
+encountered better solution. The new bijective value is returned.
 """
 function k_flip_neighborhood_search!(s::BoolVectorSolution, k::Int, best_improvement::Bool)
     len_x = length(s.x)

@@ -127,9 +127,8 @@ function MHLib.check(s::GraphColoringSolution)
         error("Invalid length of solution")
     end
     if sum(s.x .> s.inst.colors) >= 1
-        error("too many colors used")
+        error("Too many colors used")
     end
-
     invoke(check, Tuple{supertype(typeof(s))}, s)
 end
 
