@@ -1,7 +1,9 @@
 # `MHLib.jl` - A Toolbox for Metaheuristics and Hybrid Optimization Methods
 
 Build status:
-[![Build Status](https://travis-ci.com/ac-tuwien/MHLib.jl.svg?branch=master)](https://travis-ci.com/ac-tuwien/MHLib.jl)
+[![Build Status](https://github.com/ac-tuwien/MHLib.jl/workflows/CI/badge.svg)](https://github.com/ac-tuwien/MHLib.jl/actions?query=workflow%3ACI+branch%3Amaster)
+[![Coverage Status](https://coveralls.io/repos/ac-tuwien/MHLib.jl/badge.svg?branch=master)](https://coveralls.io/r/ac-tuwien/MHLib.jl?branch=master)
+[![codecov.io](http://codecov.io/github/ac-tuwien/MHLib.jl/coverage.svg?branch=master)](http://codecov.io/github/ac-tuwien/MHLib.jl?branch=master)
 
 _This project is still in early development, any feedback is much appreciated!_
 

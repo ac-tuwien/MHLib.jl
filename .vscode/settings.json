@@ -8,6 +8,7 @@
         "candits",
         "cfgs",
         "checkit",
+        "codecov",
         "deepcopy",
         "deleteat",
         "eachline",
