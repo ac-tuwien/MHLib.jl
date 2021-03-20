@@ -8,10 +8,19 @@ For other demos see runtests.jl
 
 using ArgParse
 using Revise
-using MHLib
-using MHLib.Schedulers
-using MHLib.GVNSs
-using MHLib.ALNSs
+
+if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
+    include("../src/MHLib.jl")
+    using .MHLib
+    using .MHLib.Schedulers
+    using .MHLib.GVNSs
+    using .MHLib.ALNSs
+else
+    using MHLib
+    using MHLib.Schedulers
+    using MHLib.GVNSs
+    using MHLib.ALNSs
+end
 
 includet("MAXSAT.jl")
 using .MAXSAT

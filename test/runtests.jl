@@ -3,6 +3,7 @@ using Random
 using Revise
 
 if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
+    include("../src/MHLib.jl")
     using .MHLib
     using .MHLib.Schedulers
     using .MHLib.GVNSs
@@ -115,13 +116,12 @@ if isempty(only_testsets) || "ALNS-MAXSAT" in only_testsets
         inst = MAXSATInstance("data/maxsat-simple.cnf")
         sol = MAXSATSolution(inst)
         println(sol)
-        alns = ALNS(sol, [MHMethod("con", construct!, 0)],
-            [MHMethod("li1", local_improve!, 1)],
-            [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
-                MHMethod("sh3", shaking!, 3)],)
-        ALNSs.run!(alns)
-        method_statistics(alns.scheduler)
-        main_results(alns.scheduler)
+        alg = ALNS(sol, [MHMethod("construct", construct!, 0)],
+            [MHMethod("destroy", destroy!, 1)],
+            [MHMethod("repair", repair!, 0)])
+        ALNSs.run!(alg)
+        method_statistics(alg.scheduler)
+        main_results(alg.scheduler)
         @test obj(sol) >= 0
     end
 end

@@ -3,6 +3,7 @@ using Random
 using Revise
 
 if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
+    include("../src/MHLib.jl")
     using .MHLib
     using .MHLib.Schedulers
     using .MHLib.GVNSs
