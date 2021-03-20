@@ -45,7 +45,7 @@ Attributes
 - `colors`: number of colors
 """
 struct GraphColoringInstance
-    graph
+    graph::SimpleGraph{Int}
     n::Int
     m::Int
     colors::Int

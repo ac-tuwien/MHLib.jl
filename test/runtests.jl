@@ -1,18 +1,27 @@
 using Test
 using Random
+using Revise
 
-using MHLib
-using MHLib.Schedulers
-using MHLib.GVNSs
-using MHLib.ALNSs
+if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
+    using .MHLib
+    using .MHLib.Schedulers
+    using .MHLib.GVNSs
+    using .MHLib.ALNSs
+else
+    using MHLib
+    using MHLib.Schedulers
+    using MHLib.GVNSs
+    using MHLib.ALNSs
+end
 
-include("Graphs.jl")
-include("OneMax.jl")
-include("MAXSAT.jl")
-include("MKP.jl")
-include("MISP.jl")
-include("TSP.jl")
-include("GraphColoring.jl")
+
+includet("Graphs.jl")
+includet("OneMax.jl")
+includet("MAXSAT.jl")
+includet("MKP.jl")
+includet("MISP.jl")
+includet("TSP.jl")
+includet("GraphColoring.jl")
 
 using .OneMax
 using .MAXSAT
@@ -192,12 +201,8 @@ end
 
 if isempty(only_testsets) || "GVNS-GraphColoring" in only_testsets
     @testset "GVNS-GraphColoring1.jl" begin
-        settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/fpsol2.i.1.col")
-        # settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test.col")
-        settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
-        settings_new_default_value!(GraphColoring.settings_cfg, "gcp_colors", 3)
-        parse_settings!([MHLib.Schedulers.settings_cfg, GraphColoring.settings_cfg], [])
-
+        parse_settings!([MHLib.Schedulers.settings_cfg, GraphColoring.settings_cfg], 
+            ["--ifile=data/fpsol2.i.1.col", "--mh_titer=1000", "--gcp_colors=2"])
         inst = GraphColoringInstance(settings[:ifile])
         sol = GraphColoringSolution(inst)
         println(sol)
@@ -219,10 +224,8 @@ end
 
 if isempty(only_testsets) || "GVNS-GraphColoring2" in only_testsets
     @testset "GVNS-GraphColoring2.jl" begin
-        settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/test.col")
-        settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 50)
-        settings_new_default_value!(GraphColoring.settings_cfg, "gcp_colors", 3)
-        parse_settings!([MHLib.Schedulers.settings_cfg, GraphColoring.settings_cfg], [])
+        parse_settings!([MHLib.Schedulers.settings_cfg, GraphColoring.settings_cfg], 
+            ["--ifile=data/test.col", "--mh_titer=50", "--gcp_colors=3"])
         inst = GraphColoringInstance(settings[:ifile])
         sol = GraphColoringSolution(inst)
         println(sol)

@@ -1,8 +1,8 @@
 using Test
 using Random
+using Revise
 
 if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
-    include("../src/MHLib.jl")
     using .MHLib
     using .MHLib.Schedulers
     using .MHLib.GVNSs
@@ -14,7 +14,7 @@ else
     using MHLib.ALNSs
 end
 
-include("TSP.jl")
+includet("TSP.jl")
 using .TSP
 
 # always run this code in the test directory
@@ -22,6 +22,7 @@ cd(@__DIR__)
 
 @testset "Random-Init-TSP.jl" begin
     parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1", "--mh_titer=10"])
+    println(get_settings_as_string())
     inst = TSPInstance("data/xqf131.tsp")
     sol = TSPSolution(inst)
     println(sol)

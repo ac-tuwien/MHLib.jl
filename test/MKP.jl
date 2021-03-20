@@ -1,7 +1,7 @@
 """
     MKP
 
-Demo application solving the multi-dimensional knapsack problem (MKP).
+Demo problem: multi-dimensional knapsack problem (MKP).
 
 Given are a set of n items, m resources, and a capacity for each resource.
 Each item has a price and requires from each resource a certain amount.

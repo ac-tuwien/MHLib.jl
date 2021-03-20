@@ -1,7 +1,7 @@
 """
     MISP
 
-Demo application solving the maximum (weighted) independent set problem (MISP).
+Demo problem: maximum (weighted) independent set problem (MISP).
 
 Give an undirected (weighted) graph, find a maximum cardinality subset of nodes where
 no pair of nodes is adjacent in the graph.
@@ -37,7 +37,7 @@ Attributes
 - `all_nodes`: set of all nodes
 """
 struct MISPInstance
-    graph
+    graph::SimpleGraph{Int}
     n::Int
     m::Int
     p::Vector{Int}

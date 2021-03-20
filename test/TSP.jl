@@ -1,7 +1,7 @@
 """
     TSP
 
-Demo application solving the traveling salesperson problem.
+Demo problem: traveling salesperson problem.
 
 Given an undirected, weighted, complete graph, find a Hamiltonian cycle with minimum length.
 """

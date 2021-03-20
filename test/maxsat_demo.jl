@@ -7,12 +7,13 @@ For other demos see runtests.jl
 """
 
 using ArgParse
+using Revise
 using MHLib
 using MHLib.Schedulers
 using MHLib.GVNSs
 using MHLib.ALNSs
 
-include("MAXSAT.jl")
+includet("MAXSAT.jl")
 using .MAXSAT
 
 # always run this code in the test directory
