@@ -26,7 +26,7 @@ A concrete type must implement the following:
     selected ones.
 - `sel`: Integer indicating the number of selected elements
 - `all_elements(solution)`: complete set of which a subset shall be selected;
-    only neededed if unselected elements are not maintained behind the selected ones
+    only needed if unselected elements are not maintained behind the selected ones
 """
 abstract type SubsetVectorSolution{T} <: VectorSolution{T} end
 
@@ -50,6 +50,11 @@ behind the selected ones, i.e., when `unselected_elems_in_x==true`.
 all_elements(s::SubsetVectorSolution) =
     error("Abstract all_elements(subset_vector_solution called")
 
+"""
+    clear!(::SubsetVectorSolution)
+
+Reset the solution to the empty solution.
+"""
 function clear!(s::SubsetVectorSolution)
     s.sel = 0
     invalidate!(s)
@@ -221,7 +226,7 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
         for (j, vu) in enumerate(pool[2:end])
 
             # increase selection range by one
-            # and swap the element at the last position in the selction range
+            # and swap the element at the last position in the selection range
             # with a new element from the pool
             x[sel], pool[j+1] = vu, x[sel]
             s.sel += 1

@@ -44,9 +44,16 @@ This default implementation returns true.
 to_maximize(::Type) = true
 to_maximize(s::Solution) = to_maximize(typeof(s))
 
-initialize!(s::Solution) =
+
+"""
+    initialize!(::Solution)
+
+Initialize solution in a meaningful way.
+"""
+initialize!(::Solution) =
     error("Abstract initialize!(::Solution) called")
 
+    
 """
     obj(::Solution)
 
@@ -60,6 +67,7 @@ function obj(s::Solution)
     s.obj_val
 end
 
+
 """
     calc_objective(::Solution)
 
@@ -68,13 +76,6 @@ end
 calc_objective(::Solution) =
     error("Abstract calc_objective(solution) called")
 
-
-"""
-    cached_obj!(::Solution, value)
-
-Store a new value as cached objective value if caching is used.
-"""
-function cached_obj(::Solution, value) end
 
 """
     invalidate!(::Solution)
@@ -91,7 +92,7 @@ Return true if the two solutions are considered equal and false otherwise.
 
 The default implementation just checks if the objective values are the same.
 """
-is_equal(s1::Solution, s2::Solution) = obj(s1) == obj(s2)
+is_equal(s1::S, s2::S) where {S <: Solution} = obj(s1) == obj(s2)
 
 
 """
@@ -99,7 +100,7 @@ is_equal(s1::Solution, s2::Solution) = obj(s1) == obj(s2)
 
 Return true if the first solution is better than the second.
 """
-function is_better(s1::S, s2::S) where S <: Solution
+function is_better(s1::S, s2::S) where {S <: Solution}
     to_maximize(s1) ? obj(s1) > obj(s2) : obj(s1) < obj(s2)
 end
 
@@ -109,7 +110,7 @@ end
 
 Return true if the first solution is worse than the second.
 """
-function is_worse(s1::S, s2::S) where S <: Solution
+function is_worse(s1::S, s2::S) where {S <: Solution}
     to_maximize(s1) ? obj(s1) < obj(s2) : obj(s1) > obj(s2)
 end
 

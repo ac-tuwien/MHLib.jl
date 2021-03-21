@@ -132,9 +132,9 @@ function MHLib.check(s::MISPSolution, unsorted::Bool=true)
     end
 end
 
-function clear(s::MISPSolution)
-    fill!(s.covered)
-    invoke(clear, Tuple{SubsetVectorSolution}, s)
+function clear!(s::MISPSolution)
+    fill!(s.covered, 0)
+    invoke(clear!, Tuple{SubsetVectorSolution}, s)
 end
 
 """

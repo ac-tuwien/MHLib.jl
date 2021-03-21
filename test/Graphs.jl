@@ -23,7 +23,7 @@ File format:
 function create_or_read_simple_graph(name::AbstractString) :: SimpleGraph{Int}
     if startswith(name, "gnm-")
         # create random G_n,m graph
-        par = split(name, sep='-')
+        par = split(name, '-')
         n = parse(Int, par[2])
         m = parse(Int, par[3])
         return SimpleGraph(n, m)

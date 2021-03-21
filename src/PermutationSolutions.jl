@@ -8,7 +8,7 @@ module PermutationSolutions
 using Random
 using ..MHLib
 
-export PermutationSolution, clear!, initialize!, two_opt_neighborhood_search!, 
+export PermutationSolution, initialize!, two_opt_neighborhood_search!, 
     random_two_exchange_move!
 
 """
@@ -20,18 +20,12 @@ A concrete type must implement the attributes of a vector solution.
 """
 abstract type PermutationSolution{T} <: VectorSolution{T} end
 
-function clear!(s::PermutationSolution)
-    sort!(s.x)
-    invalidate!(s)
-end
-
 """
     initialize!(permutation_solution)
 
 Random construction of a new solution by applying fill to an initially empty solution.
 """
 function MHLib.initialize!(s::PermutationSolution)
-    clear!(s)
     shuffle!(s.x)
     invalidate!(s)
 end
