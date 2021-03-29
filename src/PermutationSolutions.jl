@@ -36,7 +36,7 @@ end
 Check correctness of permutation solution.
 """
 function MHLib.check(s::PermutationSolution{T}) where T
-    allunique(s.x)
+    !allunique(s.x) && error("PermutationSolution is no permutation: $(s.x)")
     invoke(check, Tuple{VectorSolution{T}}, s)
 end
 
