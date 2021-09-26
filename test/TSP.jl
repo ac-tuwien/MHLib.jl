@@ -88,6 +88,8 @@ mutable struct TSPSolution <: PermutationSolution{Int}
     x::Vector{Int}
 end
 
+Base.length(s::TSPSolution) = s.inst.n
+
 MHLib.to_maximize(::TSPSolution) = false
 
 TSPSolution(inst::TSPInstance) =
