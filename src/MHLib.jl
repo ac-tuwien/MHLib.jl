@@ -6,6 +6,7 @@
 module MHLib
 
 using Random
+using StatsBase
 
 export Solution, to_maximize, obj, initialize!, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
@@ -229,13 +230,11 @@ dist(s1::BoolVectorSolution, s2::BoolVectorSolution) = sum(abs.(s1.x - s2.x))
 """
     k_random_flips!(::BoolVectorSolution, k)
 
-Perform k random flips and call invalidate.
+Perform k random flips (i.e. exactly k bits are flipped) and call invalidate.
 """
 function k_random_flips!(s::BoolVectorSolution, k::Int)
-    for i in 1:k
-        p = rand(1:length(s))
-        s.x[p] = !s.x[p]
-    end
+    p = sample(1:length(s), k, replace = false)
+    s.x[p] .= .!s.x[p]
     invalidate!(s)
 end
 

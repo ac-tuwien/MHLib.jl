@@ -109,6 +109,23 @@ if isempty(only_testsets) || "GVNS-MAXSAT" in only_testsets
     end
 end
 
+if isempty(only_testsets) || "MAXSAT-kflip" in only_testsets
+    @testset "MAXSAT-kflip.jl" begin
+        parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1", "--mh_titer=10"])
+        inst = MAXSATInstance("data/maxsat-adv1.cnf")
+        sol = MAXSATSolution(inst)
+
+        k = 30
+        old = deepcopy(sol.x)
+        k_random_flips!(sol, k)
+        new = sol.x
+
+        ndiff = sum(old .!= new)
+
+        @test ndiff == k
+    end
+end
+
 if isempty(only_testsets) || "ALNS-MAXSAT" in only_testsets
     @testset "ALNS-MAXSAT.jl" begin
         parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.ALNSs.settings_cfg], 
