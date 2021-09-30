@@ -4,7 +4,11 @@
 Major changes in releases:
 
 ## Upcoming
-- hack for seeing symbols in testrun.jl; separate CHANGELOG.md
+
+## Version 0.1.4
+- `k_random_flips updated to do selection without replacement, i.e., indeed flip 
+    exactly `k` bits
+- hack for seeing symbols in testrun.jl in VSCode; separate CHANGELOG.md
 
 ## Version 0.1.3
 - bug fix in 2-opt neighborhood search of `PermutationSolution`

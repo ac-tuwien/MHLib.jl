@@ -85,8 +85,8 @@ end
 """
     apply_two_opt_move(permutation_solution, p1, p2)
 
-Perform two-opt move on given solution defined as inversion of subsequence starting from position p1
-    until including position p2
+Perform two-opt move on given solution defined as inversion of subsequence starting from 
+    position p1 up to and including position p2.
 """
 function apply_two_opt_move!(s::PermutationSolution, p1::Integer, p2::Integer)
     @assert 1 <= p1 <= p2 <= length(s)

@@ -17,7 +17,7 @@ jobs:
         version:
           # - "1.0"  # LTS
           # - "1"    # Latest Release
-          - '1.6-nightly'   # change to '1' when v1.6 is out
+          - '1'   # change to '1' when v1.6 is out
         os:
           - ubuntu-latest
           # - macOS-latest

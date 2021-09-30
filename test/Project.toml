@@ -1,17 +1,10 @@
-name = "MHLib"
-uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
-authors = ["Guenther Raidl <raidl@ac.tuwien.ac.at> and others"]
-version = "0.1.4"
-
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+LightGraphs = "093fc24a-ae57-5d10-9952-331d41423f4d"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-
-[compat]
-ArgParse = "1"
-DataStructures = "0.18"
-julia = "1.6"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

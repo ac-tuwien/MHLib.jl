@@ -231,7 +231,7 @@ if isempty(only_testsets) || "GVNS-GraphColoring" in only_testsets
         alg = GVNS(sol, [MHMethod("con", construct!, 0)],
             [MHMethod("li1", local_improve!, 1)],
             [MHMethod("sh$i", shaking!, i) for i in 1:5])
-        run!(alg)
+        GVNSs.run!(alg)
         method_statistics(alg.scheduler)
         main_results(alg.scheduler)
         check(sol)
@@ -252,7 +252,7 @@ if isempty(only_testsets) || "GVNS-GraphColoring2" in only_testsets
         alg = GVNS(sol, [MHMethod("con", construct!, 0)],
             [MHMethod("li1", local_improve!, 1)],
             [MHMethod("sh$i", shaking!, i) for i in 1:5])
-        run!(alg)
+        GVNSs.run!(alg)
         method_statistics(alg.scheduler)
         main_results(alg.scheduler)
         check(sol)
