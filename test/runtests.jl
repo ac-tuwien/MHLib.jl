@@ -87,7 +87,7 @@ if isempty(only_testsets) || "GVNS-OneMax" in only_testsets
             [MHMethod("li1", local_improve!, 1)],
             [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
                 MHMethod("sh3", shaking!, 3)],)
-        GVNSs.run!(gvns)
+        run!(gvns)
         method_statistics(gvns.scheduler)
         main_results(gvns.scheduler)
         @test obj(sol) >= 0
@@ -104,7 +104,7 @@ if isempty(only_testsets) || "GVNS-MAXSAT" in only_testsets
             [MHMethod("li1", local_improve!, 1)],
             [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
                 MHMethod("sh3", shaking!, 3)],)
-        GVNSs.run!(gvns)
+        run!(gvns)
         method_statistics(gvns.scheduler)
         main_results(gvns.scheduler)
         @test obj(sol) >= 0
@@ -138,7 +138,7 @@ if isempty(only_testsets) || "ALNS-MAXSAT" in only_testsets
         alg = ALNS(sol, [MHMethod("construct", construct!, 0)],
             [MHMethod("destroy", destroy!, 1)],
             [MHMethod("repair", repair!, 0)])
-        ALNSs.run!(alg)
+        run!(alg)
         method_statistics(alg.scheduler)
         main_results(alg.scheduler)
         @test obj(sol) >= 0
@@ -156,7 +156,7 @@ if isempty(only_testsets) || "GVNS-MKP" in only_testsets
             [MHMethod("li1", local_improve!, 1)],
             [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
                 MHMethod("sh3", shaking!, 3)],)
-        GVNSs.run!(gvns)
+        run!(gvns)
         method_statistics(gvns.scheduler)
         main_results(gvns.scheduler)
         @test obj(sol) >= 0
@@ -173,7 +173,7 @@ if isempty(only_testsets) || "GVNS-MISP" in only_testsets
             [MHMethod("li1", local_improve!, 1)],
             [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
                 MHMethod("sh3", shaking!, 3)],)
-        GVNSs.run!(gvns)
+        run!(gvns)
         method_statistics(gvns.scheduler)
         main_results(gvns.scheduler)
         @test obj(sol) >= 0
@@ -212,7 +212,7 @@ if isempty(only_testsets) || "GVNS-TSP" in only_testsets
         search = GVNS(sol, [MHMethod("con", construct!, 0)],
             [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)],
             consider_initial_sol=true)
-        GVNSs.run!(search)
+        run!(search)
         main_results(search.scheduler)
         @test obj(sol) >= 0
     end
@@ -233,7 +233,7 @@ if isempty(only_testsets) || "GVNS-GraphColoring" in only_testsets
         alg = GVNS(sol, [MHMethod("con", construct!, 0)],
             [MHMethod("li1", local_improve!, 1)],
             [MHMethod("sh$i", shaking!, i) for i in 1:5])
-        GVNSs.run!(alg)
+        run!(alg)
         method_statistics(alg.scheduler)
         main_results(alg.scheduler)
         check(sol)
@@ -254,7 +254,7 @@ if isempty(only_testsets) || "GVNS-GraphColoring2" in only_testsets
         alg = GVNS(sol, [MHMethod("con", construct!, 0)],
             [MHMethod("li1", local_improve!, 1)],
             [MHMethod("sh$i", shaking!, i) for i in 1:5])
-        GVNSs.run!(alg)
+        run!(alg)
         method_statistics(alg.scheduler)
         main_results(alg.scheduler)
         check(sol)

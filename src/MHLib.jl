@@ -315,11 +315,12 @@ end
 
 
 """
-    run!()
+    run!(alg...)
 
 General function for performing an optimization algorithm in MHLib.
 """
-function run!
+function run!(alg...)
+    error("abstract run!(alg...) called")
 end
 
 """
