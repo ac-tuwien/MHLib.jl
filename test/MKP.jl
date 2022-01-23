@@ -101,15 +101,15 @@ function Base.copy!(s1::MKPSolution, s2::MKPSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
-    s1.x[:] = s2.x
-    s1.y[:] = s2.y
+    copy!(s1.x, s2.x)
+    copy!(s1.y, s2.y)
     s1.all_elements = Set(s2.all_elements)
     s1.sel = s2.sel
 end
 
 Base.copy(s::MKPSolution) =
-    MKPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]), Base.copy(s.y[:]),
-        Base.copy(s.all_elements), s.sel)
+    MKPSolution(s.inst, s.obj_val, s.obj_val_valid, copy(s.x), copy(s.y),
+        copy(s.all_elements), s.sel)
 
 Base.show(io::IO, s::MKPSolution) =
     println(io, s.x)

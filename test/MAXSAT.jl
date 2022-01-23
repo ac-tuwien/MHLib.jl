@@ -104,13 +104,12 @@ function Base.copy!(s1::MAXSATSolution, s2::MAXSATSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
-    s1.x[:] = s2.x
-    s1.destroyed[:] = s2.destroyed
+    copy!(s1.x, s2.x)
+    copy!(s1.destroyed, s2.destroyed)
 end
 
 Base.copy(s::MAXSATSolution) =
-    MAXSATSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]),
-        Base.copy(s.destroyed[:]))
+    MAXSATSolution(s.inst, s.obj_val, s.obj_val_valid, copy(s.x), copy(s.destroyed))
 
 Base.show(io::IO, s::MAXSATSolution) =
     println(io, s.x)

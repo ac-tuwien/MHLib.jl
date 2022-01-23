@@ -86,7 +86,7 @@ end
     apply_two_opt_move(permutation_solution, p1, p2)
 
 Perform two-opt move on given solution defined as inversion of subsequence starting from 
-    position p1 up to and including position p2.
+    position `p1` up to and including position `p2`.
 """
 function apply_two_opt_move!(s::PermutationSolution, p1::Integer, p2::Integer)
     @assert 1 <= p1 <= p2 <= length(s)
@@ -96,7 +96,7 @@ end
 """
     two_opt_move_delta_eval(permutation_solution, p1, p2)
 
-Return the delta in the objective value when inverting s.x from position p1 to position p2.
+Return the delta in the objective value when inverting `s.x` from pos. `p1` to pos. `p2`.
 
 The function returns the difference in the objective function if the move would be performed,
 the solution, however, is not changed.

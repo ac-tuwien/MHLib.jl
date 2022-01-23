@@ -11,7 +11,7 @@ module GraphColoring
 using ArgParse
 using Random
 using StatsBase
-using LightGraphs
+using Graphs
 
 using MHLib
 using MHLib.Schedulers
@@ -60,7 +60,7 @@ function GraphColoringInstance(name::AbstractString)
     graph = create_or_read_simple_graph(name)
     n = nv(graph)
     m = ne(graph)
-    colors = settings[:gcp_colors]
+    colors = settings[:gcp_colors]::Int
     GraphColoringInstance(graph, n, m, colors)
 end
 
@@ -96,11 +96,11 @@ function Base.copy!(s1::GraphColoringSolution, s2::GraphColoringSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
-    s1.x[:] = s2.x
+    copy!(s1.x, s2.x)
 end
 
 Base.copy(s::GraphColoringSolution) =
-    GraphColoringSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]))
+    GraphColoringSolution(s.inst, s.obj_val, s.obj_val_valid, copy(s.x))
 
 Base.show(io::IO, s::GraphColoringSolution) =
     println(io, s.x)

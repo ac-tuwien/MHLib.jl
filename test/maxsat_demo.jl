@@ -3,7 +3,7 @@
     maxsat_demo
 
 Standalone demo program for solving the MAXSAT problem.
-For other demos see runtests.jl
+For other demos see `runtests.jl`
 """
 
 using ArgParse
@@ -49,11 +49,11 @@ function maxsat()
     println(sol)
     # local alg
 
-    if settings[:alg] == "alns"
+    if settings[:alg] === "alns"
         alg = ALNS(sol, [MHMethod("construct", construct!, 0)],
             [MHMethod("destroy", destroy!, 1)],
             [MHMethod("repair", repair!, 0)])
-    elseif settings[:alg] == "gvns"
+    elseif settings[:alg] === "gvns"
         alg = GVNS(sol, [MHMethod("con", construct!, 0)],
             [MHMethod("li1", local_improve!, 1)],
             [MHMethod("sh$i", shaking!, i) for i in 1:5])

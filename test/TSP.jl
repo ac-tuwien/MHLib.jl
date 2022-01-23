@@ -97,11 +97,11 @@ function Base.copy!(s1::TSPSolution, s2::TSPSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
-    s1.x[:] = s2.x
+    copy!(s1.x, s2.x)
 end
 
 Base.copy(s::TSPSolution) =
-    TSPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]))
+    TSPSolution(s.inst, s.obj_val, s.obj_val_valid, copy(s.x))
 
 Base.show(io::IO, s::TSPSolution) =
     println(io, s.x)

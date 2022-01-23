@@ -10,7 +10,7 @@ module MISP
 
 using Random
 using StatsBase
-using LightGraphs
+using Graphs
 using MHLib
 using MHLib.Schedulers
 using MHLib.SubsetVectorSolutions
@@ -97,14 +97,13 @@ function Base.copy!(s1::MISPSolution, s2::MISPSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
-    s1.x[:] = s2.x
+    copy!(s1.x, s2.x)
     s1.sel = s2.sel
-    s1.covered[:] = s2.covered
+    copy!(s1.covered, s2.covered)
 end
 
 Base.copy(s::MISPSolution) =
-    MISPSolution(s.inst, s.obj_val, s.obj_val_valid, Base.copy(s.x[:]), s.sel,
-        Base.copy(s.covered[:]))
+    MISPSolution(s.inst, s.obj_val, s.obj_val_valid, copy(s.x), s.sel, copy(s.covered))
 
 Base.show(io::IO, s::MISPSolution) =
     println(io, s.x)

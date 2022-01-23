@@ -40,7 +40,7 @@ abstract type Solution end
 Return true if the optimization goal is to maximize the objective function
 in the given type of solutions.
 
-This default implementation returns true.
+This default implementation returns `true`.
 """
 to_maximize(::Type) = true
 to_maximize(s::Solution) = to_maximize(typeof(s))
@@ -56,9 +56,9 @@ initialize!(::Solution) =
 
     
 """
-    obj(::Solution)
+    obj(s::Solution)
 
-Return obj_val if obj_val_valid or calculate it via objective(::Solution).
+Return `s.obj_val` if `obj_val_valid` or calculate it via `objective(::Solution)`.
 """
 function obj(s::Solution)
     if !s.obj_val_valid
@@ -75,7 +75,7 @@ end
 (Re-)calculate the objective value of the given solution and return it.
 """
 calc_objective(::Solution) =
-    error("Abstract calc_objective(solution) called")
+    error("Abstract calc_objective(::Solution) called")
 
 
 """
@@ -89,7 +89,7 @@ invalidate!(s::Solution) = s.obj_val_valid = false;
 """
     is_equal(::Solution, ::Solution)
 
-Return true if the two solutions are considered equal and false otherwise.
+Return `true` if the two solutions are considered equal and false otherwise.
 
 The default implementation just checks if the objective values are the same.
 """
@@ -99,7 +99,7 @@ is_equal(s1::S, s2::S) where {S <: Solution} = obj(s1) == obj(s2)
 """
     is_better(::Solution, ::Solution)
 
-Return true if the first solution is better than the second.
+Return `true` if the first solution is better than the second.
 """
 function is_better(s1::S, s2::S) where {S <: Solution}
     to_maximize(s1) ? obj(s1) > obj(s2) : obj(s1) < obj(s2)
@@ -109,7 +109,7 @@ end
 """
     is_worse(::Solution, ::Solution)
 
-Return true if the first solution is worse than the second.
+Return `true` if the first solution is worse than the second.
 """
 function is_worse(s1::S, s2::S) where {S <: Solution}
     to_maximize(s1) ? obj(s1) < obj(s2) : obj(s1) > obj(s2)
@@ -119,7 +119,7 @@ end
 """
     is_better_obj(::Solution, obj1, obj2)
 
-Return true if obj1 is a better objective value than obj2 in
+Return `true` if `obj1` is a better objective value than `obj2` in
 the given solution type.
 """
 function is_better_obj(s::Solution, obj1, obj2)
@@ -130,7 +130,7 @@ end
 """
     is_worse_obj(::Solution, obj1, obj2)
 
-Return true if obj1 is a worse objective value than obj2 in
+Return `true` if `obj1` is a worse objective value than `obj2` in
 the given solution type.
 """
 function is_worse_obj(s::Solution, obj1, obj2)
@@ -155,7 +155,7 @@ dist(s1::S, s2::S) where S <: Solution = obj(s1) == obj(s2) ? 0 : 1
 
 Check validity of solution.
 
-If a problem is encountered, raise an exception.
+If a problem is encountered, terminate with an error.
 The default implementation just re-calculates the objective value.
 """
 function check(s::Solution)::Nothing
@@ -176,7 +176,7 @@ export VectorSolution
 """
     VectorSolution
 
-An abstract solution encoded by a vector of type `T`.
+An abstract solution encoded by a vector of elements with type `T`.
 
 Concrete subtypes need to implement:
 - all requirements of the supertype `Solution`
@@ -230,7 +230,7 @@ dist(s1::BoolVectorSolution, s2::BoolVectorSolution) = sum(abs.(s1.x - s2.x))
 """
     k_random_flips!(::BoolVectorSolution, k)
 
-Perform k random flips (i.e. exactly k bits are flipped) and call invalidate.
+Perform `k` random flips, i.e., exactly `k` bits are flipped, and call `invalidate`.
 """
 function k_random_flips!(s::BoolVectorSolution, k::Int)
     p = sample(1:length(s), k, replace = false)
@@ -242,7 +242,7 @@ end
 """
     k_flip_neighborhood_search!(::BoolVectorSolution, k::Int, best_improvement::Bool)
 
-Perform one major iteration of a k-flip local search, i.e., search one neighborhood.
+Perform one major iteration of a `k`-flip local search, i.e., search one neighborhood.
 
 If `best_improvement` is set, the neighborhood is completely searched and a best neighbor is
 kept; otherwise the search terminates in a first-improvement manner, i.e., keeping a first
@@ -266,7 +266,7 @@ function k_flip_neighborhood_search!(s::BoolVectorSolution, k::Int, best_improve
                 if !best_improvement
                     return true
                 end
-                best_sol[:] = s.x
+                copy!(best_sol, s.x)
                 best_obj = obj_val
                 better_found = true
             end
@@ -292,7 +292,7 @@ function k_flip_neighborhood_search!(s::BoolVectorSolution, k::Int, best_improve
         end
     end
     if better_found
-        s.x[:] = best_sol
+        copy!(s.x, best_sol)
         obj_val = best_obj
     end
     obj_val

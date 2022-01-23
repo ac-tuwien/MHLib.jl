@@ -1,15 +1,13 @@
 {
     "cSpell.words": [
-        "ALNSs",
-        "COORD",
-        "GVNSs",
-        "MISP",
         "allunique",
+        "ALNSs",
         "candits",
         "cfgs",
         "checkit",
         "codecov",
         "compat",
+        "COORD",
         "deepcopy",
         "deleteat",
         "deps",
@@ -20,6 +18,7 @@
         "fillup",
         "findall",
         "fpsol",
+        "GVNSs",
         "ifile",
         "includet",
         "isdefined",
@@ -27,8 +26,10 @@
         "isnothing",
         "issorted",
         "isvalid",
+        "julia",
         "lfreq",
         "lnewinc",
+        "MISP",
         "mknapcb",
         "oberweger",
         "onemax",
@@ -38,7 +39,9 @@
         "setdiff",
         "startswith",
         "struct",
+        "testrun",
         "trunc",
-        "typeof"
+        "typeof",
+        "uuid"
     ]
 }

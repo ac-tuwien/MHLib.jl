@@ -1,3 +1,7 @@
+# always run this code in the test directory and the test environment
+cd(@__DIR__)
+using Pkg; Pkg.activate(".")
+
 using Test
 using Random
 using Revise
@@ -18,8 +22,6 @@ end
 includet("TSP.jl")
 using .TSP
 
-# always run this code in the test directory
-cd(@__DIR__)
 
 @testset "Random-Init-TSP.jl" begin
     parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1", "--mh_titer=10"])

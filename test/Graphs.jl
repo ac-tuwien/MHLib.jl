@@ -5,7 +5,7 @@ Module containing utility functions for demos that use graphs.
 """
 module Graphs
 
-using LightGraphs
+using Graphs
 
 export create_or_read_simple_graph
 

@@ -1,5 +1,5 @@
 #=
-Managing global settings via decentralized specifications.
+Managing global parameters/settings via decentralized specifications.
 =#
 
 using ArgParse
@@ -16,7 +16,18 @@ const settings_cfg = ArgParseSettings()
 
 
 """
-Dictionary with all parameters and their values.
+    settings::Dict{Symbol,Any}
+
+Global settings, i.e., dictionary with all parameters and their values.
+
+
+Settings can be given by command line arguments, in a configuration file or in code, e.g.,
+provided in the main program.
+
+For using module-specific settings, define them via `ArgParseSettings` and `@add_arg_table!`
+and call `parse_settings!`, values can then be accessed via `settings[:<name>]::<Type>`.
+The type-cast is optional but may frequently help to achieve type-stability.
+
 """
 const settings = Dict{Symbol,Any}()
 

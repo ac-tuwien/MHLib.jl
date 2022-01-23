@@ -1,3 +1,7 @@
+# always run this code in the test directory and the test environment
+cd(@__DIR__)
+using Pkg; Pkg.activate(".")
+
 using Test
 using Random
 using Revise
@@ -31,8 +35,6 @@ using .MISP
 using .TSP
 using .GraphColoring
 
-# always run this code in the test directory
-cd(@__DIR__)
 
 # testsets to perform:
 only_testsets = ARGS
@@ -116,7 +118,7 @@ if isempty(only_testsets) || "MAXSAT-kflip" in only_testsets
         sol = MAXSATSolution(inst)
 
         k = 30
-        old = deepcopy(sol.x)
+        old = copy(sol.x)
         k_random_flips!(sol, k)
         new = sol.x
 

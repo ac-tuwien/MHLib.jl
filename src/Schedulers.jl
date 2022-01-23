@@ -41,18 +41,18 @@ const settings_cfg = ArgParseSettings()
         default = -1
     "--mh_ttime"
         help = "time limit [s] (<0: turned off)"
-        arg_type = Int
-        default = -1
+        arg_type = Float64
+        default = -1.0
     "--mh_tctime"
         help = "maximum time [s] without improvement (<0: turned off)"
-        arg_type = Int
-        default = -1
+        arg_type = Float64
+        default = -1.0
     "--mh_tobj"
         help = "objective value at which should be terminated when reached (<0: turned off)"
         arg_type = Float64
         default = -1.0
     "--mh_checkit"
-        help = "call check() for each solution after each method application"
+        help = "call `check` for each solution after each method application"
         arg_type = Bool
         default = false
 end
@@ -64,8 +64,8 @@ end
 Data in conjunction with a method application's result.
 
 Attributes
-- `changed`: if false, the solution has not been changed by the method application
-- `terminate`: if true, a termination condition has been fulfilled
+- `changed`: if `false`, the solution has not been changed by the method application
+- `terminate`: if `true`, a termination condition has been fulfilled
 - `log_info`: customized log info
 """
 mutable struct Result
@@ -127,7 +127,7 @@ Type for metaheuristics that work by iteratively applying certain methods/operat
 Attributes
 - `incumbent`: incumbent solution, i.e., initial solution and always best solution so far
     encountered
-- `incumbent_valid`: true if incumbent is a valid solution to be considered
+- `incumbent_valid`: `true` if incumbent is a valid solution to be considered
 - `incumbent_iteration`: iteration in which incumbent was found
 - `incumbent_time`: time at which incumbent was found
 - `methods`: vector of all `MHMethods`
@@ -159,7 +159,7 @@ end
 Create a `MHMethod` scheduler.
 
 Create a Scheduler for the given solution with the given methods provides as
-`Vector{MHMethod}`. If `consider_initial_sol` is true, consider the given solution as
+`Vector{MHMethod}`. If `consider_initial_sol` is `true`, consider the given solution as
 valid initial solution; otherwise it is assumed to be uninitialized.
 
 """
@@ -167,7 +167,7 @@ function Scheduler(sol::Solution, methods::Vector{MHMethod},
         consider_initial_sol::Bool=false)
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
     s = Scheduler(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
-        time(), missing, settings[:mh_checkit])
+        time(), missing, settings[:mh_checkit]::Bool)
     log_iteration_header(s)
     if s.incumbent_valid
         log_iteration(s, "-", NaN, sol, true, true, "")
@@ -268,15 +268,16 @@ end
 """
     check_termination(scheduler)
 
-Check termination conditions and return true when to terminate.
+Check termination conditions and return `true` when to terminate.
 """
 function check_termination(s::Scheduler)::Bool
     t = time()
-    if 0 <= settings[:mh_titer] <= s.iteration ||
-        0 <= settings[:mh_tciter] <= s.iteration - s.incumbent_iteration ||
-        0 <= settings[:mh_ttime] <= t - s.time_start ||
-        0 <= settings[:mh_tctime] <= t - s.incumbent_time ||
-        0 <= settings[:mh_tobj] && !is_worse_obj(s.incumbent, obj(s.incumbent), settings[:mh_tobj])
+    if 0 <= settings[:mh_titer]::Int <= s.iteration ||
+        0 <= settings[:mh_tciter]::Int <= s.iteration - s.incumbent_iteration ||
+        0 <= settings[:mh_ttime]::Float64 <= t - s.time_start ||
+        0 <= settings[:mh_tctime]::Float64 <= t - s.incumbent_time ||
+        0 <= settings[:mh_tobj]::Float64 && !is_worse_obj(s.incumbent, obj(s.incumbent), 
+            settings[:mh_tobj]::Float64)
         return true
     end
     false
@@ -286,8 +287,7 @@ end
 """
     perform_sequentially!(scheduler, solution, methods)
 
-Applies the given methods sequentially, finally keeping the best solution as
-incumbent.
+Applies the given methods sequentially, finally keeping the best solution as incumbent.
 """
 function perform_sequentially!(s::Scheduler, sol::Solution, meths::Vector{MHMethod})
     for m in next_method(meths)
@@ -377,9 +377,9 @@ A line is written if in_any_case is set or in dependence of
 """
 function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::Solution,
         new_incumbent::Bool, in_any_case::Bool, log_info::String="")
-    log = in_any_case || new_incumbent && settings[:mh_lnewinc]
+    log = in_any_case || new_incumbent && settings[:mh_lnewinc]::Bool
     if !log
-        lfreq = settings[:mh_lfreq]
+        lfreq = settings[:mh_lfreq]::Int
         if lfreq > 0 && sched.iteration % lfreq == 0
             log = true
         elseif lfreq < 0 && is_logarithmic_number(sched.iteration)

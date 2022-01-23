@@ -34,23 +34,23 @@ mutable struct OneMaxSolution <: BoolVectorSolution
     obj_val::Int
     obj_val_valid::Bool
     x::Vector{Bool}
-    OneMaxSolution(n) = new(-1, false, Vector{Bool}(undef, n))
-    OneMaxSolution(s::OneMaxSolution) =
-        new(s.obj_val, s.obj_val_valid, copy(s.x))
 end
+
+OneMaxSolution(n) = OneMaxSolution(-1, false, Vector{Bool}(undef, n))
+
+OneMaxSolution(s::OneMaxSolution) = OneMaxSolution(s.obj_val, s.obj_val_valid, copy(s.x))
 
 MHLib.calc_objective(s::OneMaxSolution) = sum(s.x)
 
-Base.show(io::IO, s::OneMaxSolution) =
-    println(io, s.x)
+Base.show(io::IO, s::OneMaxSolution) = println(io, s.x)
 
 function Base.copy!(s1::OneMaxSolution, s2::OneMaxSolution)
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
-    s1.x[:] = s2.x
+    copy!(s1.x, s2.x)
 end
 
-Base.copy(s::OneMaxSolution) = deepcopy(s)
+Base.copy(s::OneMaxSolution) = OneMaxSolution(s.obj_val, s.obj_val_valid, copy(s.x))
 
 
 end  # module
