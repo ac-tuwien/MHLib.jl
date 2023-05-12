@@ -5,7 +5,7 @@ Major changes in releases:
 
 ## Upcoming
 
-## Version 0.1.6
+## Version 0.1.6, 0.1.7
 - used packages updated for Julia 1.9
 
 ## Version 0.1.5
