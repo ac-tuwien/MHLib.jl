@@ -5,6 +5,9 @@ Major changes in releases:
 
 ## Upcoming
 
+## Version 0.1.6
+- used packages updated for Julia 1.9
+
 ## Version 0.1.5
 - switched from outdated `LightGraphs.jl` to `Graphs.jl`
 - minor documentation and code polishing
