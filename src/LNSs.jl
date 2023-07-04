@@ -13,7 +13,8 @@ using MHLib.Schedulers
 using StatsBase
 using ArgParse
 
-export LNS, get_number_to_destroy
+export LNS, LNSParameters, get_number_to_destroy, 
+    MethodSelector, UniformRandomMethodSelector, WeightedRandomMethodSelector
 
 
 const settings_cfg = ArgParseSettings()
@@ -41,6 +42,19 @@ Base.@kwdef struct LNSParameters
 end
 
 """
+    MethodSelector
+
+Abstract type for selecting the repair and destroy methods within the LNS.
+"""
+abstract type MethodSelector end
+
+LNSs.init_method_selector!(::LNS, ::MethodSelector) = nothing
+
+update_method_selector!(::LNS, ::MethodSelector, destroy::Int, repair::Int, case::Symbol) =
+    nothing
+
+
+"""
     LNS
 
 A basic large neighborhood search.
@@ -55,20 +69,22 @@ Attributes
     - temperature: temperature for Metropolis criterion
     - params: LNSParameters, by default adopted from global settings
 """
-mutable struct LNS
+mutable struct LNS{TMethodSelector <: MethodSelector}
     scheduler::Scheduler
     meths_ch::Vector{MHMethod}
     meths_de::Vector{MHMethod}
     meths_re::Vector{MHMethod}
     meths_compat::Union{Nothing, Matrix{Bool}}
     temperature::Float64
+    method_selector::TMethodSelector
     params::LNSParameters
 end
 
 
 """
-    LNS(sol::Solution, meths_ch, meths_de, meths_re, consider_initial_sol,
-        meths_compat, params)
+    LNS(sol::Solution, meths_ch, meths_de, meths_re;
+        meths_compat, consider_initial_sol, scheduler_params, 
+        method_selector, params)
 
 Create a LNS.
 
@@ -78,30 +94,17 @@ If `consider_initial_sol`, consider the given solution as valid initial solution
 otherwise it is assumed to be uninitialized.
 """
 function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMethod},
-        meths_re::Vector{MHMethod}; consider_initial_sol::Bool=false, meths_compat=nothing,
-        params=LNSParameters())
+        meths_re::Vector{MHMethod}; meths_compat::Union{Nothing, Matrix{Bool}}=nothing,
+        consider_initial_sol::Bool=false, method_selector::MethodSelector=UniformRandomMethodSelector(),
+        scheduler_params=SchedulerParameters(), params=LNSParameters())
     temperature = obj(sol) * params.init_temp_factor + 0.000000001
-    LNS(Scheduler(sol, [meths_ch; meths_de; meths_re], consider_initial_sol),
-    meths_ch, meths_de, meths_re, meths_compat, temperature, params)
+    scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re], consider_initial_sol, 
+        params=scheduler_params)
+    LNS(scheduler, meths_ch, meths_de, meths_re, meths_compat, temperature, 
+        method_selector, params)
 end
 
 
-"""
-    select_method_pair(lns)
-
-Select a destroy and repair method pair according to current weights.
-"""
-function select_method_pair(lns::LNS)
-    de_idx = rand(1:length(lns.meths_de))
-    destroy = lns.meths_de[de_idx]
-    if isnothing(lns.meths_compat)
-        meths_re = lns.meths_re
-    else
-        meths_re = lns.meths_re[lns.meths_compat[de_idx, :]]
-    end
-    repair = rand(meths_re)
-    return destroy, repair
-end
 
 
 """
@@ -141,31 +144,32 @@ function get_number_to_destroy(num_elements::Int;
     return b >= a ? rand(a:b) : b+1
 end
 
-
-
-
 """
-    update_after_destroy_and_repair_performed!(lns, destroy, repair, sol_new,
-        sol_incumbent, sol)
+    update_solution!(lns, sol_new, sol_incumbent, sol)
 
-Update current solution, incumbent, and all operator score data according to performed
-destroy+repair.
+Update current solution and incumbent according to the result of performing a
+destroy and repair method pair. Returns the case of the update.
 """
-function update_after_destroy_and_repair_performed!(lns::LNS, destroy::MHMethod,
-    repair::MHMethod, sol_new::Solution, sol_incumbent::Solution, sol::Solution)
+function update_solution!(lns::LNS, sol_new::Solution, sol_incumbent::Solution, 
+        sol::Solution)
     if is_better(sol_new, sol_incumbent)
         # print("better than incumbent")
         copy!(sol_incumbent, sol_new)
         copy!(sol, sol_new)
+        case = :betterThanIncumbent
     elseif is_better(sol_new, sol)
         # print("better than current")
         copy!(sol, sol_new)
+        case = :betterThanCurrent
     elseif is_better(sol, sol_new) && metropolis_criterion(lns, sol_new, sol)
         # print("accepted although worse")
         copy!(sol, sol_new)
+        case = :acceptedAlthoughWorse
     elseif sol_new != sol
         copy!(sol_new, sol)
+        case = :rejected
     end
+    return case
 end
 
 
@@ -175,13 +179,15 @@ end
 Perform basic large neighborhood search (LNS) on the given solution.
 """
 function lns!(lns::LNS, sol::Solution)
+    init_method_selector!(lns, lns.method_selector)
     sol_incumbent = copy(sol)
     sol_new = copy(sol)
     while true
-        destroy, repair = select_method_pair(lns)
-        res = perform_method_pair!(lns.scheduler, destroy, repair, sol_new)
-        update_after_destroy_and_repair_performed!(lns, destroy, repair, sol_new,
-            sol_incumbent, sol) 
+        destroy, repair = select_method_pair(lns, lns.method_selector)
+        res = perform_method_pair!(lns.scheduler, lns.meths_de[destroy], 
+            lns.meths_re[repair], sol_new)
+        case = update_solution!(lns, sol_new, sol_incumbent, sol) 
+        update_method_selector!(lns, lns.method_selector, destroy, repair, case)
         if res.terminate
             copy!(sol, sol_incumbent)
             return
@@ -202,5 +208,65 @@ function MHLib.run!(lns::LNS)
     perform_sequentially!(lns.scheduler, sol, lns.meths_ch)
     lns!(lns, sol)
 end
+
+
+"""
+    select_method_pair(lns, ::MethodSelector)
+
+Select indicies for a destroy and a repair method.
+"""
+function select_method_pair(lns::LNS, ::MethodSelector)
+    destroy = select_method(lns, lns.method_selector, eachindex(lns.meths_de), true)
+    if isnothing(lns.meths_compat)
+        repair_candidates = eachindex(lns.meths_re)
+    else
+        compat = view(lns.meths_compat,destroy, :)
+        repair_candidates = eachindex(lns.meths_re)[compat]
+    end
+    repair = select_method(lns, lns.method_selector, repair_candidates, false)
+    return destroy, repair
+end
+
+
+"""
+    UniformRandomMethodSelector
+
+Uniformly randomly select a repair and destroy method.
+"""
+struct UniformRandomMethodSelector <: MethodSelector end
+
+"""
+    select_method(lns, method_selector::UniformRandomMethodSelector)
+
+Select a method uniformly randomly.
+"""
+function select_method(::LNS, ::UniformRandomMethodSelector, 
+        candidates, is_destroy::Bool) :: Int
+    return rand(candidates)
+end
+
+
+"""
+    WeightedRandomMethodSelector
+
+Select indices of destroy and repair methods according to constant pre-specified weights.
+"""
+struct WeightedRandomMethodSelector <: MethodSelector
+    weights_de::Vector{Float64}
+    weights_re::Vector{Float64}
+end
+
+"""
+    select_method(lns, method_selector::UniformRandomMethodSelector, candidates, is_destroy)
+
+Select a method proportionally to the weights at random.
+"""
+function select_method(::LNS, method_selector::WeightedRandomMethodSelector, 
+        candidates, is_destroy::Bool) :: Int
+    weights = is_destroy ? method_selector.weights_de : method_selector.weights_re
+    return sample(candidates, Weights(weights))
+end
+
+
 
 end  # module

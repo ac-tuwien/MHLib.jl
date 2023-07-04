@@ -12,6 +12,7 @@ using Random
 using StatsBase
 using MHLib
 using MHLib.Schedulers
+using MHLib.LNSs
 using MHLib.ALNSs
 
 export MAXSATInstance, MAXSATSolution, destroy!, repair!

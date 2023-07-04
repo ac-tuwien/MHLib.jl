@@ -36,9 +36,9 @@ const settings_cfg = ArgParseSettings()
 
 @add_arg_table! settings_cfg begin
     "--alg"
-        help = "Algorithm to apply (gvns, lns, alns)"
+        help = "Algorithm to apply (gvns, lns, weighted-lns, alns)"
         arg_type = String
-        default = "alns"
+        default = "weighted-lns"
 end
 
 println("MAXSAT Demo version $(git_version())\nARGS: ", ARGS)
@@ -56,13 +56,20 @@ function maxsat()
 
     if settings[:alg] === "lns"
         alg = LNS(sol, [MHMethod("construct", construct!, 0)],
-            [MHMethod("destroy", destroy!, 1)],
-            [MHMethod("repair", repair!, 0)];
+            [MHMethod("de", destroy!, 1)],
+            [MHMethod("re", repair!, 0)];
             meths_compat = [true;;])
+    elseif settings[:alg] === "weighted-lns"
+        num_re = 5
+        method_selector = WeightedRandomMethodSelector(num_re:-1:1, 1:1)
+        alg = LNS(sol, [MHMethod("construct", construct!, 0)],
+            [MHMethod("de$i", destroy!, i) for i in 1:num_re],
+            [MHMethod("re", repair!, 0)];
+            method_selector)
     elseif settings[:alg] === "alns"
         alg = ALNS(sol, [MHMethod("construct", construct!, 0)],
-            [MHMethod("destroy", destroy!, 1)],
-            [MHMethod("repair", repair!, 0)];
+            [MHMethod("de", destroy!, 1)],
+            [MHMethod("re", repair!, 0)],
             meths_compat = [true;;])
     elseif settings[:alg] === "gvns"
         alg = GVNS(sol, [MHMethod("con", construct!, 0)],

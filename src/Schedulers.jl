@@ -14,10 +14,11 @@ using Random
 using DataStructures  # SortedDict for method_stats
 using MHLib
 
-export Result, MHMethod, MHMethodStatistics, Scheduler, perform_method!,
-    next_method, update_incumbent!, check_termination, perform_sequentially!,
-    main_results, method_statistics, delayed_success_update!, log_iteration, 
-    log_iteration_header, construct!, local_improve!, shaking!, perform_method_pair!
+export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerParameters, 
+    perform_method!, next_method, update_incumbent!, check_termination, 
+    perform_sequentially!, main_results, method_statistics, delayed_success_update!, 
+    log_iteration, log_iteration_header, construct!, local_improve!, shaking!, 
+    perform_method_pair!
 
 const settings_cfg = ArgParseSettings()
 
@@ -152,7 +153,6 @@ Attributes
 - `time_start`: starting time of algorithm
 - `run_time`: overall runtime (set when terminating)
 - `params`: parameters adopted from settings by default
-- `checkit`: if set `check()` is called for each solution after each method application
 """
 mutable struct Scheduler
     incumbent::Solution
@@ -180,7 +180,7 @@ valid initial solution; otherwise it is assumed to be uninitialized.
 
 """
 function Scheduler(sol::Solution, methods::Vector{MHMethod},
-        consider_initial_sol::Bool=false, params::SchedulerParameters=SchedulerParameters())
+        consider_initial_sol::Bool=false; params::SchedulerParameters=SchedulerParameters())
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
     s = Scheduler(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
         time(), missing, params)
