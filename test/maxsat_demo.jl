@@ -52,7 +52,8 @@ function maxsat()
     if settings[:alg] === "alns"
         alg = ALNS(sol, [MHMethod("construct", construct!, 0)],
             [MHMethod("destroy", destroy!, 1)],
-            [MHMethod("repair", repair!, 0)])
+            [MHMethod("repair", repair!, 0)];
+            meths_compat = [true;;])
     elseif settings[:alg] === "gvns"
         alg = GVNS(sol, [MHMethod("con", construct!, 0)],
             [MHMethod("li1", local_improve!, 1)],

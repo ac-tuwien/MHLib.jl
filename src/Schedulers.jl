@@ -57,6 +57,22 @@ const settings_cfg = ArgParseSettings()
         default = false
 end
 
+"""
+    SchedulerParameters
+
+Parameters for the scheduler adopted from settings by default.
+"""
+Base.@kwdef struct SchedulerParameters
+    titer::Int = settings[:mh_titer]
+    lnewinc::Bool = settings[:mh_lnewinc]
+    lfreq::Int = settings[:mh_lfreq]
+    tciter::Int = settings[:mh_tciter]
+    ttime::Float64 = settings[:mh_ttime]
+    tctime::Float64 = settings[:mh_tctime]
+    tobj::Float64 = settings[:mh_tobj]
+    checkit::Bool = settings[:mh_checkit]
+end
+
 
 """
     Result
@@ -135,7 +151,7 @@ Attributes
 - `iteration`: overall number of method applications
 - `time_start`: starting time of algorithm
 - `run_time`: overall runtime (set when terminating)
-- `own_settings`: own settings object with possibly individualized parameter values
+- `params`: parameters adopted from settings by default
 - `checkit`: if set `check()` is called for each solution after each method application
 """
 mutable struct Scheduler
@@ -150,7 +166,7 @@ mutable struct Scheduler
     run_time::Union{Float64, Missing}
     # logger = logging.getLogger("pymhlib") TODO
     # iter_logger = logging.getLogger("pymhlib_iter")
-    checkit::Bool
+    params::SchedulerParameters
 end
 
 """
@@ -164,14 +180,13 @@ valid initial solution; otherwise it is assumed to be uninitialized.
 
 """
 function Scheduler(sol::Solution, methods::Vector{MHMethod},
-        consider_initial_sol::Bool=false)
+        consider_initial_sol::Bool=false, params::SchedulerParameters=SchedulerParameters())
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
     s = Scheduler(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
-        time(), missing, settings[:mh_checkit]::Bool)
+        time(), missing, params)
     log_iteration_header(s)
     if s.incumbent_valid
         log_iteration(s, "-", NaN, sol, true, true, "")
-        # TODO s.own_settings = OwnSettings(own_settings) if own_settings else settings
     end
     s
 end
@@ -239,7 +254,7 @@ function perform_method!(s::Scheduler, method::MHMethod, sol::Solution;
     t_start = time()
     method.func(sol, method.par, res)
     t_end = time()
-    if s.checkit
+    if s.params.checkit
         check(sol)
     end
     ms = s.method_stats[method.name]
@@ -272,12 +287,12 @@ Check termination conditions and return `true` when to terminate.
 """
 function check_termination(s::Scheduler)::Bool
     t = time()
-    if 0 <= settings[:mh_titer]::Int <= s.iteration ||
-        0 <= settings[:mh_tciter]::Int <= s.iteration - s.incumbent_iteration ||
-        0 <= settings[:mh_ttime]::Float64 <= t - s.time_start ||
-        0 <= settings[:mh_tctime]::Float64 <= t - s.incumbent_time ||
-        0 <= settings[:mh_tobj]::Float64 && !is_worse_obj(s.incumbent, obj(s.incumbent), 
-            settings[:mh_tobj]::Float64)
+    if 0 <= s.params.titer <= s.iteration ||
+        0 <= s.params.tciter <= s.iteration - s.incumbent_iteration ||
+        0 <= s.params.ttime <= t - s.time_start ||
+        0 <= s.params.tctime::Float64 <= t - s.incumbent_time ||
+        0 <= s.params.tobj && !is_worse_obj(s.incumbent, obj(s.incumbent), 
+            s.params.tobj)
         return true
     end
     false
@@ -367,7 +382,7 @@ end
 Writes iteration log info.
 
 A line is written if in_any_case is set or in dependence of
-`settings[:mh_lfreq]` and `settings[:mh_lnewinc]`.
+`params.lfreq` and `params.lnewinc`.
 `method_name`: name of applied method or "-" (if initially given solution);
 `obj_old`: objective value before applying last operator;
 `param new_sol`: newly created solution;
@@ -377,9 +392,9 @@ A line is written if in_any_case is set or in dependence of
 """
 function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::Solution,
         new_incumbent::Bool, in_any_case::Bool, log_info::String="")
-    log = in_any_case || new_incumbent && settings[:mh_lnewinc]::Bool
+    log = in_any_case || new_incumbent && sched.params.lnewinc
     if !log
-        lfreq = settings[:mh_lfreq]::Int
+        lfreq = sched.params.lfreq
         if lfreq > 0 && sched.iteration % lfreq == 0
             log = true
         elseif lfreq < 0 && is_logarithmic_number(sched.iteration)

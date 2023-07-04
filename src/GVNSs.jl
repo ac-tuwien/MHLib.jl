@@ -45,7 +45,6 @@ otherwise it is assumed to be uninitialized.
 """
 function GVNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_li::Vector{MHMethod},
         meths_sh::Vector{MHMethod}; consider_initial_sol::Bool=false)
-    # TODO own_settings
     GVNS(Scheduler(sol, [meths_ch; meths_li; meths_sh], consider_initial_sol),
         meths_ch, meths_li, meths_sh)
 end
