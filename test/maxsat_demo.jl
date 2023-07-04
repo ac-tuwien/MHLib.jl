@@ -14,12 +14,16 @@ if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
     using .MHLib
     using .MHLib.Schedulers
     using .MHLib.GVNSs
+    using .MHLib.LNSs
     using .MHLib.ALNSs
+
 else
     using MHLib
     using MHLib.Schedulers
     using MHLib.GVNSs
+    using MHLib.LNSs
     using MHLib.ALNSs
+
 end
 
 includet("MAXSAT.jl")
@@ -32,7 +36,7 @@ const settings_cfg = ArgParseSettings()
 
 @add_arg_table! settings_cfg begin
     "--alg"
-        help = "Algorithm to apply (gvns, alns)"
+        help = "Algorithm to apply (gvns, lns, alns)"
         arg_type = String
         default = "alns"
 end
@@ -40,7 +44,8 @@ end
 println("MAXSAT Demo version $(git_version())\nARGS: ", ARGS)
 settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/maxsat-adv1.cnf")
 # settings_new_default_value(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
-parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.ALNSs.settings_cfg, settings_cfg])
+parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.LNSs.settings_cfg, 
+    MHLib.ALNSs.settings_cfg, settings_cfg])
 println(get_settings_as_string())
 
 function maxsat()
@@ -49,7 +54,12 @@ function maxsat()
     println(sol)
     # local alg
 
-    if settings[:alg] === "alns"
+    if settings[:alg] === "lns"
+        alg = LNS(sol, [MHMethod("construct", construct!, 0)],
+            [MHMethod("destroy", destroy!, 1)],
+            [MHMethod("repair", repair!, 0)];
+            meths_compat = [true;;])
+    elseif settings[:alg] === "alns"
         alg = ALNS(sol, [MHMethod("construct", construct!, 0)],
             [MHMethod("destroy", destroy!, 1)],
             [MHMethod("repair", repair!, 0)];

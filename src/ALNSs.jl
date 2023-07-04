@@ -1,8 +1,7 @@
 """
     ALNSs
 
-A adaptive large neighborhood search which can also be used for plain large neighborhood
-search.
+A adaptive large neighborhood search.
 
 It extends the more general scheduler module/class by distinguishing between construction
 heuristics, destroy methods and repair methods. Moreover it contain score_data which
@@ -124,7 +123,7 @@ end
 
 Create an ALNS.
 
-Create a GVNS for the given solution with the given construction,
+Create an ALNS for the given solution with the given construction,
 and repair methods provided as `Vector{MHMethod}`.
 If `consider_initial_sol`, consider the given solution as valid initial solution;
 otherwise it is assumed to be uninitialized.

@@ -337,6 +337,7 @@ end
 include("Settings.jl")
 include("Schedulers.jl")
 include("GVNSs.jl")
+include("LNSs.jl")
 include("ALNSs.jl")
 include("SubsetVectorSolutions.jl")
 include("PermutationSolutions.jl")
@@ -344,6 +345,7 @@ include("PermutationSolutions.jl")
 
 const all_settings_cfgs = [
         Schedulers.settings_cfg,
+        LNSs.settings_cfg,
         ALNSs.settings_cfg,
     ]
 
