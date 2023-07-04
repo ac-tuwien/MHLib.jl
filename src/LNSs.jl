@@ -48,26 +48,21 @@ Abstract type for selecting the repair and destroy methods within the LNS.
 """
 abstract type MethodSelector end
 
-LNSs.init_method_selector!(::LNS, ::MethodSelector) = nothing
-
-update_method_selector!(::LNS, ::MethodSelector, destroy::Int, repair::Int, case::Symbol) =
-    nothing
-
-
 """
     LNS
 
 A basic large neighborhood search.
 
 Attributes
-    - scheduler: Scheduler object
-    - meths_ch: list of construction heuristic methods
-    - meths_de: list of destroy methods
-    - meths_re: list of repair methods
-    - meths_compat: Boolean matrix indicating which repair method can be applied
-        in conjunction with which destroy method
-    - temperature: temperature for Metropolis criterion
-    - params: LNSParameters, by default adopted from global settings
+- `scheduler`: Scheduler object
+- `meths_ch`: list of construction heuristic methods
+- `meths_de`: list of destroy methods
+- `meths_re`: list of repair methods
+- `meths_compat`: Boolean matrix indicating which repair method can be applied
+    in conjunction with which destroy method, i.e., `meths_compat[i,j]==true` indicates
+    that the i-th repair method can be applied with the j-th destroy method
+- `temperature`: temperature for Metropolis criterion
+- `params`: LNSParameters, by default adopted from global settings
 """
 mutable struct LNS{TMethodSelector <: MethodSelector}
     scheduler::Scheduler
@@ -173,21 +168,26 @@ function update_solution!(lns::LNS, sol_new::Solution, sol_incumbent::Solution,
 end
 
 
+init_method_selector!(::LNS) = nothing
+
+update_method_selector!(::LNS, destroy::Int, repair::Int, case::Symbol) = nothing
+
+
 """
     lns!(lns, sol)
 
 Perform basic large neighborhood search (LNS) on the given solution.
 """
 function lns!(lns::LNS, sol::Solution)
-    init_method_selector!(lns, lns.method_selector)
+    init_method_selector!(lns)
     sol_incumbent = copy(sol)
     sol_new = copy(sol)
     while true
-        destroy, repair = select_method_pair(lns, lns.method_selector)
+        destroy, repair = select_method_pair(lns)
         res = perform_method_pair!(lns.scheduler, lns.meths_de[destroy], 
             lns.meths_re[repair], sol_new)
         case = update_solution!(lns, sol_new, sol_incumbent, sol) 
-        update_method_selector!(lns, lns.method_selector, destroy, repair, case)
+        update_method_selector!(lns, destroy, repair, case)
         if res.terminate
             copy!(sol, sol_incumbent)
             return
@@ -211,19 +211,19 @@ end
 
 
 """
-    select_method_pair(lns, ::MethodSelector)
+    select_method_pair(lns)
 
 Select indicies for a destroy and a repair method.
 """
-function select_method_pair(lns::LNS, ::MethodSelector)
-    destroy = select_method(lns, lns.method_selector, eachindex(lns.meths_de), true)
+function select_method_pair(lns::LNS)
+    destroy = select_method(lns, eachindex(lns.meths_de), true)
     if isnothing(lns.meths_compat)
         repair_candidates = eachindex(lns.meths_re)
     else
         compat = view(lns.meths_compat,destroy, :)
         repair_candidates = eachindex(lns.meths_re)[compat]
     end
-    repair = select_method(lns, lns.method_selector, repair_candidates, false)
+    repair = select_method(lns, repair_candidates, false)
     return destroy, repair
 end
 
@@ -236,11 +236,11 @@ Uniformly randomly select a repair and destroy method.
 struct UniformRandomMethodSelector <: MethodSelector end
 
 """
-    select_method(lns, method_selector::UniformRandomMethodSelector)
+    select_method(::LNS{UniformRandomMethodSelector})
 
-Select a method uniformly randomly.
+Select a method uniformly at random.
 """
-function select_method(::LNS, ::UniformRandomMethodSelector, 
+function select_method(::LNS{UniformRandomMethodSelector}, 
         candidates, is_destroy::Bool) :: Int
     return rand(candidates)
 end
@@ -257,16 +257,16 @@ struct WeightedRandomMethodSelector <: MethodSelector
 end
 
 """
-    select_method(lns, method_selector::UniformRandomMethodSelector, candidates, is_destroy)
+    select_method(::LNS{WeightedRandomMethodSelector}, candidates, is_destroy)
 
 Select a method proportionally to the weights at random.
 """
-function select_method(::LNS, method_selector::WeightedRandomMethodSelector, 
-        candidates, is_destroy::Bool) :: Int
-    weights = is_destroy ? method_selector.weights_de : method_selector.weights_re
+function select_method(lns::LNS{WeightedRandomMethodSelector}, candidates, 
+        is_destroy::Bool) :: Int
+    sel = lns.method_selector
+    weights = is_destroy ? sel.weights_de : sel.weights_re
     return sample(candidates, Weights(weights))
 end
-
 
 
 end  # module

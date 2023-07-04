@@ -28,7 +28,7 @@ const settings_cfg = ArgParseSettings()
     "--alns_gamma"
         help = "ALNS reaction factor for updating the method weights"
         arg_type = Float64
-        default = 0.0
+        default = 0.025
     "--alns_sigma1"
         help = "ALNS score for new global best solution"
         arg_type = Int
@@ -41,10 +41,6 @@ const settings_cfg = ArgParseSettings()
         help = "ALNS score for worse accepted solution"
         arg_type = Int
         default = 3
-    "--alns_logscores"
-        help = "ALNS write out log information on scores"
-        arg_type = Bool
-        default = true
 end
 
 """
@@ -58,7 +54,6 @@ Base.@kwdef struct ALNSParameters
     sigma1::Int = settings[:alns_sigma1]
     sigma2::Int = settings[:alns_sigma2]
     sigma3::Int = settings[:alns_sigma3]
-    logscores::Bool = settings[:alns_logscores]
 end
 
 
@@ -68,9 +63,9 @@ end
 Weight of a method and all data relevant to calculate the score and update the weight.
 
 Attributes
-    - weight: weight to be used for selecting methods
-    - score: current score in current segment
-    - applied: number of applications in current segment
+- `weight`: weight to be used for selecting methods
+- `score`: current score in current segment
+- `applied`: number of applications in current segment
 """
 mutable struct ScoreData
     weight::Float64
@@ -85,10 +80,10 @@ ScoreData() = ScoreData(1.0, 0, 0)
 An adaptive large neighborhood search (ALNS).
 
 Attributes
-    - score_data_de: dictionary which stores a ScoreData struct for each destroy method
-    - score_data_re: dictionary which stores a ScoreData struct for each repair method
-    - next_segment: iteration number of next segment for updating operator weights
-    - params: ALNSParameters, by default adopted from global settings
+- `score_data_de`: dictionary which stores a ScoreData struct for each destroy method
+- `score_data_re`: dictionary which stores a ScoreData struct for each repair method
+- `next_segment`: iteration number of next segment for updating operator weights
+- `params`: `ALNSParameters`, by default adopted from global settings
 """
 mutable struct ALNSMethodSelector <: LNSs.MethodSelector
     score_data_de::Vector{ScoreData}
@@ -99,8 +94,8 @@ end
 
 ALNSMethodSelector(meths_de::Vector{MHMethod}, meths_re::Vector{MHMethod};
         params::ALNSParameters=ALNSParameters()) =
-    ALNSMethodSelector(ScoreData[lengths(meths_de)], ScoreData[lengths(meths_re)], 
-        0, params)
+    ALNSMethodSelector([ScoreData() for _ in 1:length(meths_de)], 
+        [ScoreData() for _ in 1:length(meths_re)], 0, params)
 
 
 """
@@ -121,30 +116,31 @@ function ALNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMeth
         lns_params=LNSParameters(), params=ALNSParameters())
     method_selector = ALNSMethodSelector(meths_de, meths_re; params)
     LNS(sol, meths_ch, meths_de, meths_re; meths_compat, consider_initial_sol,
-        scheduler_params, method_selector, scheduler_params, params=lns_params)
+        method_selector, scheduler_params, params=lns_params)
 end
 
 """
-    select_method(lns, method_selector::ALNSMethodSelector, candidates, is_destroy)
+    select_method(::LNS{ALNSMethodSelector}, candidates, is_destroy) :: Int
 
 Select a method proportionally to the scores at random.
 """
-function LNSs.select_method(::LNS, method_selector::ALNSMethodSelector, 
+function LNSs.select_method(lns::LNS{ALNSMethodSelector}, 
         candidates, is_destroy::Bool) :: Int
-    score_data = is_destroy ? method_selector.score_data_de : method_selector.score_data_re
-    weights = [score_data[i].weights for i in candidates]
+    sel = lns.method_selector
+    score_data = is_destroy ? sel.score_data_de : sel.score_data_re
+    weights = [score_data[i].weight for i in candidates]
     return sample(candidates, Weights(weights))
 end
 
 """
-    update_operator_weights!(alns)
+    update_operator_weights!(::LNS{ALNSMethodSelector})
 
 Update operator weights at segment ends and re-initialize scores.
 """
-function update_operator_weights!(lns::LNS, sel::ALNSMethodSelector)
+function update_operator_weights!(lns::LNS{ALNSMethodSelector})
+    sel = lns.method_selector
     iteration = lns.scheduler.iteration
     if iteration == sel.next_segment
-        # TODO: log_scores()
         # update operator weights
         sel.next_segment = lns.scheduler.iteration + sel.params.segment_size
         gamma = sel.params.gamma
@@ -155,40 +151,44 @@ function update_operator_weights!(lns::LNS, sel::ALNSMethodSelector)
                 data.applied = 0
             end
         end
+        # @show sel.score_data_de sel.score_data_re
     end
 end
 
 """
-    init_method_selector!(lns, sel::ALNSMethodSelector)
+    init_method_selector!(::LNS{ALNSMethodSelector})
 
 Initialize method selector with current state of LNS.
 """
-LNSs.init_method_selector!(lns::LNS, sel::ALNSMethodSelector) = 
+function LNSs.init_method_selector!(lns::LNS{ALNSMethodSelector})
+    sel = lns.method_selector
     sel.next_segment = lns.scheduler.iteration + sel.params.segment_size
+end
 
 """
-    update_after_destroy_and_repair_performed!(alns, destroy, repair, sol_new,
-        sol_incumbent, sol)
+    update_after_destroy_and_repair_performed!(::LNS{ALNSMethodSelector}, 
+        destroy, repair, case)
 
-Update  score data according to performed destroy+repair and case.
+Update score data according to performed destroy+repair and case of result.
 """
-function LNSs.update_method_selector!(lns::LNS, sel::ALNSMethodSelector,
-        destroy::Int, repair::Int, case)
-    destroy_data = sel.score_data[destroy]
-    repair_data = sel.score_data[repair]
+function LNSs.update_method_selector!(lns::LNS{ALNSMethodSelector}, 
+        destroy::Int, repair::Int, case::Symbol)
+    sel = lns.method_selector
+    destroy_data = sel.score_data_de[destroy]
+    repair_data = sel.score_data_re[repair]
     destroy_data.applied += 1
     repair_data.applied += 1
     score = 0
     if case == :betterThanIncumbent
-        score = alns.params.sigma1
+        score = sel.params.sigma1
     elseif case == :betterThanCurrent
-        score = alns.params.sigma2
+        score = sel.params.sigma2
     elseif case == :acceptedAlthoughWorse
-        score = alns.params.sigma3
+        score = sel.params.sigma3
     end
     destroy_data.score += score
     repair_data.score += score
-    update_operator_weights!(lns, sel)
+    update_operator_weights!(lns)
 end
 
 end  # module

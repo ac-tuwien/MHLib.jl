@@ -23,7 +23,6 @@ else
     using MHLib.GVNSs
     using MHLib.LNSs
     using MHLib.ALNSs
-
 end
 
 includet("MAXSAT.jl")
@@ -38,12 +37,12 @@ const settings_cfg = ArgParseSettings()
     "--alg"
         help = "Algorithm to apply (gvns, lns, weighted-lns, alns)"
         arg_type = String
-        default = "weighted-lns"
+        default = "alns"
 end
 
 println("MAXSAT Demo version $(git_version())\nARGS: ", ARGS)
 settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/maxsat-adv1.cnf")
-# settings_new_default_value(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
+settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
 parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.LNSs.settings_cfg, 
     MHLib.ALNSs.settings_cfg, settings_cfg])
 println(get_settings_as_string())
@@ -60,17 +59,17 @@ function maxsat()
             [MHMethod("re", repair!, 0)];
             meths_compat = [true;;])
     elseif settings[:alg] === "weighted-lns"
-        num_re = 5
+        num_de = 5
         method_selector = WeightedRandomMethodSelector(num_re:-1:1, 1:1)
         alg = LNS(sol, [MHMethod("construct", construct!, 0)],
-            [MHMethod("de$i", destroy!, i) for i in 1:num_re],
+            [MHMethod("de$i", destroy!, i) for i in 1:num_de],
             [MHMethod("re", repair!, 0)];
             method_selector)
     elseif settings[:alg] === "alns"
+        num_de = 5
         alg = ALNS(sol, [MHMethod("construct", construct!, 0)],
-            [MHMethod("de", destroy!, 1)],
-            [MHMethod("re", repair!, 0)],
-            meths_compat = [true;;])
+            [MHMethod("de$i", destroy!, i) for i in 1:num_de],
+            [MHMethod("re", repair!, 0)])
     elseif settings[:alg] === "gvns"
         alg = GVNS(sol, [MHMethod("con", construct!, 0)],
             [MHMethod("li1", local_improve!, 1)],
