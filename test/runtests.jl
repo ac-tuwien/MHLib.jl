@@ -11,11 +11,13 @@ if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
     using .MHLib
     using .MHLib.Schedulers
     using .MHLib.GVNSs
+    using .MHLib.LNSs
     using .MHLib.ALNSs
 else
     using MHLib
     using MHLib.Schedulers
     using MHLib.GVNSs
+    using MHLib.LNSs
     using MHLib.ALNSs
 end
 
@@ -43,7 +45,7 @@ if length(only_testsets) >= 1 && startswith(only_testsets[1], "DEBUG_MODE")
     only_testsets = only_testsets[2:end]
 end
 # only_testsets = ["GVNS-GraphColoring"]
-# only_testsets = ["GVNS-MKP"]
+# only_testsets = ["ALNS-MAXSAT"]
 
 if isempty(only_testsets) || "OneMaxSolution" in only_testsets
     @testset "OneMaxSolution" begin
@@ -128,16 +130,36 @@ if isempty(only_testsets) || "MAXSAT-kflip" in only_testsets
     end
 end
 
-if isempty(only_testsets) || "ALNS-MAXSAT" in only_testsets
-    @testset "ALNS-MAXSAT.jl" begin
-        parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.ALNSs.settings_cfg], 
-            ["--seed=1"])
-        inst = MAXSATInstance("data/maxsat-simple.cnf")
+if isempty(only_testsets) || "LNS-MAXSAT" in only_testsets
+    @testset "LNS-MAXSAT.jl" begin
+        parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.LNSs.settings_cfg, MHLib.ALNSs.settings_cfg], 
+            ["--seed=1", "--mh_titer=120"])
+        inst = MAXSATInstance("data/maxsat-adv1.cnf")
         sol = MAXSATSolution(inst)
         println(sol)
+        num_de = 5
+        method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
+        alg = LNS(sol, [MHMethod("construct", construct!, 0)],
+            [MHMethod("de$i", destroy!, i) for i in 1:num_de],
+            [MHMethod("re", repair!, 0)]; method_selector)
+        run!(alg)
+        method_statistics(alg.scheduler)
+        main_results(alg.scheduler)
+        @test obj(sol) >= 0
+    end
+end
+
+if isempty(only_testsets) || "ALNS-MAXSAT" in only_testsets
+    @testset "ALNS-MAXSAT.jl" begin
+        parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.LNSs.settings_cfg, MHLib.ALNSs.settings_cfg], 
+            ["--seed=1", "--mh_titer=120"])
+        inst = MAXSATInstance("data/maxsat-adv1.cnf")
+        sol = MAXSATSolution(inst)
+        println(sol)
+        num_de = 5
         alg = ALNS(sol, [MHMethod("construct", construct!, 0)],
-            [MHMethod("destroy", destroy!, 1)],
-            [MHMethod("repair", repair!, 0)])
+            [MHMethod("de$i", destroy!, i) for i in 1:num_de],
+            [MHMethod("re", repair!, 0)])
         run!(alg)
         method_statistics(alg.scheduler)
         main_results(alg.scheduler)

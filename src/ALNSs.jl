@@ -1,8 +1,7 @@
 """
     ALNSs
 
-A adaptive large neighborhood search which can also be used for plain large neighborhood
-search.
+A adaptive large neighborhood search.
 
 It extends the more general scheduler module/class by distinguishing between construction
 heuristics, destroy methods and repair methods. Moreover it contain score_data which
@@ -12,16 +11,12 @@ module ALNSs
 
 using MHLib
 using MHLib.Schedulers
+using MHLib.LNSs
 using StatsBase
 using ArgParse
 
-export ALNS, get_number_to_destroy
+export ALNS, ALNSParameters, ALNSMethodSelector
 
-#=
-TODO:
-- own_settings
-- log_scores
-=#
 
 const settings_cfg = ArgParseSettings()
 
@@ -30,26 +25,10 @@ const settings_cfg = ArgParseSettings()
         help = "ALNS segment size"
         arg_type = Int
         default = 100
-    "--alns_dest_min_abs"
-        help = "ALNS minimum number of elements to destroy"
-        arg_type = Int
-        default = 5
-    "--alns_dest_max_abs"
-        help = "ALNS maximum number of elements to destroy"
-        arg_type = Int
-        default = 100
-    "--alns_dest_min_ratio"
-        help = "ALNS minimum ratio of elements to destroy"
-        arg_type = Float64
-        default = 0.1
-    "--alns_dest_max_ratio"
-        help = "ALNS maximum ratio of elements to destroy"
-        arg_type = Float64
-        default = 0.35
     "--alns_gamma"
         help = "ALNS reaction factor for updating the method weights"
         arg_type = Float64
-        default = 0.0
+        default = 0.025
     "--alns_sigma1"
         help = "ALNS score for new global best solution"
         arg_type = Int
@@ -62,18 +41,19 @@ const settings_cfg = ArgParseSettings()
         help = "ALNS score for worse accepted solution"
         arg_type = Int
         default = 3
-    "--alns_init_temp_factor"
-        help = "ALNS factor for determining initial temperature"
-        arg_type = Float64
-        default = 0.0
-    "--alns_temp_dec_factor"
-        help = "ALNS factor for decreasing the temperature"
-        arg_type = Float64
-        default = 0.99
-    "--alns_logscores"
-        help = "ALNS write out log information on scores"
-        arg_type = Bool
-        default = true
+end
+
+"""
+    ALNSParameters
+
+Parameters for the ALNS algorithm adopted from settings by default.
+"""
+Base.@kwdef struct ALNSParameters
+    segment_size::Int = settings[:alns_segment_size]
+    gamma::Float64 = settings[:alns_gamma]
+    sigma1::Int = settings[:alns_sigma1]
+    sigma2::Int = settings[:alns_sigma2]
+    sigma3::Int = settings[:alns_sigma3]
 end
 
 
@@ -83,9 +63,9 @@ end
 Weight of a method and all data relevant to calculate the score and update the weight.
 
 Attributes
-    - weight: weight to be used for selecting methods
-    - score: current score in current segment
-    - applied: number of applications in current segment
+- `weight`: weight to be used for selecting methods
+- `score`: current score in current segment
+- `applied`: number of applications in current segment
 """
 mutable struct ScoreData
     weight::Float64
@@ -100,203 +80,115 @@ ScoreData() = ScoreData(1.0, 0, 0)
 An adaptive large neighborhood search (ALNS).
 
 Attributes
-    - scheduler: Scheduler object
-    - meths_ch: list of construction heuristic methods
-    - meths_de: list of destroy methods
-    - methds_re: list of repair methods
-    - score_data: dictionary which stores a ScoreData struct for each method
-    - temperature: temperature for Metropolis criterion
-    - next_segment: iteration number of next segment for updating operator weights
+- `score_data_de`: dictionary which stores a ScoreData struct for each destroy method
+- `score_data_re`: dictionary which stores a ScoreData struct for each repair method
+- `next_segment`: iteration number of next segment for updating operator weights
+- `params`: `ALNSParameters`, by default adopted from global settings
 """
-mutable struct ALNS
-    scheduler::Scheduler
-    meths_ch::Vector{MHMethod}
-    meths_de::Vector{MHMethod}
-    meths_re::Vector{MHMethod}
-    score_data::Dict{String, ScoreData}
-    temperature::Float64
+mutable struct ALNSMethodSelector <: LNSs.MethodSelector
+    score_data_de::Vector{ScoreData}
+    score_data_re::Vector{ScoreData}
     next_segment::Int
+    params::ALNSParameters
 end
 
+ALNSMethodSelector(meths_de::Vector{MHMethod}, meths_re::Vector{MHMethod};
+        params::ALNSParameters=ALNSParameters()) =
+    ALNSMethodSelector([ScoreData() for _ in 1:length(meths_de)], 
+        [ScoreData() for _ in 1:length(meths_re)], 0, params)
+
 
 """
-    ALNS(sol::Solution, meths_ch, meths_de, meths_re, consider_initial_sol)
+    ALNS(sol::Solution, meths_ch, meths_de, meths_re; 
+        meths_compat, consider_initial_sol, scheduler_params, lns_params, alns_params)
 
-Create an ALNS.
+Create an Adaptive Large Neighborhood Search (ALNS).
 
-Create a GVNS for the given solution with the given construction,
-and repair methods provided as `Vector{MHMethod}`.
+Create an ALNS, i.e., LNS with `ALNSMethodSelector`` for the given solution with 
+the given construction, and repair methods provided as `Vector{MHMethod}`.
 If `consider_initial_sol`, consider the given solution as valid initial solution;
 otherwise it is assumed to be uninitialized.
 """
 function ALNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMethod},
-        meths_re::Vector{MHMethod}, consider_initial_sol::Bool=false)
-    # TODO own_settings
-    temperature = obj(sol) * settings[:alns_init_temp_factor] + 0.000000001
-    score_data = Dict(m.name => ScoreData() for m in vcat(meths_de, meths_re))
-    ALNS(Scheduler(sol, [meths_ch; meths_de; meths_re], consider_initial_sol),
-        meths_ch, meths_de, meths_re, score_data, temperature, 0)
+        meths_re::Vector{MHMethod}; 
+        meths_compat::Union{Nothing, Matrix{Bool}}=nothing,
+        consider_initial_sol::Bool=false, scheduler_params=SchedulerParameters(),
+        lns_params=LNSParameters(), params=ALNSParameters())
+    method_selector = ALNSMethodSelector(meths_de, meths_re; params)
+    LNS(sol, meths_ch, meths_de, meths_re; meths_compat, consider_initial_sol,
+        method_selector, scheduler_params, params=lns_params)
 end
 
-
 """
-    select_method(meths, weights)
+    select_method(::LNS{ALNSMethodSelector}, candidates, is_destroy) :: Int
 
-Randomly select a method from the given list with probabilities proportional to the given
-weights. If weights is nothing, uniform probability is used.
+Select a method proportionally to the scores at random.
 """
-function select_method(meths::Vector{MHMethod}, weights::Vector{Float64})
-    return sample(meths, Weights(weights))
+function LNSs.select_method(lns::LNS{ALNSMethodSelector}, 
+        candidates, is_destroy::Bool) :: Int
+    sel = lns.method_selector
+    score_data = is_destroy ? sel.score_data_de : sel.score_data_re
+    weights = [score_data[i].weight for i in candidates]
+    return sample(candidates, Weights(weights))
 end
 
-
 """
-    select_method_pair(alns)
-
-Select a destroy and repair method pair according to current weights.
-"""
-function select_method_pair(alns::ALNS)
-    destroy = select_method(alns.meths_de, [alns.score_data[m.name].weight
-        for m in alns.meths_de])
-    repair = select_method(alns.meths_re, [alns.score_data[m.name].weight
-        for m in alns.meths_re])
-    return destroy, repair
-end
-
-
-"""
-    metropolis_criterion(alns, sol_new, sol_current)
-
-Apply Metropolis criterion, return true when `sol_new` should be accepted.
-"""
-function metropolis_criterion(alns::ALNS, sol_new::Solution, sol_current::Solution)
-    if is_better(sol_new, sol_current)
-        return true
-    end
-    return rand() <= exp(-abs(obj(sol_new) - obj(sol_current)) / alns.temperature)
-end
-
-
-"""
-    cool_down!(alns)
-
-Apply geometric cooling.
-"""
-function cool_down!(alns::ALNS)
-    alns.temperature *= settings[:alns_temp_dec_factor]
-end
-
-
-"""
-    get_number_to_destroy(num_elements, own_settings,
-        dest_min_abs, dest_min_ratio, dest_max_abs, dest_max_ratio)
-
-Randomly sample the number of elements to destroy in the destroy operator based on the
-parameter settings.
-"""
-function get_number_to_destroy(num_elements::Int, own_settings=settings,
-    dest_min_abs::Int=own_settings[:alns_dest_min_abs],
-    dest_min_ratio::Float64=own_settings[:alns_dest_min_ratio],
-    dest_max_abs::Int=own_settings[:alns_dest_max_abs],
-    dest_max_ratio::Float64=own_settings[:alns_dest_max_ratio])
-    a = max(dest_min_abs, Int(floor(dest_min_ratio * num_elements)))
-    b = min(dest_max_abs, Int(floor(dest_max_ratio * num_elements)))
-    return b >= a ? rand(a:b) : b+1
-end
-
-
-"""
-    update_operator_weights!(alns)
+    update_operator_weights!(::LNS{ALNSMethodSelector})
 
 Update operator weights at segment ends and re-initialize scores.
 """
-function update_operator_weights!(alns::ALNS)
-    if alns.scheduler.iteration == alns.next_segment
-        # TODO: log_scores()
+function update_operator_weights!(lns::LNS{ALNSMethodSelector})
+    sel = lns.method_selector
+    iteration = lns.scheduler.iteration
+    if iteration == sel.next_segment
         # update operator weights
-        alns.next_segment = alns.scheduler.iteration + settings[:alns_segment_size]
-        gamma = settings[:alns_gamma]
-        for m in vcat(alns.meths_de, alns.meths_re)
-            data = alns.score_data[m.name]
+        sel.next_segment = lns.scheduler.iteration + sel.params.segment_size
+        gamma = sel.params.gamma
+        for data in Iterators.flatten((sel.score_data_de, sel.score_data_re))
             if data.applied > 0
                 data.weight = data.weight * (1 - gamma) + gamma * data.score / data.applied
                 data.score = 0
                 data.applied = 0
             end
         end
+        # @show sel.score_data_de sel.score_data_re
     end
 end
 
+"""
+    init_method_selector!(::LNS{ALNSMethodSelector})
+
+Initialize method selector with current state of LNS.
+"""
+function LNSs.init_method_selector!(lns::LNS{ALNSMethodSelector})
+    sel = lns.method_selector
+    sel.next_segment = lns.scheduler.iteration + sel.params.segment_size
+end
 
 """
-    update_after_destroy_and_repair_performed!(alns, destroy, repair, sol_new,
-        sol_incumbent, sol)
+    update_after_destroy_and_repair_performed!(::LNS{ALNSMethodSelector}, 
+        destroy, repair, case)
 
-Update current solution, incumbent, and all operator score data according to performed
-destroy+repair.
+Update score data according to performed destroy+repair and case of result.
 """
-function update_after_destroy_and_repair_performed!(alns::ALNS, destroy::MHMethod,
-    repair::MHMethod, sol_new::Solution, sol_incumbent::Solution, sol::Solution)
-    destroy_data = alns.score_data[destroy.name]
-    repair_data = alns.score_data[repair.name]
+function LNSs.update_method_selector!(lns::LNS{ALNSMethodSelector}, 
+        destroy::Int, repair::Int, case::Symbol)
+    sel = lns.method_selector
+    destroy_data = sel.score_data_de[destroy]
+    repair_data = sel.score_data_re[repair]
     destroy_data.applied += 1
     repair_data.applied += 1
     score = 0
-    if is_better(sol_new, sol_incumbent)
-        # print("better than incumbent")
-        score = settings[:alns_sigma1]
-        copy!(sol_incumbent, sol_new)
-        copy!(sol, sol_new)
-    elseif is_better(sol_new, sol)
-        # print("better than current")
-        score = settings[:alns_sigma2]
-        copy!(sol, sol_new)
-    elseif is_better(sol, sol_new) && metropolis_criterion(alns, sol_new, sol)
-        score = settings[:alns_sigma3]
-        # print("accepted although worse")
-        copy!(sol, sol_new)
-    elseif sol_new != sol
-        copy!(sol_new, sol)
+    if case == :betterThanIncumbent
+        score = sel.params.sigma1
+    elseif case == :betterThanCurrent
+        score = sel.params.sigma2
+    elseif case == :acceptedAlthoughWorse
+        score = sel.params.sigma3
     end
     destroy_data.score += score
     repair_data.score += score
-end
-
-
-"""
-    alns!(alns, sol)
-
-Perform adaptive large neighborhood search (ALNS) on the given solution.
-"""
-function alns!(alns::ALNS, sol::Solution)
-    alns.next_segment = alns.scheduler.iteration + settings[:alns_segment_size]
-    sol_incumbent = copy(sol)
-    sol_new = copy(sol)
-    while true
-        destroy, repair = select_method_pair(alns)
-        res = perform_method_pair!(alns.scheduler, destroy, repair, sol_new)
-        update_after_destroy_and_repair_performed!(alns, destroy, repair, sol_new,
-            sol_incumbent, sol)
-        if res.terminate
-            copy!(sol, sol_incumbent)
-            return
-        end
-        update_operator_weights!(alns)
-        cool_down!(alns)
-    end
-end
-
-
-"""
-    run!(alns)
-
-Perform the construction heuristics followed by the ALNS.
-"""
-function MHLib.run!(alns::ALNS)
-    sol = copy(alns.scheduler.incumbent)
-    @assert alns.scheduler.incumbent_valid || !isempty(alns.meths_ch)
-    perform_sequentially!(alns.scheduler, sol, alns.meths_ch)
-    alns!(alns, sol)
+    update_operator_weights!(lns)
 end
 
 end  # module

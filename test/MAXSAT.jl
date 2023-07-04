@@ -12,6 +12,7 @@ using Random
 using StatsBase
 using MHLib
 using MHLib.Schedulers
+using MHLib.LNSs
 using MHLib.ALNSs
 
 export MAXSATInstance, MAXSATSolution, destroy!, repair!
@@ -161,14 +162,13 @@ end
 """
     destroy(maxsat_solution, par, result)
 
-Destroy operator for ALNS selects par*ALNS.get_number_to_destroy positions uniformly
+Destroy operator for ALNS selects `par*get_number_to_destroy()` positions uniformly
 at random for removal.
 
 Selected positions are stored with the solution in list self.destroyed.
 """
 function destroy!(sol::MAXSATSolution, par::Int, result::Result)
     x = sol.x
-    # TODO: num = min(ALNS.get_number_to_destroy(length(x)) * par, length(x))
     num = min(get_number_to_destroy(length(x)) * par, length(x))
     sol.destroyed = sample(1:length(x), num, replace=false)
     invalidate!(sol)
