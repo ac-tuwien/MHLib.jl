@@ -73,13 +73,19 @@ Further modules:
 - `Schedulers`, type `Scheduler`:
     A an abstract framework for single trajectory metaheuristics that rely on iteratively
     applying certain methods to a current solution.
-    Modules like `GVNSs` and `ALNSs` extend this type towards
+    Modules like `GVNSs` and `LNSs` extend this type towards
     more specific metaheuristics.
 - `GVNSs`, type `GVNSs`:
     A framework for local search, iterated local search, (general) variable neighborhood
     search, GRASP, etc.
+- `LNSs`, type `LNS`:
+    A framework for different variants of large neighborhood search (LNS).
+    The selection of the destroy and recreate methods is done in an extensible way by
+    means of the abstract type `MethodSelector` and derived types in order to realize 
+    different LNS variants.
 - `ALNSs`, type `ALNS`:
-    A framework for adaptive large neighborhood search (ALNS).
+    Adaptive large neighborhood search (ALNS). It is realized via `LNS` and 
+    `ALNSMethodSelector`.
 
 
 ## Demos
@@ -87,6 +93,7 @@ Further modules:
 For demonstration purposes, simple metaheuristic approaches are provided in the `test`
 subdirectory for the following well-known combinatorial optimization problems.
 They can be started as shown in the respective sections of `runtests.jl`.
+Moreover, there are the standalone demo applications `maxsat_demo.jl` and `runtests_tsp.jl`
 
 It is recommended to take such a demo as template for solving your own problem.
 
