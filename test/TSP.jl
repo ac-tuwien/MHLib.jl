@@ -1,7 +1,7 @@
 """
     TSP
 
-Demo problem: traveling salesperson problem.
+Demo problem: Symmetric traveling salesperson problem.
 
 Given an undirected, weighted, complete graph, find a Hamiltonian cycle with minimum length.
 """
@@ -27,48 +27,75 @@ Given an undirected, weighted, complete graph, find a Hamiltonian cycle with min
 Attributes
 - `n`: number of nodes
 - `d`: distance matrix
+- `coords`:Euclidean coordinates of nodes or `nothing` if not available
 """
 struct TSPInstance
     n::Int
-    d::Array{Int, 2}
+    d::Matrix{Int}
+    coords::Union{Nothing, Vector{Vector{Int}}}
+end
+
+"""
+    TSPInstance(coords)
+
+Create a TSP instance from given Euclidean coordinates.
+"""
+function TSPInstance(coords::Vector{Vector{Int}})
+    @assert length(coords) >= 2 && length(coords[1]) == 2
+    n = length(coords)
+    d = Matrix{Int}(undef, n, n)
+    for i in 1:n
+        for j in i:n
+            p = coords[i]; q = coords[j]
+             if i == j
+                 d[i,j] = 0
+             else
+                 d[i,j] = d[j,i] = round(Int, sqrt((p[1] - q[1])^2 + (p[2] - q[2])^2))
+             end
+        end
+    end
+    TSPInstance(n, d, coords)
 end
 
 """
     TSPInstance(file_name)
 
-Read TSP instance from file in tslib format
+Read 2D Euclidean TSP instance from file in TSPLIB format.
 """
 function TSPInstance(file_name::AbstractString)
-    coords = Vector{Float64}[]
-    
+    coords = Vector{Int}[]
     open(file_name) do f
         parse_coords = false
-    
         for line in eachline(f)
-            if line == "EOF"
+           if line == "EOF"
                parse_coords = false
            end
            if parse_coords
                id, x_str, y_str = split(line, ' ')
-               x = parse(Float64, x_str)
-               y = parse(Float64, y_str)
+               x = parse(Int, x_str)
+               y = parse(Int, y_str)
                push!(coords, [x, y])
            end
            if line == "NODE_COORD_SECTION"
                parse_coords = true
            end
        end
+       length(coords) == 0 && error("No coordinates found in file $file_name") 
    end
+   TSPInstance(coords)
+end
 
-   n = length(coords)
-   d = zeros(Float64, n, n)
-   for (i, x_1) in enumerate(coords)
-       for (j, x_2) in enumerate(coords)
-            d[i, j] = trunc(sqrt((x_1[1]::Float64 - x_2[1]::Float64)^2 + (x_1[2]::Float64 - x_2[2]::Float64)^2) + 0.5)
-       end
-   end
+"""
+    TSPInstance(n, dims::Vector=[100, 100])
 
-   TSPInstance(n, d)
+Create a random Euclidean TSP instance with `n` nodes.
+
+The nodes lie in the integer grid `[0, xdim-1] x [0, ydim-1]`.
+"""
+function TSPInstance(n::Int=50, dims::Vector=[100, 100])
+    @assert length(dims) == 2
+    coords = [trunc.(Int, rand(2) .* dims) for _ in 1:n]
+    TSPInstance(coords)
 end
 
 function Base.show(io::IO, inst::TSPInstance)

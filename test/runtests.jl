@@ -205,6 +205,7 @@ end
 if isempty(only_testsets) || "Random-Init-TSP" in only_testsets
     @testset "Random-Init-TSP.jl" begin
         parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1", "--mh_titer=10"])
+        rand_inst = TSPInstance()
         inst = TSPInstance("data/xqf131.tsp")
         sol = TSPSolution(inst)
         println(sol)
