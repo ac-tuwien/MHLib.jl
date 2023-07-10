@@ -132,12 +132,30 @@ end
 
 if isempty(only_testsets) || "LNS-MAXSAT" in only_testsets
     @testset "LNS-MAXSAT.jl" begin
-        parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.LNSs.settings_cfg, MHLib.ALNSs.settings_cfg], 
-            ["--seed=1", "--mh_titer=120"])
+        parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.LNSs.settings_cfg, 
+            MHLib.ALNSs.settings_cfg], ["--seed=1", "--mh_titer=120"])
         inst = MAXSATInstance("data/maxsat-adv1.cnf")
         sol = MAXSATSolution(inst)
         println(sol)
         num_de = 5
+        method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
+        alg = LNS(sol, [MHMethod("construct", construct!, 0)],
+            [MHMethod("de$i", destroy!, i) for i in 1:num_de],
+            [MHMethod("re", repair!, 0)]; method_selector)
+        run!(alg)
+        method_statistics(alg.scheduler)
+        main_results(alg.scheduler)
+        @test obj(sol) >= 0
+    end
+end
+
+if isempty(only_testsets) || "LNS-TSP" in only_testsets
+    @testset "LNS-MAXSAT.jl" begin
+        parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.LNSs.settings_cfg,],  ["--seed=1", "--mh_titer=120"])
+        inst = TSPInstance(50)
+        sol = TSPSolution(inst)
+        println(sol)
+        num_de = 3
         method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
         alg = LNS(sol, [MHMethod("construct", construct!, 0)],
             [MHMethod("de$i", destroy!, i) for i in 1:num_de],

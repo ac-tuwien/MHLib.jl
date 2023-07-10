@@ -13,8 +13,9 @@ using MHLib.Schedulers
 using StatsBase
 using ArgParse
 
-export LNS, LNSParameters, get_number_to_destroy, 
-    MethodSelector, UniformRandomMethodSelector, WeightedRandomMethodSelector
+export LNS, LNSParameters,
+    MethodSelector, UniformRandomMethodSelector, WeightedRandomMethodSelector,
+    destroy!, repair!
 
 
 const settings_cfg = ArgParseSettings()
@@ -99,7 +100,25 @@ function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMetho
         method_selector, params)
 end
 
+"""
+    destroy!(solution, par, result)
 
+Scheduler method that performs destroy.
+Will usually be specialized for a specific problem.
+This abstract implementation just throws an exception.
+"""
+destroy!(s::Solution, par::Int, result::Result) =
+    error("Abstract method destroy! called")
+
+"""
+    repair!(solution, par, result)
+
+Scheduler method that performs repair.
+Will usually be specialized for a specific problem.
+This abstract implementation just throws an exception.
+"""
+repair!(s::Solution, par::Int, result::Result) =
+    error("Abstract method repair! called")
 
 
 """
@@ -124,20 +143,6 @@ function cool_down!(lns::LNS)
     lns.temperature *= lns.params.temp_dec_factor
 end
 
-
-"""
-    get_number_to_destroy(num_elements;
-        dest_min_abs, dest_min_ratio, dest_max_abs, dest_max_ratio)
-
-Randomly sample the number of elements to destroy in the destroy operator based on
-minimum and maximum numbers and ratios.
-"""
-function get_number_to_destroy(num_elements::Int;
-    min_abs=5, max_abs=100, min_ratio=0.5, max_ratio=0.35)
-    a = max(min_abs, floor(Int, min_ratio * num_elements))
-    b = min(max_abs, floor(Int, max_ratio * num_elements))
-    return b >= a ? rand(a:b) : b+1
-end
 
 """
     update_solution!(lns, sol_new, sol_incumbent, sol)

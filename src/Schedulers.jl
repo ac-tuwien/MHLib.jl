@@ -535,7 +535,7 @@ function method_statistics(s::Scheduler)
 end
 
 
-#--------------------- Diverse generic Scheduler methods -----------------------
+# --------------------- Diverse generic Scheduler methods -----------------------
 
 """
     construct!(solution, par, result)
@@ -564,7 +564,7 @@ Will usually be specialized for a specific problem.
 This abstract implementation just throws an exception.
 """
 shaking!(s::Solution, par::Int, result::Result) =
-    error("Abstract method local_improve! called")
+    error("Abstract method shaking! called")
 
 """
     local_improve!(bool_vector_solution, par, result)

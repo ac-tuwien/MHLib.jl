@@ -6,10 +6,11 @@ A module for solutions that are represented by a permutation of distinct element
 module PermutationSolutions
 
 using Random
+using StatsBase
 using ..MHLib
 
 export PermutationSolution, initialize!, two_opt_neighborhood_search!, 
-    random_two_exchange_move!
+    random_two_exchange_moves!, random_remove_elements!, random_reinsert_removed!
 
 """
     PermutationSolution
@@ -114,13 +115,79 @@ function two_opt_move_delta_eval(s::PermutationSolution, p1::Integer, p2::Intege
 end
 
 """
-    random_two_exchange_move!(permutation_solution, p1, p2)
+    random_two_exchange_moves!(permutation_solution, num)
 
-Perform a random two exchange move, invalidating the solution.
+Perform `num` random two exchange moves and invalidate the solution.
 """
-function random_two_exchange_move!(s::PermutationSolution)
-    p1, p2 = randperm(length(s))
-    s.x[p1], s.x[p2] = s.x[p2], s.x[p1]
+function random_two_exchange_moves!(s::PermutationSolution, num::Int=1)
+    for _ in 1:num
+        p1, p2 = sample(eachindex(s.x), 2, replace=false)
+        s.x[p1], s.x[p2] = s.x[p2], s.x[p1]
+    end
+    invalidate!(s)
+end
+
+"""
+    random_remove_elements!(permutation_solution, num)
+
+Destroy solution by removing `num` elements at random positions and store
+them in the `destroy` attribute.
+"""
+function random_remove_elements!(s::PermutationSolution, num::Int)
+    if isnothing(s.destroyed)
+        s.destroyed = destroyed = Vector{Int}(undef, num)
+    else
+        destroyed = s.destroyed
+        @assert length(destroyed) == 0
+        resize!(destroyed, num)
+    end
+
+    sample!(1:length(s.x), destroyed, replace=false, ordered=true)  # select posiions to remove
+    pos = 1
+    di = 1
+    x = s.x
+    for i in eachindex(x)
+        if di <= length(destroyed) && destroyed[di] == i
+            destroyed[di] = x[i]
+            di += 1
+        else
+            x[pos] = x[i]
+            pos += 1
+        end
+    end
+    @assert di == num + 1 "di=$di != num=$num"
+    resize!(s.x, length(s.x) - num)
+    invalidate!(s)
+end
+
+"""
+    random_reinsert_removed!(permutation_solution)
+
+Repair solution by inserting elements from `destroy` at random positions.
+
+Note that this is a very naive repair heuristic just for demonstration purposes.
+In a real application, the repair would, for example, test all possible insertion
+positions and select the best one for each element in `destroyed`.
+"""
+function random_reinsert_removed!(s::PermutationSolution)
+    destroyed = s.destroyed
+    @assert !isnothing(destroyed)
+    x = s.x
+    shuffle!(destroyed)
+    num = length(destroyed)
+    resize!(x, length(x) + length(destroyed))
+    positions = sample(1:length(x), num, replace=false, ordered=true)
+    pi = num
+    for i in length(x):-1:1
+        if pi >= 1 && positions[pi] == i
+            x[i] = destroyed[pi]
+            pi -= 1
+        else
+            x[i] = x[i - pi]
+        end
+    end
+    @assert pi == 0
+    empty!(destroyed)
     invalidate!(s)
 end
 

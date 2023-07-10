@@ -10,12 +10,10 @@ using StatsBase
 
 export Solution, to_maximize, obj, initialize!, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
-    run!, git_version,
-
-    # settings
+    run!, git_version, get_number_to_destroy,
     settings
 
-#----------------------------- Solution ------------------------------
+# ----------------------------- Solution ------------------------------
 
 """
     Solution
@@ -169,7 +167,22 @@ function check(s::Solution)::Nothing
 end
 
 
-#----------------------------- VectorSolution ------------------------------
+"""
+    get_number_to_destroy(::Solution, num_elements;
+        dest_min_abs, dest_min_ratio, dest_max_abs, dest_max_ratio)
+
+Randomly sample the number of elements to destroy in a destroy operator, e.g., 
+for an LNS, based on minimum and maximum numbers and ratios.
+"""
+function get_number_to_destroy(::Solution, num_elements::Int;
+        min_abs=1, max_abs=num_elements, min_ratio=0.0, max_ratio=1.0)
+    a = max(min_abs, floor(Int, min_ratio * num_elements))
+    b = min(max_abs, floor(Int, max_ratio * num_elements))
+    return b >= a ? rand(a:b) : b+1
+end
+
+
+# ----------------------------- VectorSolution ------------------------------
 
 export VectorSolution
 
@@ -181,6 +194,8 @@ An abstract solution encoded by a vector of elements with type `T`.
 Concrete subtypes need to implement:
 - all requirements of the supertype `Solution`
 - `x::AbstractVector`: vector representing the solution
+- `destroyed::Union{Nothing, Int[]}`: vector of positions of destroyed elements when 
+    using destroy+repair operators e.g. in LNS
 """
 abstract type VectorSolution{T} <: Solution end
 
@@ -197,7 +212,7 @@ is_equal(s1::VectorSolution, s2::VectorSolution) =
     obj(s1) == obj(s2) && s1.x == s2.x
 
 
-#----------------------------- BoolVectorSolution ------------------------------
+# ----------------------------- BoolVectorSolution ------------------------------
 
 export BoolVectorSolution, k_random_flips!, k_flip_neighborhood_search!,
     flip_variable!
@@ -332,7 +347,7 @@ function git_version() :: String
     chomp(read(`git describe --abbrev=4 --dirty --always --tags`, String))
 end
 
-#-----------------------------------------------------------
+# -----------------------------------------------------------
 
 include("Settings.jl")
 include("Schedulers.jl")

@@ -162,14 +162,13 @@ end
 """
     destroy(maxsat_solution, par, result)
 
-Destroy operator for ALNS selects `par*get_number_to_destroy()` positions uniformly
-at random for removal.
+Destroy operator for LNS selects `3 par` positions uniformly at random for removal.
 
-Selected positions are stored with the solution in list self.destroyed.
+Selected positions are stored with the solution in list `self.destroyed`.
 """
-function destroy!(sol::MAXSATSolution, par::Int, result::Result)
+function MHLib.LNSs.destroy!(sol::MAXSATSolution, par::Int, result::Result)
     x = sol.x
-    num = min(get_number_to_destroy(length(x)) * par, length(x))
+    num = get_number_to_destroy(sol, length(x); min_abs=3par, max_abs=3par)
     sol.destroyed = sample(1:length(x), num, replace=false)
     invalidate!(sol)
 end
@@ -178,9 +177,9 @@ end
 """
     repair!(maxsat_solution, par, result)
 
-Repair operator for ALNS assigns new random values to all positions in sol.destroyed.
+Repair operator for LNS assigns new random values to all positions in `sol.destroyed`.
 """
-function repair!(sol::MAXSATSolution, par::Int, result::Result)
+function MHLib.LNSs.repair!(sol::MAXSATSolution, par::Int, result::Result)
     @assert !(length(sol.destroyed) == 0)
     x = sol.x
     for p in sol.destroyed

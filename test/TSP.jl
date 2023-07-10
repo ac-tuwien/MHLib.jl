@@ -13,9 +13,11 @@ using StatsBase
 
 using MHLib
 using MHLib.Schedulers
+using MHLib.LNSs
 using MHLib.PermutationSolutions
 
 export TSPInstance, TSPSolution
+
 
 """
     TSPInstance
@@ -113,22 +115,25 @@ mutable struct TSPSolution <: PermutationSolution{Int}
     obj_val::Int
     obj_val_valid::Bool
     x::Vector{Int}
+    destroyed::Union{Nothing, Vector{Int}}  # for LNS destroy and repair operations
 end
 
 MHLib.to_maximize(::TSPSolution) = false
 
 TSPSolution(inst::TSPInstance) =
-    TSPSolution(inst, -1, false, collect(1:inst.n))
+    TSPSolution(inst, -1, false, collect(1:inst.n), nothing)
 
 function Base.copy!(s1::TSPSolution, s2::TSPSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
+    s1.destroyed = isnothing(s2.destroyed) ? nothing : copy(s2.destroyed)
     copy!(s1.x, s2.x)
 end
 
 Base.copy(s::TSPSolution) =
-    TSPSolution(s.inst, s.obj_val, s.obj_val_valid, copy(s.x))
+    TSPSolution(s.inst, s.obj_val, s.obj_val_valid, copy(s.x), 
+        (isnothing(s.destroyed) ? nothing : copy(s.destroyed)))
 
 Base.show(io::IO, s::TSPSolution) =
     println(io, s.x)
@@ -159,10 +164,31 @@ end
 """
     shaking!(tsp_solution, par, result)
 
-Perform shaking by making a random 2-exchange move
+Perform shaking by making `par` random 2-exchange move
 """
 function MHLib.Schedulers.shaking!(s::TSPSolution, par::Int, result::Result)
-    random_two_exchange_move!(s)
+    random_two_exchange_moves!(s, par)
+end
+
+"""
+    destroy!(tsp_solution, par, result)
+
+Perform destroy operation, e.g., for an LNS, by removing nodes from the solution.
+
+The number of removed nodes is `3 par`.
+"""
+function MHLib.LNSs.destroy!(s::TSPSolution, par::Int, result::Result)
+    random_remove_elements!(s, get_number_to_destroy(s, length(s.x); 
+        min_abs=3par, max_abs=3par))
+end
+
+"""
+    repair!(tsp_solution, par, result)
+    
+Perform repair operation by reinserting removed nodes randomly.
+"""
+function MHLib.LNSs.repair!(s::TSPSolution, par::Int, result::Result)
+    random_reinsert_removed!(s)
 end
 
 """

@@ -80,7 +80,7 @@ Further modules:
     search, GRASP, etc.
 - `LNSs`, type `LNS`:
     A framework for different variants of large neighborhood search (LNS).
-    The selection of the destroy and recreate methods is done in an extensible way by
+    The selection of the destroy and repair methods is done in an extensible way by
     means of the abstract type `MethodSelector` and derived types in order to realize 
     different LNS variants.
 - `ALNSs`, type `ALNS`:
