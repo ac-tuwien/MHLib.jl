@@ -42,7 +42,7 @@ end
 
 @testset "LNS-TSP.jl" begin
     parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.LNSs.settings_cfg], 
-        ["--seed=1", "--mh_titer=5000"])
+        ["--seed=1", "--mh_titer=20000"])
     inst = TSPInstance("data/xqf131.tsp")
     sol = TSPSolution(inst)
     initialize!(sol)
@@ -51,7 +51,7 @@ end
     @test obj(sol) >= 0
     @test sol.obj_val_valid
     @assert !to_maximize(sol)
-    alg = LNS(sol, MHMethod[],  # MHMethod("con", construct!, 0)],
+    alg = LNS(sol, MHMethod[MHMethod("con", construct!, 0)],
         [MHMethod("de$i", LNSs.destroy!, i) for i in 1:3],
         [MHMethod("re", LNSs.repair!, 1)], 
         consider_initial_sol = true)

@@ -10,7 +10,8 @@ using StatsBase
 using ..MHLib
 
 export PermutationSolution, initialize!, two_opt_neighborhood_search!, 
-    random_two_exchange_moves!, random_remove_elements!, random_reinsert_removed!
+    random_two_exchange_moves!, random_remove_elements!, random_reinsert_removed!,
+    greedy_reinsert_removed!, insert_val_at_best_pos!
 
 """
     PermutationSolution
@@ -163,7 +164,7 @@ end
 """
     random_reinsert_removed!(permutation_solution)
 
-Repair solution by inserting elements from `destroy` at random positions.
+Repair solution by inserting the elements from `destroyed` at random positions.
 
 Note that this is a very naive repair heuristic just for demonstration purposes.
 In a real application, the repair would, for example, test all possible insertion
@@ -190,5 +191,31 @@ function random_reinsert_removed!(s::PermutationSolution)
     empty!(destroyed)
     invalidate!(s)
 end
+
+"""
+    greedy_reinsert_removed!(permutation_solution)
+
+Repair a solution by inserting the elements from `destroyed` in a best location.
+"""
+function greedy_reinsert_removed!(s::PermutationSolution)
+    destroyed = s.destroyed
+    @assert !isnothing(destroyed)
+    shuffle!(destroyed)
+    obj(s)  # make sure the solution is evaluated, even when only partial solution yet
+    for val in destroyed
+        insert_val_at_best_pos!(s, val)
+    end
+    empty!(destroyed)
+end
+
+"""
+    insert_val_at_best_pos!(permutation_solution, val)
+
+Insert `val` at the best position in the solution.
+The objective value of the solution is assumed to be valid and is
+incrementally updated.
+"""
+insert_val_at_best_pos!(s::PermutationSolution, val) = 
+    error("Abstract function insert_val_at_best_pos(::PermutationSolution, ::Any) called")
 
 end  # module

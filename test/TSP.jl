@@ -138,8 +138,17 @@ Base.copy(s::TSPSolution) =
 Base.show(io::IO, s::TSPSolution) =
     println(io, s.x)
 
-MHLib.calc_objective(s::TSPSolution) =
-    sum(map(i -> s.inst.d[s.x[i],s.x[(i%s.inst.n)+1]], 1:s.inst.n))
+"""
+    calc_objective(tsp_solution)
+
+Determines TSP tour length from scratch.
+
+Can also be called for a partial solution, i.e., when `s.destroyed` is not `nothing`.
+"""
+function MHLib.calc_objective(s::TSPSolution)
+    n = length(s.x)
+    sum(map(i -> s.inst.d[s.x[i],s.x[(i%n)+1]], 1:n))
+end
 
 """
     construct!(tsp_solution, par, result)
@@ -188,7 +197,29 @@ end
 Perform repair operation by reinserting removed nodes randomly.
 """
 function MHLib.LNSs.repair!(s::TSPSolution, par::Int, result::Result)
-    random_reinsert_removed!(s)
+    greedy_reinsert_removed!(s)
+end
+
+"""
+    insert_val_at_best_pos!(tsp_solution, val)
+
+Inserts `val` greedily at the best position.
+The solution's objective value is assumed to be valid and is incrementally updated.
+"""
+function PermutationSolutions.insert_val_at_best_pos!(s::TSPSolution, val::Int)
+    x = s.x
+    d = s.inst.d
+    best_pos = length(x) + 1
+    δ_best = δ = d[val, x[end]] + d[val, x[1]] - d[x[1], x[end]]
+    for i in 2:length(s.x)
+        δ = d[val, x[i-1]] + d[val, x[i]] - d[x[i-1], x[i]]       
+        if δ < δ_best 
+            δ_best = δ
+            best_pos = i
+        end
+    end
+    insert!(s.x, best_pos, val)
+    s.obj_val = s.obj_val + δ_best
 end
 
 """
