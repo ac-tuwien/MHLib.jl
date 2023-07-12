@@ -248,7 +248,7 @@ returned Results object. If `delayed_success`, the success is not immediately de
 and the statistics updated accordingly but at some later call of `delayed_success_update`.
 """
 function perform_method!(s::Scheduler, method::MHMethod, sol::Solution;
-    delayed_success=false)::Result
+        delayed_success=false)::Result
     res = Result()
     obj_old = obj(sol)
     t_start = time()
@@ -413,12 +413,14 @@ end
 """
     perform_method_pair!(scheduler, destroy, repair, sol)
 
-Performs a destroy/repair method pair on given solution and returns Results object.
+Performs a destroy/repair method pair on given solution and returns `Results` structure.
 
 Also updates incumbent, iteration and the method's statistics in method_stats.
-Furthermore checks the termination condition and eventually sets terminate in the returned Results object.
+Furthermore checks the termination condition and eventually sets terminate in the 
+returned `Results` structure.
 """
-function perform_method_pair!(scheduler::Scheduler, destroy::MHMethod, repair::MHMethod, sol::Solution)
+function perform_method_pair!(scheduler::Scheduler, destroy::MHMethod, repair::MHMethod, 
+        sol::Solution)
     res = Result()
     obj_old = obj(sol)
     t_start = time()

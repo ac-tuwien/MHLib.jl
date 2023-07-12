@@ -55,7 +55,8 @@ abstract type MethodSelector end
 A basic large neighborhood search.
 
 Attributes
-- `scheduler`: Scheduler object
+- `solution`: current solution
+- `scheduler`: `Scheduler`
 - `meths_ch`: list of construction heuristic methods
 - `meths_de`: list of destroy methods
 - `meths_re`: list of repair methods
@@ -66,6 +67,8 @@ Attributes
 - `params`: LNSParameters, by default adopted from global settings
 """
 mutable struct LNS{TMethodSelector <: MethodSelector}
+    solution::Solution
+    new_solution::Solution
     scheduler::Scheduler
     meths_ch::Vector{MHMethod}
     meths_de::Vector{MHMethod}
@@ -91,12 +94,13 @@ otherwise it is assumed to be uninitialized.
 """
 function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMethod},
         meths_re::Vector{MHMethod}; meths_compat::Union{Nothing, Matrix{Bool}}=nothing,
-        consider_initial_sol::Bool=false, method_selector::MethodSelector=UniformRandomMethodSelector(),
+        consider_initial_sol::Bool=false, 
+        method_selector::MethodSelector=UniformRandomMethodSelector(),
         scheduler_params=SchedulerParameters(), params=LNSParameters())
     temperature = obj(sol) * params.init_temp_factor + 0.000000001
     scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re], consider_initial_sol, 
         params=scheduler_params)
-    LNS(scheduler, meths_ch, meths_de, meths_re, meths_compat, temperature, 
+    LNS(sol, copy(sol), scheduler, meths_ch, meths_de, meths_re, meths_compat, temperature, 
         method_selector, params)
 end
 
@@ -145,16 +149,14 @@ end
 
 
 """
-    update_solution!(lns, sol_new, sol_incumbent, sol)
+    update_solution!(lns, sol_new, sol)
 
 Update current solution and incumbent according to the result of performing a
 destroy and repair method pair. Returns the case of the update.
 """
-function update_solution!(lns::LNS, sol_new::Solution, sol_incumbent::Solution, 
-        sol::Solution)
-    if is_better(sol_new, sol_incumbent)
+function update_solution!(lns::LNS, sol_new::Solution, sol::Solution)
+    if lns.scheduler.iteration == lns.scheduler.incumbent_iteration
         # print("better than incumbent")
-        copy!(sol_incumbent, sol_new)
         copy!(sol, sol_new)
         case = :betterThanIncumbent
     elseif is_better(sol_new, sol)
@@ -191,6 +193,28 @@ Default implementation does nothing.
 update_method_selector!(::LNS, destroy::Int, repair::Int, case::Symbol, Δ, Δ_inc) = 
     nothing
 
+    
+function lns_init(lns::LNS, sol::Solution)
+    init_method_selector!(lns)
+    lns.solution = sol
+    lns.new_solution = copy(sol)
+end
+
+function lns_iteration(lns::LNS, destroy_idx::Union{Nothing,Int}=nothing,
+        repair_idx::Union{Nothing,Int}=nothing) :: Result
+    destroy = isnothing(destroy_idx) ? select_method(lns, eachindex(lns.meths_de), true) : 
+        destroy_idx
+    repair = isnothing(repair_idx) ? select_repair_method(lns, destroy) : repair_idx
+    res = perform_method_pair!(lns.scheduler, lns.meths_de[destroy], 
+    lns.meths_re[repair], lns.new_solution)
+    obj_new_solution = obj(lns.new_solution)
+    Δ = obj_new_solution - obj(lns.solution)
+    Δ_inc = obj_new_solution - obj(lns.scheduler.incumbent)
+    case = update_solution!(lns, lns.new_solution, lns.solution) 
+    update_method_selector!(lns, destroy, repair, case, Δ, Δ_inc)
+    cool_down!(lns)
+    res
+end
 
 """
     lns!(lns, sol)
@@ -198,24 +222,16 @@ update_method_selector!(::LNS, destroy::Int, repair::Int, case::Symbol, Δ, Δ_i
 Perform basic large neighborhood search (LNS) on the given solution.
 """
 function lns!(lns::LNS, sol::Solution)
-    init_method_selector!(lns)
-    sol_incumbent = copy(sol)
-    sol_new = copy(sol)
+    lns_init(lns, sol)
     while true
-        destroy, repair = select_method_pair(lns)
-        res = perform_method_pair!(lns.scheduler, lns.meths_de[destroy], 
-            lns.meths_re[repair], sol_new)
-        Δ = obj(sol_new) - obj(sol)
-        Δ_inc = obj(sol_new) - obj(sol_incumbent)
-        case = update_solution!(lns, sol_new, sol_incumbent, sol) 
-        update_method_selector!(lns, destroy, repair, case, Δ, Δ_inc)
+        res = lns_iteration(lns)
         if res.terminate
-            copy!(sol, sol_incumbent)
+            copy!(lns.solution, lns.scheduler.incumbent)
             return
         end
-        cool_down!(lns)
     end
 end
+
 
 
 """
@@ -232,20 +248,18 @@ end
 
 
 """
-    select_method_pair(lns)
+    select_repair_method(lns, destroy::Int)
 
-Select indicies for a destroy and a repair method.
+Select a repair method that is compatible to the given destroy method.
 """
-function select_method_pair(lns::LNS)
-    destroy = select_method(lns, eachindex(lns.meths_de), true)
+function select_repair_method(lns::LNS, destroy::Int)
     if isnothing(lns.meths_compat)
         repair_candidates = eachindex(lns.meths_re)
     else
         compat = view(lns.meths_compat,destroy, :)
         repair_candidates = eachindex(lns.meths_re)[compat]
     end
-    repair = select_method(lns, repair_candidates, false)
-    return destroy, repair
+    return select_method(lns, repair_candidates, false)
 end
 
 

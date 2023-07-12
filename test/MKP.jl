@@ -130,8 +130,8 @@ function calc_y!(s::MKPSolution)
     return 0
 end
 
-function MHLib.check(s::MKPSolution; unsorted::Bool=false, kwargs...)
-    invoke(check, Tuple{SubsetVectorSolution}, s; unsorted, kwargs...)
+function MHLib.check(s::MKPSolution; kwargs...)
+    invoke(check, Tuple{SubsetVectorSolution}, s; kwargs...)
     y_old = s.y
     calc_y!(s)
     if any(y_old .!= s.y)

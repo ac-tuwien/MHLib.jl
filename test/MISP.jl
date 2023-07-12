@@ -111,8 +111,8 @@ Base.show(io::IO, s::MISPSolution) =
 MHLib.calc_objective(s::MISPSolution) =
     s.sel > 0 ? sum(s.inst.p[s.x[1:s.sel]]) : 0
 
-function MHLib.check(s::MISPSolution; unsorted::Bool=true, kwargs...)
-    invoke(check, Tuple{SubsetVectorSolution}, s; unsorted, kwargs...)
+function MHLib.check(s::MISPSolution; kwargs...)
+    invoke(check, Tuple{SubsetVectorSolution}, s; kwargs...)
     selected = Set(s.x[1:s.sel])
     for e in edges(s.inst.graph)
         if src(e) in selected && dst(e) in selected
