@@ -194,13 +194,13 @@ update_method_selector!(::LNS, destroy::Int, repair::Int, case::Symbol, Δ, Δ_i
     nothing
 
     
-function lns_init(lns::LNS, sol::Solution)
+function lns_init!(lns::LNS, sol::Solution)
     init_method_selector!(lns)
     lns.solution = sol
     lns.new_solution = copy(sol)
 end
 
-function lns_iteration(lns::LNS, destroy_idx::Union{Nothing,Int}=nothing,
+function lns_iteration!(lns::LNS, destroy_idx::Union{Nothing,Int}=nothing,
         repair_idx::Union{Nothing,Int}=nothing) :: Result
     destroy = isnothing(destroy_idx) ? select_method(lns, eachindex(lns.meths_de), true) : 
         destroy_idx
@@ -222,9 +222,9 @@ end
 Perform basic large neighborhood search (LNS) on the given solution.
 """
 function lns!(lns::LNS, sol::Solution)
-    lns_init(lns, sol)
+    lns_init!(lns, sol)
     while true
-        res = lns_iteration(lns)
+        res = lns_iteration!(lns)
         if res.terminate
             copy!(lns.solution, lns.scheduler.incumbent)
             return
