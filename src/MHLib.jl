@@ -149,14 +149,14 @@ dist(s1::S, s2::S) where S <: Solution = obj(s1) == obj(s2) ? 0 : 1
 
 
 """
-    check(::Solution)
+    check(::Solution; ...)
 
 Check validity of solution.
 
 If a problem is encountered, terminate with an error.
 The default implementation just re-calculates the objective value.
 """
-function check(s::Solution)::Nothing
+function check(s::Solution; kwargs...)::Nothing
     if s.obj_val_valid
         old_obj = s.obj_val
         invalidate!(s)

@@ -172,7 +172,7 @@ end
 Update score data according to performed destroy+repair and case of result.
 """
 function LNSs.update_method_selector!(lns::LNS{ALNSMethodSelector}, 
-        destroy::Int, repair::Int, case::Symbol)
+        destroy::Int, repair::Int, case::Symbol,  Δ, Δ_inc)
     sel = lns.method_selector
     destroy_data = sel.score_data_de[destroy]
     repair_data = sel.score_data_re[repair]

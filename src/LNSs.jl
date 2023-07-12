@@ -172,10 +172,24 @@ function update_solution!(lns::LNS, sol_new::Solution, sol_incumbent::Solution,
     return case
 end
 
+"""
+    init_method_selector!(::LNS)
 
+Initialize the method selector.
+
+Default implementation does nothing.
+"""
 init_method_selector!(::LNS) = nothing
 
-update_method_selector!(::LNS, destroy::Int, repair::Int, case::Symbol) = nothing
+"""
+    update_method_selector!(lns, destroy, repair, case, Δ, Δ_inc)
+
+Update the method selector according to the result of last performed method pair.
+
+Default implementation does nothing.
+"""
+update_method_selector!(::LNS, destroy::Int, repair::Int, case::Symbol, Δ, Δ_inc) = 
+    nothing
 
 
 """
@@ -191,8 +205,10 @@ function lns!(lns::LNS, sol::Solution)
         destroy, repair = select_method_pair(lns)
         res = perform_method_pair!(lns.scheduler, lns.meths_de[destroy], 
             lns.meths_re[repair], sol_new)
+        Δ = obj(sol_new) - obj(sol)
+        Δ_inc = obj(sol_new) - obj(sol_incumbent)
         case = update_solution!(lns, sol_new, sol_incumbent, sol) 
-        update_method_selector!(lns, destroy, repair, case)
+        update_method_selector!(lns, destroy, repair, case, Δ, Δ_inc)
         if res.terminate
             copy!(sol, sol_incumbent)
             return

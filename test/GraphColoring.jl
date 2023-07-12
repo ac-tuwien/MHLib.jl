@@ -117,19 +117,19 @@ end
 
 
 """
-    check(s::GraphColoringSolution)
+    check(s::GraphColoringSolution; ...)
 
 Check if s is a valid solution.
 Raises an error if a problem is detected.
 """
-function MHLib.check(s::GraphColoringSolution)
+function MHLib.check(s::GraphColoringSolution; kwargs...)
     if length(s.x) != s.inst.n
         error("Invalid length of solution")
     end
     if sum(s.x .> s.inst.colors) >= 1
         error("Too many colors used")
     end
-    invoke(check, Tuple{supertype(typeof(s))}, s)
+    invoke(check, Tuple{supertype(typeof(s))}, s; kwargs...)
 end
 
 

@@ -33,13 +33,13 @@ function MHLib.initialize!(s::PermutationSolution)
 end
 
 """
-    check(permutation_solution)
+    check(permutation_solution; ...)
 
 Check correctness of permutation solution.
 """
-function MHLib.check(s::PermutationSolution{T}) where T
+function MHLib.check(s::PermutationSolution{T}; kwargs...) where T
     !allunique(s.x) && error("PermutationSolution is no permutation: $(s.x)")
-    invoke(check, Tuple{VectorSolution{T}}, s)
+    invoke(check, Tuple{VectorSolution{T}}, s; kwargs...)
 end
 
 """
