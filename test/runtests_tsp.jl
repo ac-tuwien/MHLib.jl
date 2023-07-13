@@ -23,6 +23,22 @@ includet("TSP.jl")
 using .TSP
 
 
+function perform_lns(iter=10)
+    parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1", "--mh_titer=$iter"])
+    inst = TSPInstance("data/xqf131.tsp")
+    sol = TSPSolution(inst)
+    initialize!(sol)
+    alg = LNS(sol, MHMethod[MHMethod("con", construct!, 0)],
+        [MHMethod("de$i", LNSs.destroy!, i) for i in 1:3],
+        [MHMethod("re", LNSs.repair!, 1)], 
+        consider_initial_sol = true)
+    run!(alg)
+    method_statistics(alg.scheduler)
+    main_results(alg.scheduler)
+    return sol
+end
+
+
 @testset "Random-Init-TSP.jl" begin
     parse_settings!([MHLib.Schedulers.settings_cfg], ["--seed=1", "--mh_titer=10"])
     println(get_settings_as_string())
@@ -32,7 +48,7 @@ using .TSP
     println(obj(sol))
     @test obj(sol) >= 0
     @test sol.obj_val_valid
-
+    @assert !to_maximize(sol)
     initialize!(sol)
     @test !sol.obj_val_valid
     println(sol)
@@ -41,23 +57,7 @@ using .TSP
 end
 
 @testset "LNS-TSP.jl" begin
-    parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.LNSs.settings_cfg], 
-        ["--seed=1", "--mh_titer=20000"])
-    inst = TSPInstance("data/xqf131.tsp")
-    sol = TSPSolution(inst)
-    initialize!(sol)
-    println(sol)
-    println(obj(sol))
-    @test obj(sol) >= 0
-    @test sol.obj_val_valid
-    @assert !to_maximize(sol)
-    alg = LNS(sol, MHMethod[MHMethod("con", construct!, 0)],
-        [MHMethod("de$i", LNSs.destroy!, i) for i in 1:3],
-        [MHMethod("re", LNSs.repair!, 1)], 
-        consider_initial_sol = true)
-    run!(alg)
-    method_statistics(alg.scheduler)
-    main_results(alg.scheduler)
+    sol = perform_lns()
     @test obj(sol) >= 0
 end
 
@@ -80,3 +80,5 @@ end
     main_results(alg.scheduler)
     @test obj(sol) >= 0
 end
+
+# @profview perform_lns(1000000)
