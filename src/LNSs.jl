@@ -197,7 +197,7 @@ Update the method selector according to the result of last performed method pair
 
 Default implementation does nothing.
 """
-update_method_selector!(::LNS, destroy::Int, repair::Int, case::Symbol, Δ, Δ_inc) = 
+update_method_selector!(::LNS, destroy::Int, repair::Int, case::ResultCase, Δ, Δ_inc) = 
     nothing
 
     
