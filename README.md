@@ -90,12 +90,8 @@ Further modules:
 
 ## Demos
 
-For demonstration purposes, simple metaheuristic approaches are provided in the `test`
-subdirectory for the following well-known combinatorial optimization problems.
-They can be started as shown in the respective sections of `runtests.jl`.
-Moreover, there are the standalone demo applications `maxsat_demo.jl` and `runtests_tsp.jl`
-
-It is recommended to take such a demo as template for solving your own problem.
+For demonstration purposes the `test` subdirectory provides basic implementations
+for the following classical combinatorial optimization problems.
 
 - `OneMax`: basic test problem in which the goal is to set all digits in a binary
     string to `true`
@@ -104,6 +100,12 @@ It is recommended to take such a demo as template for solving your own problem.
 - `TSP`: traveling salesperson problem based on `PermutationSolution`
 - `MKP`: multi-constrained knapsack problem based on `SubsetVectorSolution`
 - `MISP`: maximum independent set problem based on `SubsetVectorSolution`
+
+There are the standalone demo applications `demo_maxsat.jl` and `demo_tsp.jl`, but
+see also the respective sections in `runtests.jl`.
+
+It is recommended to take such a demo as template for solving your own problem.
+
 
 ## News
 

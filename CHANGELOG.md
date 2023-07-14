@@ -4,7 +4,8 @@
 Major changes in releases:
 
 ## Upcoming
-- LNS/ALNS refactored, MethodSelector introduced to generalize LNS
+- LNS/ALNS refactored, `MethodSelector` introduced to generalize LNS
+- all structures adapted to use type parameters instead of abstract types for elements
 
 ## Version 0.1.6, 0.1.7
 - used packages updated for Julia 1.9

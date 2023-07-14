@@ -137,7 +137,7 @@ MHMethodStatistics() = MHMethodStatistics(0, 0.0, 0, 0.0, 0.0)
 
 
 """
-    Scheduler
+    Scheduler{TSolution <: Solution}
 
 Type for metaheuristics that work by iteratively applying certain methods/operations.
 
@@ -154,8 +154,8 @@ Attributes
 - `run_time`: overall runtime (set when terminating)
 - `params`: parameters adopted from settings by default
 """
-mutable struct Scheduler
-    incumbent::Solution
+mutable struct Scheduler{TSolution <: Solution}
+    incumbent::TSolution
     incumbent_valid::Bool
     incumbent_iteration::Int
     incumbent_time::Float64
@@ -182,7 +182,7 @@ valid initial solution; otherwise it is assumed to be uninitialized.
 function Scheduler(sol::Solution, methods::Vector{MHMethod},
         consider_initial_sol::Bool=false; params::SchedulerParameters=SchedulerParameters())
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
-    s = Scheduler(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
+    s = Scheduler{typeof(sol)}(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
         time(), missing, params)
     log_iteration_header(s)
     if s.incumbent_valid

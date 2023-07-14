@@ -50,7 +50,7 @@ Abstract type for selecting the repair and destroy methods within the LNS.
 abstract type MethodSelector end
 
 """
-    LNS
+    LNS{TMethodSelector <: MethodSelector, TSolution <: Solution}
 
 A basic large neighborhood search.
 
@@ -66,10 +66,10 @@ Attributes
 - `temperature`: temperature for Metropolis criterion
 - `params`: LNSParameters, by default adopted from global settings
 """
-mutable struct LNS{TMethodSelector <: MethodSelector}
-    solution::Solution
-    new_solution::Solution
-    scheduler::Scheduler
+mutable struct LNS{TMethodSelector <: MethodSelector, TSolution <: Solution}
+    solution::TSolution
+    new_solution::TSolution
+    scheduler::Scheduler{TSolution}
     meths_ch::Vector{MHMethod}
     meths_de::Vector{MHMethod}
     meths_re::Vector{MHMethod}
@@ -100,8 +100,8 @@ function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMetho
     temperature = obj(sol) * params.init_temp_factor + 0.000000001
     scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re], consider_initial_sol, 
         params=scheduler_params)
-    LNS(sol, copy(sol), scheduler, meths_ch, meths_de, meths_re, meths_compat, temperature, 
-        method_selector, params)
+    LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), scheduler, 
+        meths_ch, meths_de, meths_re, meths_compat, temperature, method_selector, params)
 end
 
 """

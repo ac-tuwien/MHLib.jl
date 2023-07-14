@@ -26,15 +26,16 @@ Attributes
 - `meths_li`: list of local improvement methods
 - `meths_sh`: list of shaking methods
 """
-mutable struct GVNS
-    scheduler::Scheduler
+mutable struct GVNS{TSolution <: Solution}
+    scheduler::Scheduler{TSolution}
     meths_ch::Vector{MHMethod}
     meths_li::Vector{MHMethod}
     meths_sh::Vector{MHMethod}
 end
 
 """
-    GVNS(solution, meths_ch, meths_li, meths_sh, consider_initial_sol=false)
+    GVNS{TSolution <: Solution(solution, meths_ch, meths_li, meths_sh, 
+        consider_initial_sol=false)
 
 Create a GVNS.
 
@@ -45,7 +46,7 @@ otherwise it is assumed to be uninitialized.
 """
 function GVNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_li::Vector{MHMethod},
         meths_sh::Vector{MHMethod}; consider_initial_sol::Bool=false)
-    GVNS(Scheduler(sol, [meths_ch; meths_li; meths_sh], consider_initial_sol),
+    GVNS{typeof(sol)}(Scheduler(sol, [meths_ch; meths_li; meths_sh], consider_initial_sol),
         meths_ch, meths_li, meths_sh)
 end
 
