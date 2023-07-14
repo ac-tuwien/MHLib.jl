@@ -15,7 +15,7 @@ using ArgParse
 
 export LNS, LNSParameters,
     MethodSelector, UniformRandomMethodSelector, WeightedRandomMethodSelector,
-    destroy!, repair!
+    destroy!, repair!, ResultCase
 
 
 const settings_cfg = ArgParseSettings()
@@ -82,7 +82,7 @@ end
 """
     ResultCase
 
-Enumeration type for type of result of one pair of method application.
+Enumeration type for type of result of method application.
 """
 @enum ResultCase betterThanIncumbent betterThanCurrent acceptedAlthoughWorse rejected
 
