@@ -79,6 +79,13 @@ mutable struct LNS{TMethodSelector <: MethodSelector, TSolution <: Solution}
     params::LNSParameters
 end
 
+"""
+    ResultCase
+
+Enumeration type for type of result of one pair of method application.
+"""
+@enum ResultCase betterThanIncumbent betterThanCurrent acceptedAlthoughWorse rejected
+
 
 """
     LNS(sol::Solution, meths_ch, meths_de, meths_re;
@@ -158,18 +165,18 @@ function update_solution!(lns::LNS, sol_new::Solution, sol::Solution)
     if lns.scheduler.iteration == lns.scheduler.incumbent_iteration
         # print("better than incumbent")
         copy!(sol, sol_new)
-        case = :betterThanIncumbent
+        case = betterThanIncumbent
     elseif is_better(sol_new, sol)
         # print("better than current")
         copy!(sol, sol_new)
-        case = :betterThanCurrent
+        case = betterThanCurrent
     elseif is_better(sol, sol_new) && metropolis_criterion(lns, sol_new, sol)
         # print("accepted although worse")
         copy!(sol, sol_new)
-        case = :acceptedAlthoughWorse
+        case = acceptedAlthoughWorse
     elseif sol_new != sol
         copy!(sol_new, sol)
-        case = :rejected
+        case = rejected
     end
     return case
 end
