@@ -192,6 +192,28 @@ function Scheduler(sol::Solution, methods::Vector{MHMethod},
 end
 
 """
+    reset!(::Scheduler, solution)
+
+Reset scheduler with given solution, which however, is not considered, for a new run.
+"""
+function reset!(s::Scheduler{TSolution}, sol::TSolution) where {TSolution <: Solution}
+    s.incumbent = sol     
+    s.incumbent_valid = false
+    s.incumbent_iteration = 0
+    s.incumbent_time = 0.0
+    s.iteration = 0
+    s.time_start = time()
+    s.run_time = missing
+    for ms in values(s.method_stats)
+        ms.applications = 0
+        ms.netto_time = 0.0
+        ms.successes = 0
+        ms.obj_gain = 0.0
+        ms.brutto_time = 0.0
+    end
+end
+
+"""
     update_incumbent!(scheduler, solution, current_time)
 
 If the given solution is better than the incumbent (or we do not have an incumbent yet)

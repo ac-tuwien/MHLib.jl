@@ -112,6 +112,20 @@ function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMetho
 end
 
 """
+    reset!(::LNS, sol)
+
+Reset the LNS to the given solution for a new run.
+"""
+function Schedulers.reset!(lns::LNS{<:MethodSelector, TSolution}, sol::TSolution) where 
+        {TSolution <: Solution}
+    copy!(lns.solution, sol)
+    copy!(lns.new_solution, sol)
+    reset!(lns.scheduler, sol)
+    lns.temperature = obj(sol) * lns.params.init_temp_factor + 0.000000001
+    init_method_selector!(lns)
+end
+
+"""
     destroy!(solution, par, result)
 
 Scheduler method that performs destroy.
