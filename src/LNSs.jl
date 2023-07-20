@@ -118,7 +118,7 @@ end
 
 Reset the LNS to the given solution with possibly a new problem instance for a new run.
 """
-function reinitialize!(lns::LNS{<:MethodSelector, TSolution}, 
+function Schedulers.reinitialize!(lns::LNS{<:MethodSelector, TSolution}, 
         sol::TSolution) where {TSolution <: Solution}
     copy!(lns.solution, sol)
     copy!(lns.new_solution, sol)

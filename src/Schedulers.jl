@@ -196,7 +196,7 @@ end
 
 Reset scheduler with given solution, which however, is not considered, for a new run.
 """
-function reset!(s::Scheduler{TSolution}, sol::TSolution) where {TSolution <: Solution}
+function reinitialize!(s::Scheduler{TSolution}, sol::TSolution) where {TSolution <: Solution}
     s.incumbent = sol     
     s.incumbent_valid = false
     s.incumbent_iteration = 0
