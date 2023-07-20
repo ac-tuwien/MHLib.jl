@@ -104,7 +104,7 @@ function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMetho
         consider_initial_sol::Bool=false, 
         method_selector::MethodSelector=UniformRandomMethodSelector(),
         scheduler_params=SchedulerParameters(), params=LNSParameters())
-    temperature = obj(sol) * params.init_temp_factor + 0.000000001
+    temperature = obj(sol) * params.init_temp_factor
     scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re], consider_initial_sol, 
         params=scheduler_params)
     lns = LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), scheduler, 
@@ -123,7 +123,7 @@ function Schedulers.reinitialize!(lns::LNS{<:MethodSelector, TSolution},
     copy!(lns.solution, sol)
     copy!(lns.new_solution, sol)
     reinitialize!(lns.scheduler, sol)
-    lns.temperature = obj(sol) * lns.params.init_temp_factor + 0.000000001
+    lns.temperature = obj(sol) * lns.params.init_temp_factor
     init_method_selector!(lns)
 end
 
@@ -154,10 +154,14 @@ repair!(s::Solution, par::Int, result::Result) =
 Apply Metropolis criterion, return true when `sol_new` should be accepted.
 """
 function metropolis_criterion(lns::LNS, sol_new::Solution, sol_current::Solution)
-    if is_better(sol_new, sol_current)
+    if is_better(sol_new, sol_current) :: Bool
         return true
     end
-    return rand() <= exp(-abs(obj(sol_new) - obj(sol_current)) / lns.temperature)
+    if iszero(lns.temperature)
+        return false
+    else
+        return rand() <= exp(-abs(obj(sol_new) - obj(sol_current)) / lns.temperature)
+    end
 end
 
 
@@ -227,7 +231,7 @@ function lns_iteration!(lns::LNS, destroy_idx::Union{Nothing,Int}=nothing,
         destroy_idx
     repair = isnothing(repair_idx) ? select_repair_method(lns, destroy) : repair_idx
     res = perform_method_pair!(lns.scheduler, lns.meths_de[destroy], 
-    lns.meths_re[repair], lns.new_solution)
+        lns.meths_re[repair], lns.new_solution)
     obj_new_solution = obj(lns.new_solution)
     Δ = obj_new_solution - obj(lns.solution)
     Δ_inc = obj_new_solution - obj(lns.scheduler.incumbent)
@@ -235,6 +239,28 @@ function lns_iteration!(lns::LNS, destroy_idx::Union{Nothing,Int}=nothing,
     update_method_selector!(lns, destroy, repair, case, Δ, Δ_inc)
     cool_down!(lns)
     res
+end
+
+"""
+    test_perform_method_pair!(lns, destroy_idx, repair_idx) :: Bool
+
+Perform the operator pair for test purposes, without doing any actual update in the LNS.
+
+Returns true if the new solution would be accepted by the LNS.
+Used only for debugging or other special applications.
+"""
+function test_perform_method_pair!(lns::LNS, destroy_idx::Int, repair_idx::Int) :: Bool
+    res = Result()
+    sol = lns.solution
+    sol_new = copy(lns.solution)
+    destroy = lns.meths_de[destroy_idx]
+    repair = lns.meths_re[repair_idx]
+    # t_start = time()
+    destroy.func(sol_new, destroy.par, res)
+    # t_destroyed = time()
+    repair.func(sol_new, repair.par, res)
+    # t_repaired = time()
+    return is_better(sol_new, sol)  # metropolis_criterion(lns, sol_new, sol)
 end
 
 """
