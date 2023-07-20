@@ -18,7 +18,7 @@ export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerParameters,
     perform_method!, next_method, update_incumbent!, check_termination, 
     perform_sequentially!, main_results, method_statistics, delayed_success_update!, 
     log_iteration, log_iteration_header, construct!, local_improve!, shaking!, 
-    perform_method_pair!
+    perform_method_pair!, reinitialize!
 
 const settings_cfg = ArgParseSettings()
 
@@ -192,7 +192,7 @@ function Scheduler(sol::Solution, methods::Vector{MHMethod},
 end
 
 """
-    reset!(::Scheduler, solution)
+    reinitialize!(::Scheduler, solution)
 
 Reset scheduler with given solution, which however, is not considered, for a new run.
 """

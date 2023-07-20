@@ -15,7 +15,7 @@ using ArgParse
 
 export LNS, LNSParameters,
     MethodSelector, UniformRandomMethodSelector, WeightedRandomMethodSelector,
-    destroy!, repair!, ResultCase
+    destroy!, repair!, ResultCase, reinitialize!
 
 
 const settings_cfg = ArgParseSettings()
@@ -107,20 +107,22 @@ function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMetho
     temperature = obj(sol) * params.init_temp_factor + 0.000000001
     scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re], consider_initial_sol, 
         params=scheduler_params)
-    LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), scheduler, 
+    lns = LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), scheduler, 
         meths_ch, meths_de, meths_re, meths_compat, temperature, method_selector, params)
+    init_method_selector!(lns)
+    return lns
 end
 
 """
-    reset!(::LNS, sol)
+    reinitialize!(::LNS, sol)
 
-Reset the LNS to the given solution for a new run.
+Reset the LNS to the given solution with possibly a new problem instance for a new run.
 """
-function Schedulers.reset!(lns::LNS{<:MethodSelector, TSolution}, sol::TSolution) where 
-        {TSolution <: Solution}
+function reinitialize!(lns::LNS{<:MethodSelector, TSolution}, 
+        sol::TSolution) where {TSolution <: Solution}
     copy!(lns.solution, sol)
     copy!(lns.new_solution, sol)
-    reset!(lns.scheduler, sol)
+    reinitialize!(lns.scheduler, sol)
     lns.temperature = obj(sol) * lns.params.init_temp_factor + 0.000000001
     init_method_selector!(lns)
 end
@@ -214,13 +216,11 @@ Default implementation does nothing.
 update_method_selector!(::LNS, destroy::Int, repair::Int, case::ResultCase, Δ, Δ_inc) = 
     nothing
 
-    
-function lns_init!(lns::LNS, sol::Solution)
-    init_method_selector!(lns)
-    lns.solution = sol
-    lns.new_solution = copy(sol)
-end
+"""
+    lns_iteration!(lns, destroy_idx, repair_idx)
 
+Perform one iteration of the LNS using the provided destroy and repair method indices.
+"""
 function lns_iteration!(lns::LNS, destroy_idx::Union{Nothing,Int}=nothing,
         repair_idx::Union{Nothing,Int}=nothing) :: Result
     destroy = isnothing(destroy_idx) ? select_method(lns, eachindex(lns.meths_de), true) : 
@@ -243,7 +243,8 @@ end
 Perform basic large neighborhood search (LNS) on the given solution.
 """
 function lns!(lns::LNS, sol::Solution)
-    lns_init!(lns, sol)
+    lns.solution = sol
+    lns.new_solution = copy(sol)
     while true
         res = lns_iteration!(lns)
         if res.terminate
