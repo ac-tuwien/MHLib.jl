@@ -241,27 +241,6 @@ function lns_iteration!(lns::LNS, destroy_idx::Union{Nothing,Int}=nothing,
     res
 end
 
-"""
-    test_perform_method_pair!(lns, destroy_idx, repair_idx) :: Bool
-
-Perform the operator pair for test purposes, without doing any actual update in the LNS.
-
-Returns true if the new solution would be accepted by the LNS.
-Used only for debugging or other special applications.
-"""
-function test_perform_method_pair!(lns::LNS, destroy_idx::Int, repair_idx::Int) :: Bool
-    res = Result()
-    sol = lns.solution
-    sol_new = copy(lns.solution)
-    destroy = lns.meths_de[destroy_idx]
-    repair = lns.meths_re[repair_idx]
-    # t_start = time()
-    destroy.func(sol_new, destroy.par, res)
-    # t_destroyed = time()
-    repair.func(sol_new, repair.par, res)
-    # t_repaired = time()
-    return is_better(sol_new, sol)  # metropolis_criterion(lns, sol_new, sol)
-end
 
 """
     lns!(lns, sol)
