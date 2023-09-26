@@ -5,6 +5,10 @@
 Standalone demo program for solving the TSP.
 """
 
+# activate MHLibDemos environment
+cd(@__DIR__()*"/..")
+using Pkg; Pkg.activate(".") 
+
 module Demo_TSP
 
 using ArgParse

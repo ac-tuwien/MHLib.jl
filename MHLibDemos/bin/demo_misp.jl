@@ -5,6 +5,10 @@
 Standalone demo program for solving the MISP.
 """
 
+# activate MHLibDemos environment
+cd(@__DIR__()*"/..")
+using Pkg; Pkg.activate(".") 
+
 module Demo_MISP
 
 using ArgParse
@@ -19,8 +23,8 @@ const settings_cfg = ArgParseSettings()
 function solve()
     inst = MISPInstance("data/frb40-19-1.mis")
     sol = MISPSolution(inst)
-    initialize!(sol)
-    check(sol)
+    # initialize!(sol)
+    # check(sol)
     # println(sol)
 
     alg = GVNS(sol, [MHMethod("con", construct!, 0)],

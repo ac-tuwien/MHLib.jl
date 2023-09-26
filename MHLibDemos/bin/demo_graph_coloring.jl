@@ -5,6 +5,10 @@
 Standalone demo program for solving the Graph Coloring Problem.
 """
 
+# activate MHLibDemos environment
+cd(@__DIR__()*"/..")
+using Pkg; Pkg.activate(".") 
+
 module Demo_GC
 
 using ArgParse

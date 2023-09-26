@@ -5,6 +5,10 @@
 Standalone demo program for solving the MKP.
 """
 
+# activate MHLibDemos environment
+cd(@__DIR__()*"/..")
+using Pkg; Pkg.activate(".") 
+
 module Demo_MKP
 
 using ArgParse

@@ -5,6 +5,10 @@
 Standalone demo program for solving the OneMax Problem.
 """
 
+# activate MHLibDemos environment
+cd(@__DIR__()*"/..")
+using Pkg; Pkg.activate(".") 
+
 module Demo_OneMax
 
 using ArgParse
