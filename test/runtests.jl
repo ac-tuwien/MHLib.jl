@@ -12,7 +12,9 @@ if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
 else
     using MHLib
 end
-using MHLibDemos
+
+includet("../MHLibDemos/src/MHLibDemos.jl")
+using .MHLibDemos
 
 
 # testsets to perform:

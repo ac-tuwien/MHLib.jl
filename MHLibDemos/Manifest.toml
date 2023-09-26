@@ -2,7 +2,7 @@
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "4c6ee6ad8ad8ef74e57dbee365001c159367c1b1"
+project_hash = "63aaf454027a5b2b89babd62d70c3db21007f97a"
 
 [[deps.ArgParse]]
 deps = ["Logging", "TextWrap"]
@@ -157,14 +157,6 @@ git-tree-sha1 = "60168780555f3e663c536500aa790b6368adc02a"
 uuid = "6f1432cf-f94c-5a45-995e-cdbf5db27b0b"
 version = "2.3.0"
 
-[[deps.MHLib]]
-deps = ["ArgParse", "DataStructures", "Logging", "Printf", "Random", "Reexport", "StatsBase"]
-git-tree-sha1 = "d43a1238a59652a8f2c560865de6d1f903c775bc"
-repo-rev = "master"
-repo-url = ".."
-uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
-version = "0.1.7"
-
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
 git-tree-sha1 = "9ee1618cbf5240e6d4e0371d6f24065083f60c48"
@@ -223,11 +215,6 @@ uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 [[deps.Random]]
 deps = ["SHA", "Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-
-[[deps.Reexport]]
-git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
-uuid = "189a3867-3050-52da-a836-e630ba90ab69"
-version = "1.2.2"
 
 [[deps.Requires]]
 deps = ["UUIDs"]
