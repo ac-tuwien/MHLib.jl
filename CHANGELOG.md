@@ -3,7 +3,7 @@
 
 Major changes in releases:
 
-## Upcoming
+## Upcoming 
 - all demo applications moved into the new subpackage `MHLibDemos`
 - all symbols of submodules are now also re-exported by the main `MHLib` module
 - LNS/ALNS refactored, `MethodSelector` introduced to generalize LNS
