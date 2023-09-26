@@ -6,15 +6,8 @@ Demo problem: Symmetric traveling salesperson problem.
 Given an undirected, weighted, complete graph, find a Hamiltonian cycle with minimum length.
 """
 
-module TSP
-
 using Random
 using StatsBase
-
-using MHLib
-using MHLib.Schedulers
-using MHLib.LNSs
-using MHLib.PermutationSolutions
 
 export TSPInstance, TSPSolution
 
@@ -244,5 +237,3 @@ function MHLib.PermutationSolutions.two_opt_move_delta_eval(s::TSPSolution, p1::
     delta = s.inst.d[x_prev,x_p2] + s.inst.d[x_p1,x_next] - s.inst.d[x_prev,x_p1] - 
         s.inst.d[x_p2,x_next]
 end
-
-end  # module

@@ -6,17 +6,10 @@ Demo problem: maximum (weighted) independent set problem (MISP).
 Give an undirected (weighted) graph, find a maximum cardinality subset of nodes where
 no pair of nodes is adjacent in the graph.
 """
-module MISP
 
+using Graphs
 using Random
 using StatsBase
-using Graphs
-using MHLib
-using MHLib.Schedulers
-using MHLib.SubsetVectorSolutions
-
-using ..Graphs
-
 
 export MISPInstance, MISPSolution
 
@@ -116,7 +109,7 @@ function MHLib.check(s::MISPSolution; kwargs...)
     selected = Set(s.x[1:s.sel])
     for e in edges(s.inst.graph)
         if src(e) in selected && dst(e) in selected
-            error("Invalid solution - adjacent nodes selected: $(src(e)), $(src(v))")
+            error("Invalid solution - adjacent nodes selected: $(src(e)), $(dst(e))")
         end
     end
     new_covered = zeros(Int, s.inst.n)
@@ -205,5 +198,3 @@ function MHLib.SubsetVectorSolutions.element_added_delta_eval!(s::MISPSolution;
     s.sel -= 1
     return false
 end
-
-end  # module

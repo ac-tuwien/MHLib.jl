@@ -5,17 +5,9 @@ OneMax demo problem: Maximize the number of set bits in a binary string.
 
 This problem is just for simple demonstration/debugging purposes.
 """
-module OneMax
-
-using ArgParse
-
-using MHLib
-using MHLib.Schedulers
 
 export OneMaxSolution
 
-
-const settings_cfg = ArgParseSettings()
 
 @add_arg_table! settings_cfg begin
     "--onemax_n"
@@ -52,5 +44,3 @@ end
 
 Base.copy(s::OneMaxSolution) = OneMaxSolution(s.obj_val, s.obj_val_valid, copy(s.x))
 
-
-end  # module

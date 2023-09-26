@@ -6,21 +6,12 @@ Demo application solving the graph coloring problem.
 Given a graph and an number of colors, color each node with one color so that
 the number of adjacent nodes having the same color is minimized.
 """
-module GraphColoring
 
-using ArgParse
 using Random
 using StatsBase
 using Graphs
 
-using MHLib
-using MHLib.Schedulers
-using ..Graphs
-
 export GraphColoringInstance, GraphColoringSolution
-
-
-const settings_cfg = ArgParseSettings()
 
 @add_arg_table! settings_cfg begin
     "--gcp_colors"
@@ -223,10 +214,8 @@ end
 
 
 
-function initialize!(s::GraphColoringSolution)
+function MHLib.initialize!(s::GraphColoringSolution)
     s.x = sample(1:s.inst.colors, s.inst.n, replace = true)
     invalidate!(s)
 end
 
-
-end  # module

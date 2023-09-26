@@ -6,17 +6,12 @@ MAXSAT demo problem.
 The goal is to maximize the number of clauses satisfied in a boolean function given in
 conjunctive normal form.
 """
-module MAXSAT
 
 using Random
 using StatsBase
 using MHLib
-using MHLib.Schedulers
-using MHLib.LNSs
-using MHLib.ALNSs
 
 export MAXSATInstance, MAXSATSolution, destroy!, repair!
-
 
 """
 A MAXSAT problem instance.
@@ -163,6 +158,7 @@ end
     destroy(maxsat_solution, par, result)
 
 Destroy operator for LNS selects `3 par` positions uniformly at random for removal.
+end  # module
 
 Selected positions are stored with the solution in list `self.destroyed`.
 """
@@ -189,13 +185,3 @@ function MHLib.LNSs.repair!(sol::MAXSATSolution, par::Int, result::Result)
     invalidate!(sol)
 end
 
-
-#=
-function crossover(self, other)
-    """ Perform uniform crossover as crossover."""
-    return self.uniform_crossover(other)
-end
-
-=#
-
-end  # module

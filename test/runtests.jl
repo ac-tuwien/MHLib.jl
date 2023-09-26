@@ -9,33 +9,10 @@ using Revise
 if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
     include("../src/MHLib.jl")
     using .MHLib
-    using .MHLib.Schedulers
-    using .MHLib.GVNSs
-    using .MHLib.LNSs
-    using .MHLib.ALNSs
 else
     using MHLib
-    using MHLib.Schedulers
-    using MHLib.GVNSs
-    using MHLib.LNSs
-    using MHLib.ALNSs
 end
-
-
-includet("Graphs.jl")
-includet("OneMax.jl")
-includet("MAXSAT.jl")
-includet("MKP.jl")
-includet("MISP.jl")
-includet("TSP.jl")
-includet("GraphColoring.jl")
-
-using .OneMax
-using .MAXSAT
-using .MKP
-using .MISP
-using .TSP
-using .GraphColoring
+using MHLibDemos
 
 
 # testsets to perform:
@@ -46,10 +23,11 @@ if length(only_testsets) >= 1 && startswith(only_testsets[1], "DEBUG_MODE")
 end
 # only_testsets = ["GVNS-GraphColoring"]
 # only_testsets = ["ALNS-MAXSAT"]
+# only_testsets = ["GVNS-MKP"]
 
 if isempty(only_testsets) || "OneMaxSolution" in only_testsets
     @testset "OneMaxSolution" begin
-        parse_settings!([OneMax.settings_cfg], ["--seed=1"])
+        parse_settings!([MHLibDemos.settings_cfg], ["--seed=1"])
         println(get_settings_as_string())
         s1 = OneMaxSolution(5)
         initialize!(s1)
@@ -71,7 +49,7 @@ end
 
 if isempty(only_testsets) || "GVNS-OneMax" in only_testsets
     @testset "GVNS-OneMax.jl" begin
-        parse_settings!([MHLib.Schedulers.settings_cfg, OneMax.settings_cfg],
+        parse_settings!([MHLib.Schedulers.settings_cfg, MHLibDemos.settings_cfg],
             ["--seed=1"])
         sol = OneMaxSolution(10)
         println(sol)
@@ -262,7 +240,7 @@ end
 
 if isempty(only_testsets) || "GVNS-GraphColoring" in only_testsets
     @testset "GVNS-GraphColoring1.jl" begin
-        parse_settings!([MHLib.Schedulers.settings_cfg, GraphColoring.settings_cfg], 
+        parse_settings!([MHLib.Schedulers.settings_cfg, MHLibDemos.settings_cfg], 
             ["--ifile=data/fpsol2.i.1.col", "--mh_titer=1000", "--gcp_colors=2"])
         inst = GraphColoringInstance(settings[:ifile])
         sol = GraphColoringSolution(inst)
@@ -285,7 +263,7 @@ end
 
 if isempty(only_testsets) || "GVNS-GraphColoring2" in only_testsets
     @testset "GVNS-GraphColoring2.jl" begin
-        parse_settings!([MHLib.Schedulers.settings_cfg, GraphColoring.settings_cfg], 
+        parse_settings!([MHLib.Schedulers.settings_cfg, MHLibDemos.settings_cfg], 
             ["--ifile=data/test.col", "--mh_titer=50", "--gcp_colors=3"])
         inst = GraphColoringInstance(settings[:ifile])
         sol = GraphColoringSolution(inst)

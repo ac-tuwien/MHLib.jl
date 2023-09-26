@@ -3,32 +3,14 @@
     demo_maxsat.jl
 
 Standalone demo program for solving the MAXSAT problem.
-For other demos see `runtests.jl`.
 """
 
-# always run this code in the test directory
-cd(@__DIR__)
+module Demo_maxsat
+
 using ArgParse
 using Revise
-
-if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
-    include("../src/MHLib.jl")
-    using .MHLib
-    using .MHLib.Schedulers
-    using .MHLib.GVNSs
-    using .MHLib.LNSs
-    using .MHLib.ALNSs
-
-else
-    using MHLib
-    using MHLib.Schedulers
-    using MHLib.GVNSs
-    using MHLib.LNSs
-    using MHLib.ALNSs
-end
-
-includet("MAXSAT.jl")
-using .MAXSAT
+using MHLib
+using MHLibDemos
 
 
 const settings_cfg = ArgParseSettings()
@@ -51,7 +33,6 @@ function solve_maxsat()
     inst = MAXSATInstance(settings[:ifile])
     sol = MAXSATSolution(inst)
     println(sol)
-    # local alg
 
     if settings[:alg] === "lns"
         alg = LNS(sol, [MHMethod("construct", construct!, 0)],
@@ -84,5 +65,7 @@ function solve_maxsat()
     return sol
 end
 
-solve_maxsat()
-# @profview solve_maxsat()
+end  # module
+
+Demo_maxsat.solve_maxsat()
+# @profview Demo_maxsat.solve_maxsat()
