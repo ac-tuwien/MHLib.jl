@@ -2,7 +2,7 @@
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "7dbe71296d1d777174cc04d271652ba6afafb002"
+project_hash = "4c6ee6ad8ad8ef74e57dbee365001c159367c1b1"
 
 [[deps.ArgParse]]
 deps = ["Logging", "TextWrap"]
@@ -159,7 +159,9 @@ version = "2.3.0"
 
 [[deps.MHLib]]
 deps = ["ArgParse", "DataStructures", "Logging", "Printf", "Random", "Reexport", "StatsBase"]
-path = ".."
+git-tree-sha1 = "d43a1238a59652a8f2c560865de6d1f903c775bc"
+repo-rev = "master"
+repo-url = ".."
 uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
 version = "0.1.7"
 
