@@ -31,14 +31,23 @@ Vienna, Austria, since 2020.
 
 ## Installation
 
-Major versions of `pymhlib` can be installed from the Julia REPL via
+Major versions of `MHLib.jl` can be installed from the Julia REPL via
 
     ] add MHLib
 
-Development versions are available at https://github.com/ac-tuwien/MHLib.jl and can be
+The associated package `MHLibDemos.jl`, which provides diverse demos for solving classical combinatorial optimization problems with `MHLib.jl`, can be installed via
+
+    ] add MHLibDemos
+
+Development versions of both packages are available at https://github.com/ac-tuwien/MHLib.jl and can be
 installed via
 
     ] add https://github.com/ac-tuwien/MHLib.jl.git
+
+and
+
+    ] add https://github.com/ac-tuwien/MHLib.jl.git#master:MHLibDemos
+
 
 ## Major Components
 
@@ -90,8 +99,7 @@ Further modules:
 
 ## Demos
 
-For demonstration purposes the `test` subdirectory provides basic implementations
-for the following classical combinatorial optimization problems.
+For demonstration purposes the [`MHLibDemos.jl`](MHLibDemos/README.md) sub-package, whose sources can be found in the respective subdirectory here, provides basic implementations for the following classical combinatorial optimization problems.
 
 - `OneMax`: basic test problem in which the goal is to set all digits in a binary
     string to `true`
@@ -101,12 +109,11 @@ for the following classical combinatorial optimization problems.
 - `MKP`: multi-constrained knapsack problem based on `SubsetVectorSolution`
 - `MISP`: maximum independent set problem based on `SubsetVectorSolution`
 
-There are the standalone demo applications `demo_maxsat.jl` and `demo_tsp.jl`, but
-see also the respective sections in `runtests.jl`.
-
 It is recommended to take such a demo as template for solving your own problem.
 
+Further smaller usage examples can be found in the test directory of the main package.
 
 ## News
 
 See [CHANGELOG.md](CHANGELOG.md)
+
