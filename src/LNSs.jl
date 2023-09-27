@@ -15,7 +15,7 @@ using ArgParse
 
 export LNS, LNSParameters,
     MethodSelector, UniformRandomMethodSelector, WeightedRandomMethodSelector,
-    destroy!, repair!
+    destroy!, repair!, ResultCase, reinitialize!
 
 
 const settings_cfg = ArgParseSettings()
@@ -60,9 +60,9 @@ Attributes
 - `meths_ch`: list of construction heuristic methods
 - `meths_de`: list of destroy methods
 - `meths_re`: list of repair methods
-- `meths_compat`: Boolean matrix indicating which repair method can be applied
-    in conjunction with which destroy method, i.e., `meths_compat[i,j]==true` indicates
-    that the i-th repair method can be applied with the j-th destroy method
+- `meths_compat`: Boolean matrix indicating which destroy method can be applied
+    in conjunction with which repair method, i.e., `meths_compat[i,j]==true` indicates
+    that the i-th destroy method can be applied with the j-th repair method
 - `temperature`: temperature for Metropolis criterion
 - `params`: LNSParameters, by default adopted from global settings
 """
@@ -78,6 +78,13 @@ mutable struct LNS{TMethodSelector <: MethodSelector, TSolution <: Solution}
     method_selector::TMethodSelector
     params::LNSParameters
 end
+
+"""
+    ResultCase
+
+Enumeration type for type of result of method application.
+"""
+@enum ResultCase betterThanIncumbent betterThanCurrent acceptedAlthoughWorse rejected
 
 
 """
@@ -97,11 +104,27 @@ function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMetho
         consider_initial_sol::Bool=false, 
         method_selector::MethodSelector=UniformRandomMethodSelector(),
         scheduler_params=SchedulerParameters(), params=LNSParameters())
-    temperature = obj(sol) * params.init_temp_factor + 0.000000001
+    temperature = obj(sol) * params.init_temp_factor
     scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re], consider_initial_sol, 
         params=scheduler_params)
-    LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), scheduler, 
+    lns = LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), scheduler, 
         meths_ch, meths_de, meths_re, meths_compat, temperature, method_selector, params)
+    init_method_selector!(lns)
+    return lns
+end
+
+"""
+    reinitialize!(::LNS, sol)
+
+Reset the LNS to the given solution with possibly a new problem instance for a new run.
+"""
+function Schedulers.reinitialize!(lns::LNS{<:MethodSelector, TSolution}, 
+        sol::TSolution) where {TSolution <: Solution}
+    copy!(lns.solution, sol)
+    copy!(lns.new_solution, sol)
+    reinitialize!(lns.scheduler, sol)
+    lns.temperature = obj(sol) * lns.params.init_temp_factor
+    init_method_selector!(lns)
 end
 
 """
@@ -131,10 +154,14 @@ repair!(s::Solution, par::Int, result::Result) =
 Apply Metropolis criterion, return true when `sol_new` should be accepted.
 """
 function metropolis_criterion(lns::LNS, sol_new::Solution, sol_current::Solution)
-    if is_better(sol_new, sol_current)
+    if is_better(sol_new, sol_current) :: Bool
         return true
     end
-    return rand() <= exp(-abs(obj(sol_new) - obj(sol_current)) / lns.temperature)
+    if iszero(lns.temperature)
+        return false
+    else
+        return rand() <= exp(-abs(obj(sol_new) - obj(sol_current)) / lns.temperature)
+    end
 end
 
 
@@ -158,18 +185,18 @@ function update_solution!(lns::LNS, sol_new::Solution, sol::Solution)
     if lns.scheduler.iteration == lns.scheduler.incumbent_iteration
         # print("better than incumbent")
         copy!(sol, sol_new)
-        case = :betterThanIncumbent
+        case = betterThanIncumbent
     elseif is_better(sol_new, sol)
         # print("better than current")
         copy!(sol, sol_new)
-        case = :betterThanCurrent
+        case = betterThanCurrent
     elseif is_better(sol, sol_new) && metropolis_criterion(lns, sol_new, sol)
         # print("accepted although worse")
         copy!(sol, sol_new)
-        case = :acceptedAlthoughWorse
+        case = acceptedAlthoughWorse
     elseif sol_new != sol
         copy!(sol_new, sol)
-        case = :rejected
+        case = rejected
     end
     return case
 end
@@ -190,23 +217,21 @@ Update the method selector according to the result of last performed method pair
 
 Default implementation does nothing.
 """
-update_method_selector!(::LNS, destroy::Int, repair::Int, case::Symbol, Δ, Δ_inc) = 
+update_method_selector!(::LNS, destroy::Int, repair::Int, case::ResultCase, Δ, Δ_inc) = 
     nothing
 
-    
-function lns_init!(lns::LNS, sol::Solution)
-    init_method_selector!(lns)
-    lns.solution = sol
-    lns.new_solution = copy(sol)
-end
+"""
+    lns_iteration!(lns, destroy_idx, repair_idx)
 
+Perform one iteration of the LNS using the provided destroy and repair method indices.
+"""
 function lns_iteration!(lns::LNS, destroy_idx::Union{Nothing,Int}=nothing,
         repair_idx::Union{Nothing,Int}=nothing) :: Result
     destroy = isnothing(destroy_idx) ? select_method(lns, eachindex(lns.meths_de), true) : 
         destroy_idx
     repair = isnothing(repair_idx) ? select_repair_method(lns, destroy) : repair_idx
     res = perform_method_pair!(lns.scheduler, lns.meths_de[destroy], 
-    lns.meths_re[repair], lns.new_solution)
+        lns.meths_re[repair], lns.new_solution)
     obj_new_solution = obj(lns.new_solution)
     Δ = obj_new_solution - obj(lns.solution)
     Δ_inc = obj_new_solution - obj(lns.scheduler.incumbent)
@@ -216,13 +241,15 @@ function lns_iteration!(lns::LNS, destroy_idx::Union{Nothing,Int}=nothing,
     res
 end
 
+
 """
     lns!(lns, sol)
 
 Perform basic large neighborhood search (LNS) on the given solution.
 """
 function lns!(lns::LNS, sol::Solution)
-    lns_init!(lns, sol)
+    lns.solution = sol
+    lns.new_solution = copy(sol)
     while true
         res = lns_iteration!(lns)
         if res.terminate

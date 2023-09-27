@@ -18,7 +18,7 @@ export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerParameters,
     perform_method!, next_method, update_incumbent!, check_termination, 
     perform_sequentially!, main_results, method_statistics, delayed_success_update!, 
     log_iteration, log_iteration_header, construct!, local_improve!, shaking!, 
-    perform_method_pair!
+    perform_method_pair!, reinitialize!
 
 const settings_cfg = ArgParseSettings()
 
@@ -189,6 +189,28 @@ function Scheduler(sol::Solution, methods::Vector{MHMethod},
         log_iteration(s, "-", NaN, sol, true, true, "")
     end
     s
+end
+
+"""
+    reinitialize!(::Scheduler, solution)
+
+Reset scheduler with given solution, which however, is not considered, for a new run.
+"""
+function reinitialize!(s::Scheduler{TSolution}, sol::TSolution) where {TSolution <: Solution}
+    s.incumbent = sol     
+    s.incumbent_valid = false
+    s.incumbent_iteration = 0
+    s.incumbent_time = 0.0
+    s.iteration = 0
+    s.time_start = time()
+    s.run_time = missing
+    for ms in values(s.method_stats)
+        ms.applications = 0
+        ms.netto_time = 0.0
+        ms.successes = 0
+        ms.obj_gain = 0.0
+        ms.brutto_time = 0.0
+    end
 end
 
 """
