@@ -10,10 +10,13 @@ the number of adjacent nodes having the same color is minimized.
 using Random
 using StatsBase
 using Graphs
+using MHLib
 
-export GraphColoringInstance, GraphColoringSolution
+export GraphColoringInstance, GraphColoringSolution, solve_graph_coloring
 
-@add_arg_table! settings_cfg begin
+# We define a problem-specific parameter:
+const graph_coloring_settings_cfg = ArgParseSettings()
+@add_arg_table! graph_coloring_settings_cfg begin
     "--gcp_colors"
         help = "number of colors for the graph coloring problem"
         arg_type = Int
@@ -213,9 +216,41 @@ function MHLib.Schedulers.shaking!(s::GraphColoringSolution, par::Int, result::R
 end
 
 
-
 function MHLib.initialize!(s::GraphColoringSolution)
     s.x = sample(1:s.inst.colors, s.inst.n, replace = true)
     invalidate!(s)
 end
 
+
+# -------------------------------------------------------------------------------
+
+function solve_graph_coloring(args=ARGS)
+    println("Graph Coloring Demo version $(git_version())\nARGS: ", args)
+
+    # We set some new default values for parameters and parse all relevant arguments
+    settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
+    settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/fpsol2.i.1.col")
+    parse_settings!([MHLib.Schedulers.settings_cfg, graph_coloring_settings_cfg], args)
+    println(get_settings_as_string())
+        
+    inst = GraphColoringInstance(settings[:ifile])
+    sol = GraphColoringSolution(inst)
+    initialize!(sol)
+    println(sol)
+
+    alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+        [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], 
+        consider_initial_sol = true)
+    run!(alg)
+    method_statistics(alg.scheduler)
+    main_results(alg.scheduler)
+    check(sol)
+    return sol
+end
+
+# To run from REPL, use `MHLibDemos` and call `solve_graph_coloring(<args>)` where 
+# `<args>` is a list of strings being passed as arguments for setting global parameters.
+# `@<filename>` may be used to read arguments from a configuration file <filename>
+
+# Run with profiler:
+# @profview solve_graph_coloring(args)

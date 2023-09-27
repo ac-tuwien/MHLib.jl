@@ -3,8 +3,10 @@
 
 Major changes in releases:
 
-## Upcoming 
-- all demo applications moved into the new subpackage `MHLibDemos`
+## Upcoming
+
+## Version 0.1.8
+- all demo applications refined and moved into an own subpackage `MHLibDemos`
 - all symbols of submodules are now also re-exported by the main `MHLib` module
 - LNS/ALNS refactored, `MethodSelector` introduced to generalize LNS
 - all structures adapted to use type parameters instead of abstract types for elements

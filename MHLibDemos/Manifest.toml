@@ -141,11 +141,9 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[deps.MHLib]]
 deps = ["ArgParse", "DataStructures", "Logging", "Printf", "Random", "Reexport", "StatsBase"]
-git-tree-sha1 = "db91fe635ee06d3707933aca75a9ac3384a6d7f0"
-repo-rev = "master"
-repo-url = "https://github.com/ac-tuwien/MHLib.jl.git"
+path = ".."
 uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
-version = "0.1.7"
+version = "0.1.8"
 
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]

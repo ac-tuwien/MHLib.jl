@@ -2,11 +2,15 @@ module MHLibDemos
 
 using ArgParse
 using Graphs
-using MHLib
+
+if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
+    include("../../src/MHLib.jl")
+    using .MHLib
+else
+    using MHLib
+end
 
 export create_or_read_simple_graph
-
-const settings_cfg = ArgParseSettings()
 
 """
     create_or_read_simple_graph(name::AbstractString)

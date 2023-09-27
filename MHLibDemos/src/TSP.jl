@@ -8,8 +8,9 @@ Given an undirected, weighted, complete graph, find a Hamiltonian cycle with min
 
 using Random
 using StatsBase
+using MHLib
 
-export TSPInstance, TSPSolution
+export TSPInstance, TSPSolution, solve_tsp
 
 
 """
@@ -237,3 +238,56 @@ function MHLib.PermutationSolutions.two_opt_move_delta_eval(s::TSPSolution, p1::
     delta = s.inst.d[x_prev,x_p2] + s.inst.d[x_p1,x_next] - s.inst.d[x_prev,x_p1] - 
         s.inst.d[x_p2,x_next]
 end
+
+
+# -------------------------------------------------------------------------------
+
+const tsp_settings_cfg = ArgParseSettings()
+
+@add_arg_table! tsp_settings_cfg begin
+    "--alg"
+        help = "Algorithm to apply (gvns, lns)"
+        arg_type = String
+        default = "lns"
+end
+
+function solve_tsp(args=ARGS)
+    println("TSP Demo version $(git_version())\nARGS: ", args)
+
+    # set some new default values for parameters and parse all relevant arguments
+    settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/xqf131.tsp")
+    settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 10000)
+    parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.LNSs.settings_cfg, 
+        tsp_settings_cfg], args)
+    println(get_settings_as_string())
+
+    inst = TSPInstance(settings[:ifile])
+    sol = TSPSolution(inst)
+    initialize!(sol)
+    println(sol)
+
+    if settings[:alg] === "lns"
+        alg = LNS(sol, MHMethod[MHMethod("con", construct!, 0)],
+            [MHMethod("de$i", LNSs.destroy!, i) for i in 1:3],
+            [MHMethod("re", LNSs.repair!, 1)], 
+            consider_initial_sol = true)
+    elseif settings[:alg] === "gvns"
+        alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+            [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], 
+            consider_initial_sol = true)
+    else
+        error("Invalid parameter alg: $(settings[:alg])")
+    end
+    run!(alg)
+    method_statistics(alg.scheduler)
+    main_results(alg.scheduler)
+    check(sol)
+    return sol
+end
+
+# To run from REPL, use MHLibDemos and call `solve_tsp(<args>)` where `<args>` is 
+# a list of strings being passed as arguments for setting global parameters.
+# `@<filename>` may be used to read arguments from a configuration file <filename>
+
+# Run with profiler:
+# @profview solve_tsp(args)

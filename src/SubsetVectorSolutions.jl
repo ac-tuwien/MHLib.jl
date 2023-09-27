@@ -15,7 +15,7 @@ export SubsetVectorSolution, clear!, remove_some!, fillup!,
     element_added_delta_eval!, may_be_extendible, unselected_elems_in_x, all_elements
 
 """
-    SubsetVectorSolution
+    SubsetVectorSolution{T}
 
 A type for solutions that are arbitrary cardinality subsets of a given set
 represented in vector form. The front part represents the selected
@@ -47,7 +47,7 @@ Return a set with all elements.
 Needs to be defined in a concrete type if the unselected elements are not stored in `x`
 behind the selected ones, i.e., when `unselected_elems_in_x==true`.
 """
-all_elements(s::SubsetVectorSolution) =
+all_elements(::SubsetVectorSolution) =
     error("Abstract all_elements(subset_vector_solution called")
 
 """
@@ -61,7 +61,7 @@ function clear!(s::SubsetVectorSolution)
 end
 
 """
-    sort_sel!(subset_vector_solution)
+    sort_sel!(::SubsetVectorSolution)
 
 Sort selected elements in `x`.
 """

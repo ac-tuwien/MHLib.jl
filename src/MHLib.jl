@@ -367,6 +367,7 @@ include("PermutationSolutions.jl")
 
 
 const all_settings_cfgs = [
+        settings_cfg,
         Schedulers.settings_cfg,
         LNSs.settings_cfg,
         ALNSs.settings_cfg,

@@ -6,10 +6,14 @@ OneMax demo problem: Maximize the number of set bits in a binary string.
 This problem is just for simple demonstration/debugging purposes.
 """
 
-export OneMaxSolution
+using ArgParse
+using MHLib
 
+export OneMaxSolution, onemax_settings_cfg, solve_onemax
 
-@add_arg_table! settings_cfg begin
+# We define an additional problem-specific parameter:
+const onemax_settings_cfg = ArgParseSettings()
+@add_arg_table! onemax_settings_cfg begin
     "--onemax_n"
         help = "length of solution string in the problem"
         arg_type = Int
@@ -21,6 +25,9 @@ end
     OneMaxSolution
 
 A concrete solution type to solve the MAXSAT problem.
+
+As the problem is so simply defined, we do not need a separate instance structure
+but store problem size directly within the solutions.
 """
 mutable struct OneMaxSolution <: BoolVectorSolution
     obj_val::Int
@@ -44,3 +51,36 @@ end
 
 Base.copy(s::OneMaxSolution) = OneMaxSolution(s.obj_val, s.obj_val_valid, copy(s.x))
 
+
+# -------------------------------------------------------------------------------
+
+function solve_onemax(args=ARGS)
+    println("OneMax Demo version $(git_version())\nARGS: ", args)
+
+    # We set some new default values for parameters and parse all relevant arguments
+    settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 100)
+    parse_settings!([MHLib.Schedulers.settings_cfg, onemax_settings_cfg], args)
+    println(get_settings_as_string())
+        
+    sol = OneMaxSolution(settings[:onemax_n])
+    initialize!(sol)
+    println(sol)
+
+    # We apply here a variable neighborhood search, making use of a simple construction
+    # heuristic, a local improvement method, and a shaking method.
+    alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+        [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], 
+        consider_initial_sol = true)
+    run!(alg)
+    method_statistics(alg.scheduler)
+    main_results(alg.scheduler)
+    check(sol)
+    return sol
+end
+
+# To run from REPL, use `MHLibDemos` and call `solve_onemax(<args>)` where 
+# `<args>` is a list of strings being passed as arguments for setting global parameters.
+# `@<filename>` may be used to read arguments from a configuration file <filename>
+
+# Run with profiler:
+# @profview solve_onemax(args)

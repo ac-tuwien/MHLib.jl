@@ -10,8 +10,9 @@ no pair of nodes is adjacent in the graph.
 using Graphs
 using Random
 using StatsBase
+using MHLib
 
-export MISPInstance, MISPSolution
+export MISPInstance, MISPSolution, solve_misp
 
 
 """
@@ -198,3 +199,41 @@ function MHLib.SubsetVectorSolutions.element_added_delta_eval!(s::MISPSolution;
     s.sel -= 1
     return false
 end
+
+
+# -------------------------------------------------------------------------------
+
+function solve_misp(args=ARGS)
+    println("MISP Demo version $(git_version())\nARGS: ", args)
+
+    # set some new default values for parameters and parse all relevant arguments
+    settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/frb40-19-1.mis")
+    settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
+    parse_settings!([MHLib.Schedulers.settings_cfg], args)
+    println(get_settings_as_string())
+
+    inst = MISPInstance(settings[:ifile])
+    sol = MISPSolution(inst)
+    # initialize!(sol)
+    # check(sol)
+    # println(sol)
+
+    # we apply a variable neighborhod search:
+    alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+        [MHMethod("li1", local_improve!, 1)],
+        [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
+            MHMethod("sh3", shaking!, 3)], 
+        consider_initial_sol = true)
+    run!(alg)
+    method_statistics(alg.scheduler)
+    main_results(alg.scheduler)
+    check(sol)
+    return sol
+end
+
+# To run from REPL, use MHLibDemos and call `solve_misp(<args>)` where `<args>` is 
+# a list of strings being passed as arguments for setting global parameters.
+# `@<filename>` may be used to read arguments from a configuration file <filename>
+
+# Run with profiler:
+# @profview solve_misp(args)

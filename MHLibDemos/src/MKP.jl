@@ -10,8 +10,9 @@ capacities.
 """
 
 using ArgParse
+using MHLib
 
-export MKPInstance, MKPSolution
+export MKPInstance, MKPSolution, solve_mkp
 
 """
     MKPInstance
@@ -207,3 +208,40 @@ function MHLib.SubsetVectorSolutions.element_added_delta_eval!(s::MKPSolution;
     s.sel -= 1
     return false
 end
+
+# -------------------------------------------------------------------------------
+
+function solve_mkp(args=ARGS)
+    println("MKP Demo version $(git_version())\nARGS: ", args)
+
+    # set some new default values for parameters and parse all relevant arguments
+    settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/mknapcb5-01.txt")
+    settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 5000)
+    parse_settings!([MHLib.Schedulers.settings_cfg], args)
+    println(get_settings_as_string())
+
+    inst = MKPInstance(settings[:ifile])
+    sol = MKPSolution(inst)
+    # initialize!(sol)
+    # check(sol)
+    # println(sol)
+
+    # we apply a variable neighborhood search:
+    alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+        [MHMethod("li1", local_improve!, 1)],
+        [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
+            MHMethod("sh3", shaking!, 3)], 
+        consider_initial_sol = true)
+    run!(alg)
+    method_statistics(alg.scheduler)
+    main_results(alg.scheduler)
+    check(sol)
+    return sol
+end
+
+# To run from REPL, use MHLibDemos and call `solve_mkp(<args>)` where `<args>` is 
+# a list of strings being passed as arguments for setting global parameters.
+# `@<filename>` may be used to read arguments from a configuration file <filename>
+
+# Run with profiler:
+# @profview solve_mkp(args)

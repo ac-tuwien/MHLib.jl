@@ -7,11 +7,12 @@ The goal is to maximize the number of clauses satisfied in a boolean function gi
 conjunctive normal form.
 """
 
+using ArgParse
 using Random
 using StatsBase
 using MHLib
 
-export MAXSATInstance, MAXSATSolution, destroy!, repair!
+export MAXSATInstance, MAXSATSolution, destroy!, repair!, solve_maxsat, maxsat_settings_cfg
 
 """
 A MAXSAT problem instance.
@@ -185,3 +186,67 @@ function MHLib.LNSs.repair!(sol::MAXSATSolution, par::Int, result::Result)
     invalidate!(sol)
 end
 
+# -------------------------------------------------------------------------------
+
+# We define a new problem-specific parameter alg, which is used in the demo program
+const maxsat_settings_cfg = ArgParseSettings()
+@add_arg_table! maxsat_settings_cfg begin
+    "--alg"
+        help = "Algorithm to apply (gvns, lns, weighted-lns, alns)"
+        arg_type = String
+        default = "alns"
+end
+
+
+function solve_maxsat(args=ARGS)
+    println("MAXSAT Demo version $(git_version())\nARGS: ", args)
+
+    # set some new default values for parameters and parse all relevant arguments
+    settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/maxsat-adv1.cnf")
+    settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
+    parse_settings!([MHLib.Schedulers.settings_cfg,
+        MHLib.LNSs.settings_cfg, MHLib.ALNSs.settings_cfg, maxsat_settings_cfg], args)
+    println(get_settings_as_string())
+    
+    inst = MAXSATInstance(settings[:ifile])
+    sol = MAXSATSolution(inst)
+    println(sol)
+
+    # Depending on the parameter `alg`, we create the respective algorithm object
+    if settings[:alg] === "lns"
+        alg = LNS(sol, [MHMethod("construct", construct!, 0)],
+            [MHMethod("de", destroy!, 1)],
+            [MHMethod("re", repair!, 0)];
+            meths_compat = [true;;])
+    elseif settings[:alg] === "weighted-lns"
+        num_de = 5
+        method_selector = WeightedRandomMethodSelector(num_re:-1:1, 1:1)
+        alg = LNS(sol, [MHMethod("construct", construct!, 0)],
+            [MHMethod("de$i", destroy!, i) for i in 1:num_de],
+            [MHMethod("re", repair!, 0)];
+            method_selector)
+    elseif settings[:alg] === "alns"
+        num_de = 5
+        alg = ALNS(sol, [MHMethod("construct", construct!, 0)],
+            [MHMethod("de$i", destroy!, i) for i in 1:num_de],
+            [MHMethod("re", repair!, 0)])
+    elseif settings[:alg] === "gvns"
+        alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+            [MHMethod("li1", local_improve!, 1)],
+            [MHMethod("sh$i", shaking!, i) for i in 1:5])
+    else
+        error("Invalid parameter alg: $(settings[:alg])")
+    end
+    run!(alg)
+    method_statistics(alg.scheduler)
+    main_results(alg.scheduler)
+    check(sol)
+    return sol
+end
+
+# To run from REPL, use MHLibDemos and call `solve_maxsat(<args>)` where `<args>` is 
+# a list of strings being passed as arguments for setting global parameters.
+# `@<filename>` may be used to read arguments from a configuration file <filename>
+
+# Run with profiler:
+# @profview solve_maxsat(args)

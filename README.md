@@ -5,9 +5,9 @@
 
 _This project is still in early development, any feedback is much appreciated!_
 
-`MHLib.jl` is a collection of modules, types, and functions  in Julia 1.5+ supporting
+`MHLib.jl` is a collection of modules, types, and functions  in Julia 1.8+ supporting
 the effective implementation of metaheuristics and certain hybrid optimization approaches
-for solving primarily  combinatorial optimization problems.
+for solving primarily combinatorial optimization problems.
 
 ![ ](mh.png)
 
@@ -35,23 +35,14 @@ Major versions of `MHLib.jl` can be installed from the Julia REPL via
 
     ] add MHLib
 
-The associated package `MHLibDemos.jl`, which provides diverse demos for solving classical combinatorial optimization problems with `MHLib.jl`, can be installed via
-
-    ] add MHLibDemos
-
-Development versions of both packages are available at https://github.com/ac-tuwien/MHLib.jl and can be
+Development versions are available at https://github.com/ac-tuwien/MHLib.jl and can be
 installed via
 
     ] add https://github.com/ac-tuwien/MHLib.jl.git
 
-and
-
-    ] add https://github.com/ac-tuwien/MHLib.jl.git#master:MHLibDemos
-
-
 ## Major Components
 
-Note that `MHLib.jl` is still far behind the capabilities of the Python `pymhlib`.
+Note that `MHLib.jl` is still behind the capabilities of the Python `pymhlib`, however, much more performant.
 
 The main module provides the following types for candidate solutions and various
 functions for them:
@@ -99,7 +90,7 @@ Further modules:
 
 ## Demos
 
-For demonstration purposes the [`MHLibDemos.jl`](MHLibDemos/README.md) sub-package, whose sources can be found in the respective subdirectory here, provides basic implementations for the following classical combinatorial optimization problems.
+For demonstration purposes subdirectory [`MHLibDemos`](MHLibDemos/README.md) provides a package (not officially registered at JuliaHub), with basic implementations for the following classical combinatorial optimization problems, to which some of MHLib's metaheuristics are applied:
 
 - `OneMax`: basic test problem in which the goal is to set all digits in a binary
     string to `true`
@@ -109,9 +100,10 @@ For demonstration purposes the [`MHLibDemos.jl`](MHLibDemos/README.md) sub-packa
 - `MKP`: multi-constrained knapsack problem based on `SubsetVectorSolution`
 - `MISP`: maximum independent set problem based on `SubsetVectorSolution`
 
-It is recommended to take such a demo as template for solving your own problem.
+It is recommended to take the `MHLibDemos` package with one of the demos as template for 
+solving your own problem.
 
-Further smaller usage examples can be found in the test directory of the main package.
+Further smaller usage examples can also be found in the test directory of the main package.
 
 ## News
 
