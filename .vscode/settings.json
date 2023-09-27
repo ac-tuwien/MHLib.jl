@@ -40,9 +40,11 @@
         "setdiff",
         "startswith",
         "struct",
+        "subpackage",
         "testrun",
         "trunc",
         "typeof",
         "uuid"
-    ]
+    ],
+    "julia.environmentPath": "/home/guenther/proj/MHLib/test"
 }

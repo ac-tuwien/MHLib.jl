@@ -1,19 +1,22 @@
-"""
-    Graphs
+module MHLibDemos
 
-Module containing utility functions for demos that use graphs.
-"""
-module Graphs
-
+using ArgParse
 using Graphs
+
+if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
+    include("../../src/MHLib.jl")
+    using .MHLib
+else
+    using MHLib
+end
 
 export create_or_read_simple_graph
 
 """
     create_or_read_simple_graph(name::AbstractString)
 
-Read a simple unweighted graph from the specified file or create random G_n,m graph if
-name is `gnm-n-m`.
+Read a simple unweighted graph from the specified file or create random G_n,m graph 
+with n nodes and m edges if name is `gnm-n-m`.
 
 File format:
 - ``c <comments>    #`` ignored
@@ -48,4 +51,13 @@ function create_or_read_simple_graph(name::AbstractString) :: SimpleGraph{Int}
     end
 end
 
-end  # module
+
+include("OneMax.jl")
+include("MAXSAT.jl")
+include("GraphColoring.jl")
+include("MISP.jl")
+include("MKP.jl")
+include("TSP.jl")
+
+
+end # module MHLibDemos

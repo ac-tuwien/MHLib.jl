@@ -6,19 +6,13 @@ Demo problem: maximum (weighted) independent set problem (MISP).
 Give an undirected (weighted) graph, find a maximum cardinality subset of nodes where
 no pair of nodes is adjacent in the graph.
 """
-module MISP
 
+using Graphs
 using Random
 using StatsBase
-using Graphs
 using MHLib
-using MHLib.Schedulers
-using MHLib.SubsetVectorSolutions
 
-using ..Graphs
-
-
-export MISPInstance, MISPSolution
+export MISPInstance, MISPSolution, solve_misp
 
 
 """
@@ -116,7 +110,7 @@ function MHLib.check(s::MISPSolution; kwargs...)
     selected = Set(s.x[1:s.sel])
     for e in edges(s.inst.graph)
         if src(e) in selected && dst(e) in selected
-            error("Invalid solution - adjacent nodes selected: $(src(e)), $(src(v))")
+            error("Invalid solution - adjacent nodes selected: $(src(e)), $(dst(e))")
         end
     end
     new_covered = zeros(Int, s.inst.n)
@@ -206,4 +200,40 @@ function MHLib.SubsetVectorSolutions.element_added_delta_eval!(s::MISPSolution;
     return false
 end
 
-end  # module
+
+# -------------------------------------------------------------------------------
+
+function solve_misp(args=ARGS)
+    println("MISP Demo version $(git_version())\nARGS: ", args)
+
+    # set some new default values for parameters and parse all relevant arguments
+    settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/frb40-19-1.mis")
+    settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
+    parse_settings!([MHLib.Schedulers.settings_cfg], args)
+    println(get_settings_as_string())
+
+    inst = MISPInstance(settings[:ifile])
+    sol = MISPSolution(inst)
+    # initialize!(sol)
+    # check(sol)
+    # println(sol)
+
+    # we apply a variable neighborhod search:
+    alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+        [MHMethod("li1", local_improve!, 1)],
+        [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
+            MHMethod("sh3", shaking!, 3)], 
+        consider_initial_sol = true)
+    run!(alg)
+    method_statistics(alg.scheduler)
+    main_results(alg.scheduler)
+    check(sol)
+    return sol
+end
+
+# To run from REPL, use MHLibDemos and call `solve_misp(<args>)` where `<args>` is 
+# a list of strings being passed as arguments for setting global parameters.
+# `@<filename>` may be used to read arguments from a configuration file <filename>
+
+# Run with profiler:
+# @profview solve_misp(args)

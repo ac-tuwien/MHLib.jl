@@ -5,9 +5,9 @@
 
 _This project is still in early development, any feedback is much appreciated!_
 
-`MHLib.jl` is a collection of modules, types, and functions  in Julia 1.5+ supporting
+`MHLib.jl` is a collection of modules, types, and functions  in Julia 1.8+ supporting
 the effective implementation of metaheuristics and certain hybrid optimization approaches
-for solving primarily  combinatorial optimization problems.
+for solving primarily combinatorial optimization problems.
 
 ![ ](mh.png)
 
@@ -31,7 +31,7 @@ Vienna, Austria, since 2020.
 
 ## Installation
 
-Major versions of `pymhlib` can be installed from the Julia REPL via
+Major versions of `MHLib.jl` can be installed from the Julia REPL via
 
     ] add MHLib
 
@@ -42,7 +42,7 @@ installed via
 
 ## Major Components
 
-Note that `MHLib.jl` is still far behind the capabilities of the Python `pymhlib`.
+Note that `MHLib.jl` is still behind the capabilities of the Python `pymhlib`, however, much more performant.
 
 The main module provides the following types for candidate solutions and various
 functions for them:
@@ -90,8 +90,7 @@ Further modules:
 
 ## Demos
 
-For demonstration purposes the `test` subdirectory provides basic implementations
-for the following classical combinatorial optimization problems.
+For demonstration purposes subdirectory [`MHLibDemos`](MHLibDemos/README.md) provides a package (not officially registered at JuliaHub), with basic implementations for the following classical combinatorial optimization problems, to which some of MHLib's metaheuristics are applied:
 
 - `OneMax`: basic test problem in which the goal is to set all digits in a binary
     string to `true`
@@ -101,12 +100,12 @@ for the following classical combinatorial optimization problems.
 - `MKP`: multi-constrained knapsack problem based on `SubsetVectorSolution`
 - `MISP`: maximum independent set problem based on `SubsetVectorSolution`
 
-There are the standalone demo applications `demo_maxsat.jl` and `demo_tsp.jl`, but
-see also the respective sections in `runtests.jl`.
+It is recommended to take the `MHLibDemos` package with one of the demos as template for 
+solving your own problem.
 
-It is recommended to take such a demo as template for solving your own problem.
-
+Further smaller usage examples can also be found in the test directory of the main package.
 
 ## News
 
 See [CHANGELOG.md](CHANGELOG.md)
+

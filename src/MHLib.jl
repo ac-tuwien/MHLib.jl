@@ -348,6 +348,7 @@ function git_version() :: String
 end
 
 # -----------------------------------------------------------
+using Reexport
 
 include("Settings.jl")
 include("Schedulers.jl")
@@ -356,9 +357,17 @@ include("LNSs.jl")
 include("ALNSs.jl")
 include("SubsetVectorSolutions.jl")
 include("PermutationSolutions.jl")
+@reexport using .Schedulers
+@reexport using .GVNSs
+@reexport using .LNSs
+@reexport using .ALNSs
+@reexport using .SubsetVectorSolutions
+@reexport using .PermutationSolutions
+
 
 
 const all_settings_cfgs = [
+        settings_cfg,
         Schedulers.settings_cfg,
         LNSs.settings_cfg,
         ALNSs.settings_cfg,
