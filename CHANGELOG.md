@@ -5,6 +5,9 @@ Major changes in releases:
 
 ## Upcoming
 
+## Version 0.1.9
+- bug fix in `MISPSolution.clear!` and `MKPSolution.clear!`, MKP.jl polished
+
 ## Version 0.1.8
 - all demo applications refined and moved into an own subpackage `MHLibDemos`
 - all symbols of submodules are now also re-exported by the main `MHLib` module

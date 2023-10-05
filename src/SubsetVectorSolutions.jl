@@ -157,7 +157,7 @@ Check correctness of solution; throw an exception if error detected.
 - `unsorted`: if set, it is not checked if the solution is sorted
 """
 function MHLib.check(s::SubsetVectorSolution; unsorted::Bool=true, kwargs...)
-    if !(1 <= s.sel <= length(s.x))
+    if !(0 <= s.sel <= length(s.x))
         error("Invalid attribute sel in solution: $(s.sel)")
     end
     if unselected_elems_in_x(s)

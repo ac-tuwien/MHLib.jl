@@ -14,4 +14,7 @@ using MHLibDemos
 # Command line arguments are parsed and used to set global parameters
 # use `@<filename>` to read parameters from configuration file `<filename>`
 # alternatively, they may also be provided here to the call as vector of strings
-solve_misp()
+# solve_misp()
+
+# for testing on a small random graph
+solve_misp(["--seed", "3", "--ifile", "gnm-10-13"])

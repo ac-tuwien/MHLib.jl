@@ -72,7 +72,7 @@ Solution to a Graph Coloring instance.
 It is a `VectorSolution{Int}`.
 
 Attributes
-- `x`: array with the assigned colors
+- `x`: vector with the assigned colors
 """
 mutable struct GraphColoringSolution <: VectorSolution{Int}
     inst::GraphColoringInstance
@@ -123,7 +123,7 @@ function MHLib.check(s::GraphColoringSolution; kwargs...)
     if sum(s.x .> s.inst.colors) >= 1
         error("Too many colors used")
     end
-    invoke(check, Tuple{supertype(typeof(s))}, s; kwargs...)
+    invoke(MHLib.check, Tuple{supertype(typeof(s))}, s; kwargs...)
 end
 
 

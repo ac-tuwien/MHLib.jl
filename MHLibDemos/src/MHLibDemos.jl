@@ -1,5 +1,6 @@
 module MHLibDemos
 
+using Revise
 using ArgParse
 using Graphs
 

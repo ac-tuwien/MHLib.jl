@@ -100,7 +100,7 @@ Base.copy(s::MISPSolution) =
     MISPSolution(s.inst, s.obj_val, s.obj_val_valid, copy(s.x), s.sel, copy(s.covered))
 
 Base.show(io::IO, s::MISPSolution) =
-    println(io, s.x)
+    println(io, s.x[1:s.sel])
 
 MHLib.calc_objective(s::MISPSolution) =
     s.sel > 0 ? sum(s.inst.p[s.x[1:s.sel]]) : 0
@@ -125,9 +125,9 @@ function MHLib.check(s::MISPSolution; kwargs...)
     end
 end
 
-function clear!(s::MISPSolution)
+function MHLib.clear!(s::MISPSolution)
     fill!(s.covered, 0)
-    invoke(clear!, Tuple{SubsetVectorSolution}, s)
+    invoke(MHLib.clear!, Tuple{SubsetVectorSolution}, s)
 end
 
 """

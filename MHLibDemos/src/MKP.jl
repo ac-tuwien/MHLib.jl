@@ -31,7 +31,7 @@ struct MKPInstance
     n::Int
     m::Int
     p::Vector{Int}
-    r::Array{Int, 2}
+    r::Matrix{Int}
     b::Vector{Int}
     r_min::Int
     obj_opt::Float64
@@ -43,32 +43,24 @@ end
 Read MKP instance from file.
 """
 function MKPInstance(file_name::String)
-    local n::Int
-    local m::Int
-    local p::Vector{Int}
-    local r::Array{Int,2}
-    local b::Vector{Int}
-    local r_min::Int
-    local obj_opt::Float64
-    all_values = Vector{Int}()
-
+    all_values = Int[]
     open(file_name) do f
         for line in eachline(f)
             for word in split(line)
                 push!(all_values, parse(Int,word))
             end
         end
-        n = all_values[1]
-        m = all_values[2]
-        if length(all_values) != 3+n+m*n+m
-            error("Invalid number of values in MKP instance file $(file_name)")
-        end
-        obj_opt = all_values[3]
-        p = Vector{Int}(all_values[4:4+n-1])
-        r = reshape(Vector{Int}(all_values[4+n:4+n+m*n-1]),(m,n))
-        b = Vector{Int}(all_values[4+n+m*n:4+n+m*n+m-1])
-        r_min = min(minimum(r),1)
     end
+    n = all_values[1]
+    m = all_values[2]
+    if length(all_values) != 3+n+m*n+m
+        error("Invalid number of values in MKP instance file $(file_name)")
+    end
+    obj_opt = all_values[3]
+    p = all_values[4:4+n-1]
+    r = reshape(all_values[4+n:4+n+m*n-1], (m,n))
+    b = all_values[4+n+m*n:4+n+m*n+m-1]
+    r_min = min(minimum(r),1)
     MKPInstance(n, m, p, r, b, r_min, obj_opt)
 end
 
@@ -108,7 +100,7 @@ Base.copy(s::MKPSolution) =
         copy(s.all_elements), s.sel)
 
 Base.show(io::IO, s::MKPSolution) =
-    println(io, s.x)
+    println(io, s.x[1:s.sel])
 
 MHLib.calc_objective(s::MKPSolution) =
     s.sel > 0 ? sum(s.inst.p[s.x[1:s.sel]]) : 0
@@ -138,9 +130,9 @@ function MHLib.check(s::MKPSolution; kwargs...)
     end
 end
 
-function clear!(s::MKPSolution)
+function MHLib.clear!(s::MKPSolution)
     fill!(s.y, 0)
-    invoke(clear, Tuple{SubsetVectorSolution}, s)
+    invoke(MHLib.clear!, Tuple{SubsetVectorSolution}, s)
 end
 
 """
