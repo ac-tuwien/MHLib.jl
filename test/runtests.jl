@@ -11,7 +11,7 @@ using Random
 using MHLib
 
 include("../MHLibDemos/src/MHLibDemos.jl")
-using .MHLibemos
+using .MHLibDemos
 
 
 # testsets to perform:
