@@ -4,12 +4,7 @@ using Revise
 using ArgParse
 using Graphs
 
-if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
-    include("../../src/MHLib.jl")
-    using .MHLib
-else
-    using MHLib
-end
+using MHLib
 
 export create_or_read_simple_graph
 

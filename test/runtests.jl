@@ -8,16 +8,10 @@ TestEnv.activate()
 # using Revise
 using Test
 using Random
-
-if isdefined(@__MODULE__, :LanguageServer)  # hack for VSCode to see symbols
-    include("../src/MHLib.jl")
-    using .MHLib
-else
-    using MHLib
-end
+using MHLib
 
 include("../MHLibDemos/src/MHLibDemos.jl")
-using .MHLibDemos
+using .MHLibemos
 
 
 # testsets to perform:
