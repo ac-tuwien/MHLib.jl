@@ -87,7 +87,6 @@ Further modules:
     Adaptive large neighborhood search (ALNS). It is realized via `LNS` and 
     `ALNSMethodSelector`.
 
-
 ## Demos
 
 For demonstration purposes subdirectory [`MHLibDemos`](MHLibDemos/README.md) provides a package (not officially registered at JuliaHub), with basic implementations for the following classical combinatorial optimization problems, to which some of MHLib's metaheuristics are applied:
@@ -104,6 +103,11 @@ It is recommended to take the `MHLibDemos` package with one of the demos as temp
 solving your own problem.
 
 Further smaller usage examples can also be found in the test directory of the main package.
+
+## Parameter Tuning with SMAC3
+
+Subdirectory `Tuning` contains examples on how SMAC3 can specifically be used for tuning
+algorithms implemented in Julia. See [Tuning/README.md](Tuning/README.md) for details.
 
 ## News
 
