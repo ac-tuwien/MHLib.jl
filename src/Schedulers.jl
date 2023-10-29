@@ -450,6 +450,9 @@ function perform_method_pair!(scheduler::Scheduler, destroy::MHMethod, repair::M
     t_destroyed = time()
     repair.func(sol, repair.par, res)
     t_end = time()
+    if scheduler.params.checkit
+        check(sol)
+    end                                      
     update_stats_for_method_pair!(scheduler, destroy, repair, sol, res, obj_old,
                                       t_destroyed - t_start, t_end - t_destroyed)
     return res
