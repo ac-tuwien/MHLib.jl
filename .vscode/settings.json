@@ -39,6 +39,7 @@
         "sched",
         "setdiff",
         "smac",
+        "smacdemo",
         "startswith",
         "struct",
         "subpackage",

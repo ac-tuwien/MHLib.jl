@@ -16,7 +16,7 @@ This can be achieved in different ways:
 
 - `smacdemo.py`
     This is similar to the above `smacdemo.jl`, but here the main code for SMAC is 
-    written as a Phyton script.
+    written as a Python script.
 
 - `smacdemo-with-julia-server.py`:
     Here, the main Python script spawns a number of Julia "server" subprocesses which 
