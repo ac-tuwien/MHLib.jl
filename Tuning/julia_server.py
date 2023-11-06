@@ -8,8 +8,7 @@ import subprocess
 from ConfigSpace import Configuration
 
 # start Julia subprocess and load relevant code
-julia = subprocess.Popen(["julia"], stdin=subprocess.PIPE,
-                         stdout=subprocess.PIPE)
+julia = subprocess.Popen(["julia"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 julia.stdin.write(b'include("julia-function-to-tune.jl")\n')
 julia.stdin.flush()
 reply = julia.stdout.readline()
@@ -17,14 +16,14 @@ print(reply, "Julia process started ................................")
 
 
 # exemplary wrapper for Julia function to optimize
-def f(config: Configuration, seed: int=0) -> float:
-    cmd = f'f({config["x"]}, {config["y"]}, \"{config["z"]}\")\n'
+def f(config: Configuration, instance, seed: int=0) -> float:
+    cmd = f'f(\"{instance}\", {config["x"]}, {config["y"]}, \"{config["z"]}\")\n'
     print("cmd: ", cmd.encode())
     julia.stdin.write(cmd.encode())
     julia.stdin.flush()
     reply = julia.stdout.readline()
     res = float(reply)
-    print("res: ", res)
+    print(cmd, "-> ", res)
     return res
 
 

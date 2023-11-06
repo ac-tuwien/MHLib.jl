@@ -14,11 +14,6 @@ This can be achieved in different ways:
     inefficient when the function to tune is comparably fast w.r.t. Julia's startup and
     pre-compile time.
 
-- `smacdemo.jl`:
-    Here we utilize Julia's possibility to interface with Python via PyCall. This allows
-    that SMAC3 can directly call the Julia function to tune. However, this approach is
-    restricted to pure sequential function evaluations.
-
 - `smacdemo.py`
     This is similar to the above `smacdemo.jl`, but here the main code for SMAC is 
     written as a Phyton script.

@@ -13,29 +13,39 @@ to one function evaluation.
 """
 
 from ConfigSpace import Configuration, ConfigurationSpace
-from smac import HyperparameterOptimizationFacade, Scenario
+from smac import AlgorithmConfigurationFacade, Scenario
 
 from dask.distributed import Client, LocalCluster
 import julia_server
 
 
 config_space = ConfigurationSpace({
-        "x": (0.1, 10.0), 
+        "x": (0.1, 4.0), 
         "y": (1, 3), 
         "z":["opt1", "opt2"],
     })
 
 
+# names of problem instances to be used for tuning
+instances = [f"a{i}" for i in range(3)]
+
+# features of the problem instances
+# in the simplest case just the index, or otherwise some more relevant features
+features = {f"a{i}": [i] for i in range(3)}
+
+
 if __name__ == "__main__":
 
     # Scenario object specifying the optimization environment
-    scenario = Scenario(config_space, deterministic=True, n_trials=100)
+    scenario = Scenario(config_space, deterministic=False, 
+                        instances=instances, instance_features=features,
+                        n_trials=200)
 
     # for parallel execution in a number of Julia subprocesses:
     # note that the number of threads per worker must be set to 1
     cluster = LocalCluster(threads_per_worker=1, n_workers=4)
     client = Client(address=cluster)
-    smac = HyperparameterOptimizationFacade(scenario, julia_server.f, overwrite=True,
+    smac = AlgorithmConfigurationFacade(scenario, julia_server.f, overwrite=True,
                                             dask_client=client)
     
     incumbent = smac.optimize()

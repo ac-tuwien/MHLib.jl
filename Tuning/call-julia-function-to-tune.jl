@@ -4,6 +4,12 @@ using ArgParse
 
 arg_table = ArgParseSettings()
 @add_arg_table arg_table begin
+    "--instance"
+        arg_type = String
+        required = true
+    "--instance_features"
+        arg_type = String
+        required = true
     "--seed"
         arg_type = Int
     "--x"
@@ -25,8 +31,8 @@ include("julia-function-to-tune.jl")
 
 args = parse_args(ARGS, arg_table)
 
-c = f(args["x"], args["y"], args["z"])
+c = f(args["instance"], args["x"], args["y"], args["z"])
 
 println("cost=", c)
-exit()
+# exit()
 
