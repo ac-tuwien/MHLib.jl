@@ -1,5 +1,8 @@
 #!/usr/bin/env -S julia --project=.
 
+# Julia script that parses command line arguments and calls function f
+# returns result via stdout
+
 using ArgParse
 
 arg_table = ArgParseSettings()
@@ -31,8 +34,8 @@ include("julia-function-to-tune.jl")
 
 args = parse_args(ARGS, arg_table)
 
-c = f(args["instance"], args["x"], args["y"], args["z"])
+c = f(args["instance"], args["seed"], args["x"], args["y"], args["z"])
 
 println("cost=", c)
-# exit()
+
 

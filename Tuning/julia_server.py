@@ -1,5 +1,5 @@
 # Module that starts a Julia subprocess and interfaces with it via stdin/stdout
-# to evaluate a function `f` many times.
+# to, e.g., evaluate a function `f` many times.
 # Most meaningful when function calls take considerable time so that parallelization
 # makes sense but times for starting an independent Julia process for each function 
 # call would still dominate a single function call.
@@ -17,7 +17,7 @@ print(reply, "Julia process started ................................")
 
 # exemplary wrapper for Julia function to optimize
 def f(config: Configuration, instance, seed: int=0) -> float:
-    cmd = f'f(\"{instance}\", {config["x"]}, {config["y"]}, \"{config["z"]}\")\n'
+    cmd = f'f(\"{instance}\", {seed}, {config["x"]}, {config["y"]}, \"{config["z"]}\")\n'
     print("cmd: ", cmd.encode())
     julia.stdin.write(cmd.encode())
     julia.stdin.flush()
