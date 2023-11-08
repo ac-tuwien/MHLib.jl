@@ -181,7 +181,7 @@ function LNSs.update_method_selector!(lns::LNS{ALNSMethodSelector},
     score = 0
     if case == :betterThanIncumbent
         score = sel.params.sigma1
-    elseif case == :betterThanCurrent
+    elseif case == :notWorseThanCurrent
         score = sel.params.sigma2
     elseif case == :acceptedAlthoughWorse
         score = sel.params.sigma3

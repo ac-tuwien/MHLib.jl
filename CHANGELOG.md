@@ -5,8 +5,12 @@ Major changes in releases:
 
 ## Upcoming
 
+## Version 0.1.10
+
 - subdirectory `Tuning` added with examples how to use SMAC3 for tuning parameters 
     algorithms implemented in Julia
+- the LNS variants now also accept new equally good solutions as new incumbents
+    with which to continue
 
 ## Version 0.1.9
 - bug fix in `MISPSolution.clear!` and `MKPSolution.clear!`, MKP.jl polished

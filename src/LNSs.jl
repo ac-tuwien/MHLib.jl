@@ -84,7 +84,7 @@ end
 
 Enumeration type for type of result of method application.
 """
-@enum ResultCase betterThanIncumbent betterThanCurrent acceptedAlthoughWorse rejected
+@enum ResultCase betterThanIncumbent notWorseThanCurrent acceptedAlthoughWorse rejected
 
 
 """
@@ -152,9 +152,10 @@ repair!(s::Solution, par::Int, result::Result) =
     metropolis_criterion(lns, sol_new, sol_current)
 
 Apply Metropolis criterion, return true when `sol_new` should be accepted.
+When the new solution has equal objective value, we also accept it.
 """
 function metropolis_criterion(lns::LNS, sol_new::Solution, sol_current::Solution)
-    if is_better(sol_new, sol_current) :: Bool
+    if !is_worse(sol_new, sol_current) :: Bool
         return true
     end
     if iszero(lns.temperature)
@@ -186,10 +187,10 @@ function update_solution!(lns::LNS, sol_new::Solution, sol::Solution)
         # print("better than incumbent")
         copy!(sol, sol_new)
         case = betterThanIncumbent
-    elseif is_better(sol_new, sol)
-        # print("better than current")
+    elseif !is_worse(sol_new, sol)
+        # print("not worse than current")
         copy!(sol, sol_new)
-        case = betterThanCurrent
+        case = notWorseThanCurrent
     elseif is_better(sol, sol_new) && metropolis_criterion(lns, sol_new, sol)
         # print("accepted although worse")
         copy!(sol, sol_new)
