@@ -41,7 +41,7 @@ scenario = Scenario(config_space2, deterministic=False,
                     n_trials=200)
 
 
-variant_to_use = sys.argv[1] if len(sys.argv) > 1 else 1
+variant_to_use = sys.argv[1] if len(sys.argv) > 1 else "1"
 
 if variant_to_use == "1":
 
