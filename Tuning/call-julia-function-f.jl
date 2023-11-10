@@ -3,38 +3,24 @@
 # Julia script that parses command line arguments and calls function f
 # returns result via stdout
 
-using ArgParse
-
-arg_table = ArgParseSettings()
-@add_arg_table arg_table begin
-    "--instance"
-        arg_type = String
-        required = true
-    "--instance_features"
-        arg_type = String
-        required = true
-    "--seed"
-        arg_type = Int
-    "--x"
-        arg_type = Float64
-        required = true
-    "--y"
-        arg_type = Int
-        required = true
-    "--z"
-        arg_type = String
-        required = true
+# put provided command line arguments with their values into a dictionary
+d = Dict{String, String}()
+for arg in ARGS
+    (name, value) = split(arg, "=")
+    d[name] = value
 end
 
 include("julia-function-to-tune.jl")
 
 # open("args.txt", "w") do f
-#     println(f, ARGS)
+#     println(f, d)
 # end
 
-args = parse_args(ARGS, arg_table)
-
-c = f(args["instance"], args["seed"], args["x"], args["y"], args["z"])
+c = f(d["--instance"], parse(Int, d["--seed"]), 
+        parse(Float64, d["--x"]), 
+        parse(Int, d["--y"]), 
+        d["--z"],
+    )
 
 println("cost=", c)
 
