@@ -5,7 +5,8 @@
 
 _This project is still in early development, any feedback is much appreciated!_
 
-`MHLib.jl` is a collection of modules, types, and functions  in Julia 1.8+ supporting
+`MHLib.jl` is a collection of modules, types, and functions  in 
+[Julia](https://julialang.org/) supporting
 the effective implementation of metaheuristics and certain hybrid optimization approaches
 for solving primarily combinatorial optimization problems.
 

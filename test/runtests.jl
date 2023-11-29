@@ -1,11 +1,6 @@
 # always run this code in the test directory and the test environment
 cd(@__DIR__)
-using Pkg; Pkg.activate(".")
-using TestEnv
-Pkg.activate("..")
-TestEnv.activate()
 
-# using Revise
 using Test
 using Random
 using MHLib
