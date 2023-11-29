@@ -226,6 +226,7 @@ end
 
 function solve_graph_coloring(args=ARGS)
     println("Graph Coloring Demo version $(git_version())\nARGS: ", args)
+    args isa AbstractString && (args = split(args))
 
     # We set some new default values for parameters and parse all relevant arguments
     settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
@@ -248,8 +249,9 @@ function solve_graph_coloring(args=ARGS)
     return sol
 end
 
-# To run from REPL, use `MHLibDemos` and call `solve_graph_coloring(<args>)` where 
-# `<args>` is a list of strings being passed as arguments for setting global parameters.
+# To run from REPL, use `MHLibDemos` and call `solve_graph_coloring(<args>)` where `<args>`
+# is a single string or list of strings being passed as arguments for setting global 
+# parameters, e.g. `solve_graph_coloring("--seed=1 --mh_titer=120")`.
 # `@<filename>` may be used to read arguments from a configuration file <filename>
 
 # Run with profiler:

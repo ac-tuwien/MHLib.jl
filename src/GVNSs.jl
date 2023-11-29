@@ -55,7 +55,7 @@ end
     vnd(scheduler, solution)
 
 Perform variable neighborhood descent (VND) on given solution.
-Return true if a global termination condition is fulfilled, else False.
+Return true if a global termination condition is fulfilled, else false.
 """
 function vnd!(gvns::GVNS, sol::Solution)::Bool
     sol2 = copy(sol)
@@ -88,10 +88,10 @@ Perform general variable neighborhood search (GVNS) to given solution.
 """
 function gvns!(gvns::GVNS, sol::Solution)
     sol2 = copy(sol)
-    if vnd!(gvns, sol2) || isempty(gvns.meths_sh)
+    use_vnd = !isempty(gvns.meths_li)
+    if use_vnd && vnd!(gvns, sol2) || isempty(gvns.meths_sh)
         return
     end
-    use_vnd = !isempty(gvns.meths_li)
     improvement_found = true
     while improvement_found
         for m in next_method(gvns.meths_sh, repeat=true)

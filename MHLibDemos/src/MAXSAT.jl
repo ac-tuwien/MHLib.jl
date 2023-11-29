@@ -200,6 +200,7 @@ end
 
 function solve_maxsat(args=ARGS)
     println("MAXSAT Demo version $(git_version())\nARGS: ", args)
+    args isa AbstractString && (args = split(args))
 
     # set some new default values for parameters and parse all relevant arguments
     settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/maxsat-adv1.cnf")
@@ -245,8 +246,8 @@ function solve_maxsat(args=ARGS)
 end
 
 # To run from REPL, use MHLibDemos and call `solve_maxsat(<args>)` where `<args>` is 
-# a list of strings being passed as arguments for setting global parameters.
+# a single string or list of strings being passed as arguments for setting global 
+# parameters, e.g. `solve_maxsat("--seed=1 --mh_titer=120")`.
 # `@<filename>` may be used to read arguments from a configuration file <filename>
-
 # Run with profiler:
 # @profview solve_maxsat(args)

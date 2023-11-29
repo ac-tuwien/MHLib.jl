@@ -5,8 +5,11 @@ Major changes in releases:
 
 ## Upcoming
 
-## Version 0.1.10
+## Version 0.1.11
+- Fix in ``GVNS`: Empty local search method list led to an infinite loop 
+    [issue #5](/../../issues/5)
 
+## Version 0.1.10
 - subdirectory `Tuning` added with examples how to use SMAC3 for tuning parameters 
     algorithms implemented in Julia
 - the LNS variants now also accept new equally good solutions as new incumbents

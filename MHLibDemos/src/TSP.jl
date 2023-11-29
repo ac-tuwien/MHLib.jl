@@ -253,6 +253,7 @@ end
 
 function solve_tsp(args=ARGS)
     println("TSP Demo version $(git_version())\nARGS: ", args)
+    args isa AbstractString && (args = split(args))
 
     # set some new default values for parameters and parse all relevant arguments
     settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/xqf131.tsp")
@@ -285,8 +286,9 @@ function solve_tsp(args=ARGS)
     return sol
 end
 
-# To run from REPL, use MHLibDemos and call `solve_tsp(<args>)` where `<args>` is 
-# a list of strings being passed as arguments for setting global parameters.
+# To run from REPL, use MHLibDemos and call `solve_tsp(<args>)` where `<args>` is
+# a single string or list of strings being passed as arguments for setting global 
+# parameters, e.g. `solve_tsp("--seed=1 --mh_titer=120")`.
 # `@<filename>` may be used to read arguments from a configuration file <filename>
 
 # Run with profiler:
