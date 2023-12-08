@@ -17,4 +17,4 @@ using MHLibDemos
 # solve_misp()
 
 # for testing on a small random graph
-solve_misp(["--seed", "3", "--ifile", "gnm-10-13"])
+solve_misp("--seed=3 --ifile=gnm-10-13")

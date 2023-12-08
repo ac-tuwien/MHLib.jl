@@ -5,8 +5,12 @@ Major changes in releases:
 
 ## Upcoming
 
+## Version 0.1.12
+- Fix in `GVNS` and `LNS`: The termination condition has not been considered directly after
+    performing the initial construction method(s).
+    
 ## Version 0.1.11
-- Fix in ``GVNS`: Empty local search method list led to an infinite loop 
+- Fix in `GVNS`: Empty local search method list led to an infinite loop 
     [issue #5](/../../issues/5)
 
 ## Version 0.1.10

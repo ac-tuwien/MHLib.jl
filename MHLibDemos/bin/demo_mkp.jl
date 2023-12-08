@@ -13,5 +13,5 @@ using MHLibDemos
 
 # Command line arguments are parsed and used to set global parameters
 # use `@<filename>` to read parameters from configuration file `<filename>`
-# alternatively, they may also be provided here to the call as vector of strings
+# alternatively, they may also be provided here in a string
 solve_mkp()

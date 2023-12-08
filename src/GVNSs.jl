@@ -129,7 +129,8 @@ Actually performs the construction heuristics followed by the GVNS.
 function MHLib.run!(gvns::GVNS)
     sol = copy(gvns.scheduler.incumbent)
     @assert gvns.scheduler.incumbent_valid || !isempty(gvns.meths_ch)
-    perform_sequentially!(gvns.scheduler, sol, gvns.meths_ch)
+    terminate = perform_sequentially!(gvns.scheduler, sol, gvns.meths_ch)
+    terminate && return
     gvns!(gvns, sol)
 end
 

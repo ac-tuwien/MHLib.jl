@@ -325,15 +325,16 @@ end
     perform_sequentially!(scheduler, solution, methods)
 
 Applies the given methods sequentially, finally keeping the best solution as incumbent.
+
+Returns true if the termination condition has been fulfilled, else false.
 """
 function perform_sequentially!(s::Scheduler, sol::Solution, meths::Vector{MHMethod})
     for m in next_method(meths)
         res = perform_method!(s, m, sol)
-        if res.terminate
-            break
-        end
         update_incumbent!(s, sol, time() - s.time_start)
+        res.terminate && return true
     end
+    return false
 end
 
 
