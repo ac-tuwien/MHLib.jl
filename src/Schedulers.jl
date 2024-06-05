@@ -13,6 +13,7 @@ using Printf
 using Random
 using DataStructures  # SortedDict for method_stats
 using MHLib
+using Logging, LoggingExtras
 
 export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerParameters, 
     perform_method!, next_method, update_incumbent!, check_termination, 
@@ -164,8 +165,7 @@ mutable struct Scheduler{TSolution <: Solution}
     iteration::Int
     time_start::Float64
     run_time::Union{Float64, Missing}
-    # logger = logging.getLogger("pymhlib") TODO
-    # iter_logger = logging.getLogger("pymhlib_iter")
+    logger::AbstractLogger
     params::SchedulerParameters
 end
 
@@ -349,8 +349,10 @@ function main_results(s::Scheduler)
         "T total iterations: $(s.iteration)\n" *
         @sprintf("T best time [s]: %.3f\n", s.incumbent_time) *
         @sprintf("T total time [s]: %.4f\n", s.run_time)
-    # TODO self.logger.info(LogLevel.indent(s))
     print(str)
+    with_logger(s.logger) do 
+        @logmsg Log.SummaryLevel str
+    end
     check(s.incumbent)
 end
 
@@ -383,8 +385,10 @@ Write iteration log header.
 function log_iteration_header(sched::Scheduler)
     s = "I       iter             best          obj_old          obj_new" *
         "        time              method info"
-    # TODO iter_logger.info(sched, s)
     println(s)
+    with_logger(sched.logger) do 
+        @logmsg Log.HeaderLevel s
+    end 
 end
 
 
@@ -428,8 +432,10 @@ function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::
         s = @sprintf("I %10d %16.5f %16.5f %16.5f%12.4f%20s %s",
             sched.iteration, obj(sched.incumbent), obj_old, obj(new_sol),
             time()-sched.time_start, method_name, log_info)
-        # TODO self.iter_logger.info(s)
         println(s)
+        with_logger(sched.logger) do 
+            @logmsg Log.IterLevel s iter=sched.iteration best_obj=obj(sched.incumbent) prev_obj=obj_old cur_obj=obj(new_sol) time=time()-sched.time_start method=method_name info=log_info
+        end
     end
 end
 
@@ -559,7 +565,9 @@ function method_statistics(s::Scheduler)
     res *= "\n"
 
     println(res)
-    # self.logger.info(LogLevel.indent(s))
+    with_logger(s.logger) do 
+        @logmsg Log.StatsLevel res
+    end
 end
 
 
