@@ -182,8 +182,9 @@ valid initial solution; otherwise it is assumed to be uninitialized.
 function Scheduler(sol::Solution, methods::Vector{MHMethod},
         consider_initial_sol::Bool=false; params::SchedulerParameters=SchedulerParameters())
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
+    logger = get_logger(sol)
     s = Scheduler{typeof(sol)}(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
-        time(), missing, params)
+        time(), missing, logger, params)
     log_iteration_header(s)
     if s.incumbent_valid
         log_iteration(s, "-", NaN, sol, true, true, "")
