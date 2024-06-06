@@ -2,7 +2,7 @@
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "faa2b2dfef1bfef34c5517369064a3f7a7ced4e2"
+project_hash = "173a5d24d7b4bfc564ba26748cb660b12b7a8032"
 
 [[deps.ArgParse]]
 deps = ["Logging", "TextWrap"]
@@ -117,12 +117,6 @@ version = "0.3.26"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
-
-[[deps.LoggingExtras]]
-deps = ["Dates", "Logging"]
-git-tree-sha1 = "c1dd6d7978c12545b4179fb6153b9250c96b0075"
-uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
-version = "1.0.3"
 
 [[deps.Markdown]]
 deps = ["Base64"]
