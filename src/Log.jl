@@ -1,13 +1,13 @@
 """
     Log
 
-Custom logging functionallity of MHLib.  Implements a basic logger type and methods to generate differnt
-loggers based on the input arguments.  Also provides functionallity to incoperate custom user defined loggers. 
+Custom logging functionallity for MHLib.  Implements a basic logger type and methods required methods.  
+Provides a method to return a simple logger and allows users to overload this method to incoperate custom 
+user defined loggers. Additionally exports differnt methods to output optimization results and interation data.
 """
 module Log
 
 # Includes
-using ArgParse
 using MHLib
 using MHLib.Schedulers
 using Printf
@@ -35,16 +35,6 @@ LogLevel for iteration header string
 """
 const HeaderLevel = LogLevel(4)
 
-"""
-Standard ArgParseSettings always used.
-"""
-const settings_cfg = ArgParseSettings()
-@add_arg_table! settings_cfg begin
-    "--log_file"
-    help = "File to log outputs. Input filename or \"None\" to dissable"
-    arg_type = String
-    default = "None"
-end
 
 # --------------------- Message Logger ---------------------
 struct MHLogger <: AbstractLogger
@@ -78,23 +68,25 @@ function Logging.handle_message(logger::MHLogger,
 end
 
 
-# --------------------- Methods -----------------------
+# --------------------- Logger Generation Method -----------------------
 """
     get_logger(::Solution)
 
-Returns `logger<:AbstractLogger` to log output to.  If the argument `--log_file` is set outputs will be
+Returns `logger<:AbstractLogger` to log output to.  If the argument `--ofile` is set outputs will be
 saved to the file specified as well as to `stdout`.  Additionally users can overload the `get_logger` 
-method with their own deffinition to custom the logging output. 
+method with their own deffinition to customize the logging output. 
 """
 function get_logger(sol::Solution)
-    if settings[:log_file] == "None"
+    if settings[:ofile] == ""
         logger = NullLogger()
     else
-        logger = MHLogger(settings[:log_file])
+        logger = MHLogger(settings[:ofile])
     end
     return logger
 end
 
+
+# --------------------- Output Logging Methods ---------------------
 """
     log_iteration_header(scheduler)
 

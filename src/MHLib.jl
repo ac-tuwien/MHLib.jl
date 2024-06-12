@@ -372,7 +372,6 @@ const all_settings_cfgs = [
         Schedulers.settings_cfg,
         LNSs.settings_cfg,
         ALNSs.settings_cfg,
-        Log.settings_cfg,
     ]
 
 

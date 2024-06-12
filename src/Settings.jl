@@ -40,6 +40,10 @@ const settings = Dict{Symbol,Any}()
         help = "problem instance file"
         arg_type = String
         default = ""
+    "--ofile"
+        help = "File to log outputs"
+        arg_type = String
+        default = ""
 end
 
 
