@@ -6,13 +6,11 @@ racing mechanisms and random forests.
 
 This directory contains an example with three different variants on how SMAC3 can 
 specifically be used for tuning parameters of algorithms implemented in Julia. 
-This can be achieved in different ways.
 
 The main script is `tuning.py`, and the variant to be used can be provided as
 command line argument:
 
-
-1)  This variant uses the Python->Julia interface provided by the Python package `pyjulia`.
+1)  This variant uses the Python->Julia interface provided by the Python package `juliacall`.
     The julia function `f` can here be called from SMAC3 via a simple
     Python wrapper function. A limitation of this approach is that no parallelization
     via multithreading or multiprocessing is possible.
@@ -30,6 +28,6 @@ command line argument:
 
 Note that the demo needs to be started from the `Tuning` subdirectory.
 
-Ensure that Python is installed with the packages `julia`, `smac` and `ConfigSpace`.
+Ensure that Python is installed with the packages `juliacall`, `smac` and `ConfigSpace`.
 
 

@@ -1,13 +1,27 @@
 """
     Log
 
-Custom logging functionallity for MHLib.  Implements a basic logger type and methods required methods.  
-Provides a method to return a simple logger and allows users to overload this method to incoperate custom 
-user defined loggers. Additionally exports differnt methods to output optimization results and interation data.
+Custom logging functionallity for MHLib.  
+    
+Implements a basic logger type and required methods.  
+Provides a method to return a simple logger and allows users to overload this method to 
+incoperate custom user defined loggers. Additionally exports differnt methods to 
+output optimization results and interation data.
+
+The logging process works as follows.
+
+- If the user does not set the `--ofile` argument than no log file is created. 
+    Print statements are still sent to stdout as is normal
+- If the user does set the `--ofile` argument then by default a simple logger is 
+    created with the `get_logger()` function. This logger is an instance of the 
+    MHLogger type that simply writes the message directly to a file with 
+    no additional information.
+- If the user overloads the `get_logger` method than any logger can be returned. 
+    This allows for the user to create their own custom loggers that save the solution
+    data in different ways.
 """
 module Log
 
-# Includes
 using MHLib
 using MHLib.Schedulers
 using Printf
@@ -17,7 +31,7 @@ using Logging
 export  log_iteration_header, log_iteration, method_statistics, main_results
 
 
-# Define Log Level Constants
+# Define log level Constants
 """
 LogLevel for iteration data
 """
@@ -72,8 +86,10 @@ end
 """
     get_logger(::Solution)
 
-Returns `logger<:AbstractLogger` to log output to.  If the argument `--ofile` is set outputs will be
-saved to the file specified as well as to `stdout`.  Additionally users can overload the `get_logger` 
+Returns `logger <: AbstractLogger` to log output to.  
+
+If the argument `--ofile` is set output will be saved to the file specified 
+as well as to `stdout`.  Additionally users can overload the `get_logger` 
 method with their own deffinition to customize the logging output. 
 """
 function get_logger(sol::Solution)
@@ -153,13 +169,7 @@ end
 
 Safe division: return x/y if y!=0 and nan otherwise.
 """
-function sdiv(x::Real, y::Real)
-    if y == 0
-        return NaN
-    else
-        return x / y
-    end
-end
+sdiv(x::Real, y::Real) = (y == 0) ? NaN : x/y
 
 """
     method_statistics(s::Scheduler)
@@ -237,4 +247,4 @@ function main_results(s::Scheduler)
 end
 
 
-end
+end  # module

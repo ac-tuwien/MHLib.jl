@@ -29,6 +29,7 @@ Vienna, Austria, since 2020.
 - Nikolaus Frohner
 - Thomas Jatschka
 - Fabio Oberweger
+- James Mulhern
 
 ## Installation
 

@@ -48,15 +48,15 @@ if variant_to_use == "1":
     # ----- Variant 1: Call Julia function via the Python->Julia interface
     # limited to a single process/thread, but Julia is started only once
 
-    from julia import Main
-    from julia import Pkg; Pkg.activate(".")  # possibly activate correct Julia environment
-    Main.include("julia-function-to-tune.jl")  # or Main.using("ModuleOrPackageToUse")
+    from juliacall import Main as jl
+    from juliacall import Pkg; Pkg.activate(".")  # activate correct Julia environment
+    jl.include("julia-function-to-tune.jl")  # or Main.using("ModuleOrPackageToUse")
 
     # exemplary wrapper for Julia function to tune
     def f(config: Configuration, instance: str, seed: int) -> float:
         print(f'f({instance}, {seed}, {config["x"]}, {config["y"]}, {config["z"]})', 
               end=" -> ")
-        res = Main.f(instance, seed, config["x"], config["y"], config["z"])
+        res = jl.f(instance, seed, config["x"], config["y"], config["z"])
         print(res)
         return res
     

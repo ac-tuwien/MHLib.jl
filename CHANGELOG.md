@@ -5,6 +5,10 @@ Major changes in releases:
 
 ## Upcoming
 
+## Version 0.1.13
+- The logging possibilities were extended by the new `Logging` 
+- In the Python code of `Tuning`, package `julia` is replaced by the newer `juliacall`.
+
 ## Version 0.1.12
 - Fix in `GVNS` and `LNS`: The termination condition has not been considered directly after
     performing the initial construction method(s).
