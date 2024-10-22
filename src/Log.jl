@@ -31,26 +31,44 @@ using Logging
 export  log_iteration_header, log_iteration, method_statistics, main_results
 
 
-# Define log level Constants
+# Define log level constants
+
 """
-LogLevel for iteration data
+    IterLevel
+
+LogLevel for iteration data.
 """
 const IterLevel = LogLevel(1)
+
 """
-LogLevel for optimization statistics data
+    StatsLevel
+
+LogLevel for optimization statistics data.
 """
 const StatsLevel = LogLevel(2)
+
 """
-LogLevel for optimization results summary
+    SummaryLevel
+
+LogLevel for optimization results summary.
 """
 const SummaryLevel = LogLevel(3)
+
 """
-LogLevel for iteration header string
+    HeaderLevel
+
+LogLevel for iteration header string.
 """
 const HeaderLevel = LogLevel(4)
 
 
 # --------------------- Message Logger ---------------------
+
+"""
+    MHLogger
+
+Custom logger type for MHLib.
+"""
 struct MHLogger <: AbstractLogger
     io::IO                          # Output IO Stream
     levels::Vector{LogLevel}        # Use empty vector to enable all levels
@@ -62,27 +80,23 @@ MHLogger(file::String) = MHLogger(open(file, "w"), Vector{LogLevel}())
 MHLogger(file::String, lvls::Vector{LogLevel}) = MHLogger(open(file,"w"), lvls)
 
 # Required Logging Methods
-function Logging.min_enabled_level(logger::MHLogger)
-    return isempty(logger.levels) ? Logging.BelowMinLevel : minimum(logger.levels)
-end
+Logging.min_enabled_level(logger::MHLogger) =
+    isempty(logger.levels) ? Logging.BelowMinLevel : minimum(logger.levels)
 
-function Logging.shouldlog(logger::MHLogger, level, _module, group, id) 
-    return isempty(logger.levels) ? true : in(level, logger.levels)
- end
+Logging.shouldlog(logger::MHLogger, level, _module, group, id) =
+    isempty(logger.levels) ? true : in(level, logger.levels)
 
 Logging.catch_exceptions(logger::MHLogger) = true
 
-function Logging.handle_message(logger::MHLogger,
-    lvl, msg, _mod, group, id, file, line;
-    kwargs...)
-
-    # Writes message to IO stream and then flushes the stream
+function Logging.handle_message(logger::MHLogger, lvl, msg, _mod, group, id, file, line;
+        kwargs...)
     println(logger.io, msg) 
     flush(logger.io)
 end
 
 
-# --------------------- Logger Generation Method -----------------------
+# --------------------- Logger generation method -----------------------
+
 """
     get_logger(::Solution)
 
@@ -92,7 +106,7 @@ If the argument `--ofile` is set output will be saved to the file specified
 as well as to `stdout`.  Additionally users can overload the `get_logger` 
 method with their own deffinition to customize the logging output. 
 """
-function get_logger(sol::Solution)
+function get_logger(::Solution)
     if settings[:ofile] == ""
         logger = NullLogger()
     else
@@ -102,7 +116,7 @@ function get_logger(sol::Solution)
 end
 
 
-# --------------------- Output Logging Methods ---------------------
+# --------------------- Output logging methods ---------------------
 """
     log_iteration_header(scheduler)
 

@@ -60,14 +60,20 @@ Return true if a global termination condition is fulfilled, else false.
 function vnd!(gvns::GVNS, sol::Solution)::Bool
     sol2 = copy(sol)
     improvement_found = true
-    while improvement_found
+    is_local_optimum = false
+    while improvement_found && !is_local_optimum
         for m in next_method(gvns.meths_li)
+            is_local_optimum = false
             res = perform_method!(gvns.scheduler, m, sol2)
             if is_better(sol2, sol)
                 copy!(sol, sol2)
                 res.terminate && return true
                 improvement_found = true
-                break
+                if res.is_local_optimum
+                    is_local_optimum = true
+                else
+                    break
+                end
             else
                 res.terminate && return true
                 if res.changed

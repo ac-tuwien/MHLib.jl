@@ -29,6 +29,7 @@
         "issorted",
         "isvalid",
         "julia",
+        "juliacall",
         "lfreq",
         "lnewinc",
         "MISP",

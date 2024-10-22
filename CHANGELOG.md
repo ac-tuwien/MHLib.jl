@@ -3,7 +3,10 @@
 
 Major changes in releases:
 
-## Upcoming
+## Version 0.1.14
+- `Results` from `Scheduler` is extended with field `is_local_optimum` to be able to 
+    indicate if the solution is a local optimum in respect to the current method and it
+    therefore does not make sense to apply this method again; used within VND.
 
 ## Version 0.1.13
 - The logging possibilities were extended by the new `Logging` 
