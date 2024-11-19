@@ -5,7 +5,7 @@
 
 Demo function to tune with SMAC3 in different ways.
 """
-function f(instance::AbstractString, seed::Int, x::Float64, y::Int, z::String)::Float64
+function f(instance::AbstractString, seed::Int, x::Float64, y::Int, z::AbstractString)::Float64
     # just some busy waiting:
     xx=3
     for i in 1:10000000

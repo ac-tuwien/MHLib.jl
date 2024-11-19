@@ -3,6 +3,9 @@
 
 Major changes in releases:
 
+## Version 0.1.15
+- `Tuning`renamed to `tuning`and small fixes in it, updates for Julia 1.11.
+
 ## Version 0.1.14
 - `Results` from `Scheduler` is extended with field `is_local_optimum` to be able to 
     indicate if the solution is a local optimum in respect to the current method and it

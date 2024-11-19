@@ -18,7 +18,7 @@ command line argument:
 2)  Here, for each call of the function to tune, a new Julia process is started. While this
     approach allows for parallelization, also using a compute cluster, it can be quite
     inefficient when the function to tune is comparably fast w.r.t. Julia's startup and
-    pre-compile time.
+    pre-compile times.
 
 3) Here, the main Python script spawns a fixed number of Julia "server" subprocesses
     realized by `julia_server.jl`, which accept function calls, perform them, 
@@ -26,8 +26,9 @@ command line argument:
     In this way multiprocessing is utilized, but the overhead of starting 
     a new Julia process for each function call is avoided.
 
-Note that the demo needs to be started from the `Tuning` subdirectory.
+Note that the demo needs to be started from the `tuning` subdirectory.
 
-Ensure that Python is installed with the packages `juliacall`, `smac` and `ConfigSpace`.
+Ensure that Python is installed with current versions of  packages `juliacall`, `smac`, 
+and `ConfigSpace`.
 
 

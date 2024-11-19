@@ -16,7 +16,7 @@ include("julia-function-to-tune.jl")
 #     println(f, d)
 # end
 
-c = f(d["--instance"], parse(Int, d["--seed"]), 
+c = f(d["--instance"], parse(Int, d["--seed"]),
         parse(Float64, d["--x"]), 
         parse(Int, d["--y"]), 
         d["--z"],

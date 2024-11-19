@@ -44,7 +44,8 @@ installed via
 
 ## Major Components
 
-Note that `MHLib.jl` is still behind the capabilities of the Python `pymhlib`, however, much more performant.
+Note that `MHLib.jl` is still behind the capabilities of the Python `pymhlib`, 
+however, much more performant.
 
 The main module provides the following types for candidate solutions and various
 functions for them:
@@ -91,7 +92,10 @@ Further modules:
 
 ## Demos
 
-For demonstration purposes subdirectory [`MHLibDemos`](MHLibDemos/README.md) provides a package (not officially registered at JuliaHub), with basic implementations for the following classical combinatorial optimization problems, to which some of MHLib's metaheuristics are applied:
+For demonstration purposes subdirectory [`MHLibDemos`](MHLibDemos/README.md) provides 
+a package (not officially registered at JuliaHub), with basic implementations for the 
+following classical combinatorial optimization problems, to which some of 
+MHLib's metaheuristics are applied:
 
 - `OneMax`: basic test problem in which the goal is to set all digits in a binary
     string to `true`

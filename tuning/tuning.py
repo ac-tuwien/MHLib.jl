@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 # Demo for using SMAC3 to optimize the configuration of a Julia algorithm.
 
-# Ensure that Python is installed with the packages  `pyjulia`, `smac` and `ConfigSpace`
+# Ensure that Python is installed with the packages  `juliacall`, `smac` and `ConfigSpace`.
+# You may provide 1, 2, or 3 as command line argument to select the variant to use.
 
 
 import ConfigSpace
 from ConfigSpace import Configuration, ConfigurationSpace
-from smac import AlgorithmConfigurationFacade, Scenario
+from smac import AlgorithmConfigurationFacade, HyperparameterOptimizationFacade, Scenario
+from smac.intensifier.intensifier import Intensifier
 import os
 import sys
+
+# print(os.getcwd()); os.chdir("tuning") #!!!
+
 
 # simple way to specify a configuration space
 config_space = ConfigurationSpace({
@@ -19,7 +24,7 @@ config_space = ConfigurationSpace({
 
 # alternative long form, advanced configuration aspects possible:
 config_space2 = ConfigurationSpace()
-config_space2.add_hyperparameters([
+config_space2.add([
     ConfigSpace.UniformFloatHyperparameter("x", 0.1, 4.0),
     ConfigSpace.UniformIntegerHyperparameter("y", 1, 3),
     ConfigSpace.CategoricalHyperparameter("z", ["opt1", "opt2"]),
@@ -29,11 +34,11 @@ config_space2.add_hyperparameters([
 instance_dir = "../test/data"
 # names of problem instances to be used for tuning
 instances = [fn for fn in os.listdir(instance_dir) if fn.startswith("maxsat")]
+instances = instances[:1]  # limit to first two instances for testing
 
-# features of the problem instances
+# a mapping of the problem instances to their features,
 # in the simplest case just the index, or otherwise some more relevant features
 features = {fn: [i] for (i, fn) in enumerate(instances)}
-# names of problem instances to be used for tuning
 
 # Scenario object specifying the optimization environment
 scenario = Scenario(config_space2, deterministic=False, 
@@ -54,13 +59,15 @@ if variant_to_use == "1":
 
     # exemplary wrapper for Julia function to tune
     def f(config: Configuration, instance: str, seed: int) -> float:
-        print(f'f({instance}, {seed}, {config["x"]}, {config["y"]}, {config["z"]})', 
-              end=" -> ")
-        res = jl.f(instance, seed, config["x"], config["y"], config["z"])
+        x = float(config["x"]); y = int(config["y"]); z = str(config["z"])
+        print(f'f({instance}, {seed}, {x}, {y}, {y})', end=" -> ")
+        res = jl.f(instance, seed, x, y, z)
         print(res)
         return res
     
     smac = AlgorithmConfigurationFacade(scenario, f, overwrite=True)
+    # smac = HyperparameterOptimizationFacade(scenario, f, overwrite=True)
+
 
 
 elif variant_to_use == "2":
