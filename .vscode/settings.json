@@ -52,5 +52,5 @@
         "typeof",
         "uuid"
     ],
-    "julia.environmentPath": "/home/guenther/proj/MHLib/MHLibDemos"
+    "julia.environmentPath": "MHLibDemos"
 }
