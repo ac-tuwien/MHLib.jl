@@ -2,7 +2,7 @@
 
 julia_version = "1.11.2"
 manifest_format = "2.0"
-project_hash = "6b69c1bd75145b6c86fff7999db198a2798d1f53"
+project_hash = "67f3892e8167970b14fba20735334c89d030eab8"
 
 [[deps.AliasTables]]
 deps = ["PtrArrays", "Random"]
@@ -179,10 +179,10 @@ uuid = "6f1432cf-f94c-5a45-995e-cdbf5db27b0b"
 version = "3.1.0"
 
 [[deps.MHLib]]
-deps = ["ArgParse", "DataStructures", "Logging", "Printf", "Random", "Reexport", "StatsBase", "TestItemRunner", "TestItems"]
-path = ".."
+deps = ["ArgParse", "DataStructures", "Logging", "Printf", "Random", "StatsBase", "Test", "TestItemRunner", "TestItems"]
+path = "../MHLib"
 uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
-version = "0.1.16"
+version = "0.2.0"
 
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
@@ -268,11 +268,6 @@ version = "1.11.0"
 deps = ["SHA"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 version = "1.11.0"
-
-[[deps.Reexport]]
-git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
-uuid = "189a3867-3050-52da-a836-e630ba90ab69"
-version = "1.2.2"
 
 [[deps.Requires]]
 deps = ["UUIDs"]

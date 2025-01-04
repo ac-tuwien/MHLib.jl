@@ -3,7 +3,7 @@
 [![Build Status](https://github.com/ac-tuwien/MHLib.jl/workflows/CI/badge.svg)](https://github.com/ac-tuwien/MHLib.jl/actions?query=workflow%3ACI+branch%3Amaster)
 [![codecov.io](http://codecov.io/github/ac-tuwien/MHLib.jl/coverage.svg?branch=master)](http://codecov.io/github/ac-tuwien/MHLib.jl?branch=master)
 
-_This project is still in early development, any feedback is much appreciated!_
+_This project is still in development, any feedback is much appreciated!_
 
 `MHLib.jl` is a collection of modules, types, and functions  in 
 [Julia](https://julialang.org/) supporting
@@ -47,8 +47,7 @@ installed via
 Note that `MHLib.jl` is still behind the capabilities of the Python `pymhlib`, 
 however, much more performant.
 
-The main module provides the following types for candidate solutions and various
-functions for them:
+The main file `MHLib/src/MHLib.jl` provides the following types for candidate solutions and various functions for them:
 - `Solution`:
     An abstract type that represents a candidate solution to an optimization problem.
 - `VectorSolution`:
@@ -62,16 +61,15 @@ _ `SubsetVectorSolution`:
     represented in vector form. The front part represents the selected
     elements, the back part optionally the unselected ones.
 
-Moreover, the main module provides:
+Moreover, the main file provides:
 - `git_version()`:
-    Function returning the abbreviated git version string of the current project.
+    Function returning the abbreviated git version string of the current project. It is good practice to write this information also to a log file in order to be able to reproduce results.
 - `settings`:
-    Global settings that can be defined independently per module in a distributed
+    Global settings that can be defined independently per module/file in a distributed
     way, while values for these parameters can be provided as program arguments or in
-    configuration files. Most `pymhlib` modules rely on this mechanism for their external
-    parameters.
+    configuration files. Most algorithms rely on this mechanism for initializing their parameters, although they can also be set directly in the algorithms' constructor.
 
-Further modules:
+Further files (modules):
 
 - `Schedulers`, type `Scheduler`:
     A an abstract framework for single trajectory metaheuristics that rely on iteratively
@@ -89,16 +87,16 @@ Further modules:
 - `ALNSs`, type `ALNS`:
     Adaptive large neighborhood search (ALNS). It is realized via `LNS` and 
     `ALNSMethodSelector`.
+- `OneMax`:
+    A simple test problem to which the above algorithms are applied in the module tests in `MHLib/test`.
 
-## Demos
+## MHLibDemos
 
 For demonstration purposes subdirectory [`MHLibDemos`](MHLibDemos/README.md) provides 
 a package (not officially registered at JuliaHub), with basic implementations for the 
 following classical combinatorial optimization problems, to which some of 
 MHLib's metaheuristics are applied:
 
-- `OneMax`: basic test problem in which the goal is to set all digits in a binary
-    string to `true`
 - `GraphColoring`: graph coloring problem based on `VectorSolution`
 - `MAXSAT`: maximum satisfiability problem based on `BinaryVectorSolution`
 - `TSP`: traveling salesperson problem based on `PermutationSolution`
@@ -108,7 +106,7 @@ MHLib's metaheuristics are applied:
 It is recommended to take the `MHLibDemos` package with one of the demos as template for 
 solving your own problem.
 
-Further smaller usage examples can also be found in the test directory of the main package.
+Further smaller usage examples can also be found in the test directory of the MHLibDemos package.
 
 ## Parameter Tuning with SMAC3
 

@@ -1,4 +1,4 @@
-# Module tests
+# Unit tests for MHLibDemos
 
 # Always performed in the test directory within the test environment.
 

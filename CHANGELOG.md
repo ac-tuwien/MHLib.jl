@@ -5,7 +5,7 @@ Major changes in releases:
 
 ## Version 0.1.16
 - `clear!` renamed to `Base.empty!`
-- Module tests use now `TestItems.jl`, which has support integrated in VSCode
+- Unit tests use now `TestItems.jl`, which has support integrated in VSCode
 - All submodules within MHLib removed
 - MaxSat demo added directly in `MHLib` to be able to perform basic tests of all algorithms.
 - Other tests for different problems moved to `MHLibDemos`
