@@ -1,32 +1,26 @@
-"""
-    Log
+#     Log.jl
 
-Custom logging functionallity for MHLib.  
+# Custom logging functionallity for MHLib.  
     
-Implements a basic logger type and required methods.  
-Provides a method to return a simple logger and allows users to overload this method to 
-incoperate custom user defined loggers. Additionally exports differnt methods to 
-output optimization results and interation data.
+# Implements a basic logger type and required methods.  
+# Provides a method to return a simple logger and allows users to overload this method to 
+# incoperate custom user defined loggers. Additionally exports differnt methods to 
+# output optimization results and interation data.
 
-The logging process works as follows.
+# The logging process works as follows.
 
-- If the user does not set the `--ofile` argument than no log file is created. 
-    Print statements are still sent to stdout as is normal
-- If the user does set the `--ofile` argument then by default a simple logger is 
-    created with the `get_logger()` function. This logger is an instance of the 
-    MHLogger type that simply writes the message directly to a file with 
-    no additional information.
-- If the user overloads the `get_logger` method than any logger can be returned. 
-    This allows for the user to create their own custom loggers that save the solution
-    data in different ways.
-"""
-module Log
+# - If the user does not set the `--ofile` argument than no log file is created. 
+#     Print statements are still sent to stdout as is normal
+# - If the user does set the `--ofile` argument then by default a simple logger is 
+#     created with the `get_logger()` function. This logger is an instance of the 
+#     MHLogger type that simply writes the message directly to a file with 
+#     no additional information.
+# - If the user overloads the `get_logger` method than any logger can be returned. 
+#     This allows for the user to create their own custom loggers that save the solution
+#     data in different ways.
 
-using MHLib
-using MHLib.Schedulers
-using Printf
 using Logging
-
+using Printf
 
 export  log_iteration_header, log_iteration, method_statistics, main_results
 
@@ -127,15 +121,15 @@ function log_iteration_header(sched::Scheduler)
         "        time              method info"
     println(s)
     with_logger(sched.logger) do 
-        @logmsg Log.HeaderLevel s
+        @logmsg HeaderLevel s
     end 
 end
 
-const EPS = 1e-12
-const LOG10_2 = log10(2)
-const LOG10_5 = log10(5)
 
 function is_logarithmic_number(x::Int)::Bool
+    EPS = 1e-12
+    LOG10_2 = log10(2)
+    LOG10_5 = log10(5)
     lr = log10(x) % 1
     abs(lr) < EPS || abs(lr-LOG10_2) < EPS || abs(lr-LOG10_5) < EPS
 end
@@ -173,7 +167,7 @@ function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::
             time()-sched.time_start, method_name, log_info)
         println(s)
         with_logger(sched.logger) do 
-            @logmsg Log.IterLevel s iter=sched.iteration best_obj=obj(sched.incumbent) prev_obj=obj_old cur_obj=obj(new_sol) time=time()-sched.time_start method=method_name info=log_info cur_sol=new_sol
+            @logmsg IterLevel s iter=sched.iteration best_obj=obj(sched.incumbent) prev_obj=obj_old cur_obj=obj(new_sol) time=time()-sched.time_start method=method_name info=log_info cur_sol=new_sol
         end
     end
 end
@@ -237,7 +231,7 @@ function method_statistics(s::Scheduler)
 
     println(res)
     with_logger(s.logger) do 
-        @logmsg Log.StatsLevel res
+        @logmsg StatsLevel res
     end
 end
 
@@ -255,10 +249,7 @@ function main_results(s::Scheduler)
         @sprintf("T total time [s]: %.4f\n", s.run_time)
     print(str)
     with_logger(s.logger) do 
-        @logmsg Log.SummaryLevel str
+        @logmsg SummaryLevel str
     end
     check(s.incumbent)
 end
-
-
-end  # module

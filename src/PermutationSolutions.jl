@@ -1,13 +1,6 @@
-"""
-    PermutationSolutions
-
-A module for solutions that are represented by a permutation of distinct elements.
-"""
-module PermutationSolutions
-
-using Random
-using StatsBase
-using ..MHLib
+#     PermutationSolutions
+#
+# A module for solutions that are represented by a permutation of distinct elements.
 
 export PermutationSolution, initialize!, two_opt_neighborhood_search!, 
     random_two_exchange_moves!, random_remove_elements!, random_reinsert_removed!,
@@ -23,7 +16,7 @@ A concrete type must implement the attributes of a vector solution.
 abstract type PermutationSolution{T} <: VectorSolution{T} end
 
 """
-    initialize!(permutation_solution)
+    initialize!(::PermutationSolution)
 
 Random construction of a new solution by applying fill to an initially empty solution.
 """
@@ -33,7 +26,7 @@ function MHLib.initialize!(s::PermutationSolution)
 end
 
 """
-    check(permutation_solution; ...)
+    check(::PermutationSolution; ...)
 
 Check correctness of permutation solution.
 """
@@ -43,7 +36,7 @@ function MHLib.check(s::PermutationSolution{T}; kwargs...) where T
 end
 
 """
-    two_opt_neighborhood_search(permutation_solution, best_improvement)
+    two_opt_neighborhood_search(::PermutationSolution, best_improvement)
 
 Systematic search of the 2-opt neighborhood, i.e., consider all inversions of subsequences.
 
@@ -85,10 +78,11 @@ function two_opt_neighborhood_search!(s::PermutationSolution, best_improvement::
 end
 
 """
-    apply_two_opt_move(permutation_solution, p1, p2)
+    apply_two_opt_move(::PermutationSolution, p1, p2)
 
-Perform two-opt move on given solution defined as inversion of subsequence starting from 
-    position `p1` up to and including position `p2`.
+Perform two-opt move on given solution defined as inversion of subsequence.
+
+Start at position `p1` up to and including position `p2`.
 """
 function apply_two_opt_move!(s::PermutationSolution, p1::Integer, p2::Integer)
     @assert 1 <= p1 <= p2 <= length(s)
@@ -96,7 +90,7 @@ function apply_two_opt_move!(s::PermutationSolution, p1::Integer, p2::Integer)
 end
 
 """
-    two_opt_move_delta_eval(permutation_solution, p1, p2)
+    two_opt_move_delta_eval(::PermutationSolution, p1, p2)
 
 Return the delta in the objective value when inverting `s.x` from pos. `p1` to pos. `p2`.
 
@@ -116,7 +110,7 @@ function two_opt_move_delta_eval(s::PermutationSolution, p1::Integer, p2::Intege
 end
 
 """
-    random_two_exchange_moves!(permutation_solution, num)
+    random_two_exchange_moves!(::PermutationSolution, num)
 
 Perform `num` random two exchange moves and invalidate the solution.
 """
@@ -129,10 +123,11 @@ function random_two_exchange_moves!(s::PermutationSolution, num::Int=1)
 end
 
 """
-    random_remove_elements!(permutation_solution, num)
+    random_remove_elements!(::PermutationSolution, num)
 
-Destroy solution by removing `num` elements at random positions and store
-them in the `destroy` attribute.
+Destroy solution by removing `num` elements at random positions.
+
+Store them in the `destroy`.
 """
 function random_remove_elements!(s::PermutationSolution, num::Int)
     if isnothing(s.destroyed)
@@ -143,7 +138,7 @@ function random_remove_elements!(s::PermutationSolution, num::Int)
         resize!(destroyed, num)
     end
 
-    sample!(1:length(s.x), destroyed, replace=false, ordered=true)  # select posiions to remove
+    sample!(1:length(s.x), destroyed, replace=false, ordered=true)  # select pos to remove
     pos = 1
     di = 1
     x = s.x
@@ -162,7 +157,7 @@ function random_remove_elements!(s::PermutationSolution, num::Int)
 end
 
 """
-    random_reinsert_removed!(permutation_solution)
+    random_reinsert_removed!(::PermutationSolution)
 
 Repair solution by inserting the elements from `destroyed` at random positions.
 
@@ -193,7 +188,7 @@ function random_reinsert_removed!(s::PermutationSolution)
 end
 
 """
-    greedy_reinsert_removed!(permutation_solution)
+    greedy_reinsert_removed!(::PermutationSolution)
 
 Repair a solution by inserting the elements from `destroyed` in a best location.
 """
@@ -209,13 +204,12 @@ function greedy_reinsert_removed!(s::PermutationSolution)
 end
 
 """
-    insert_val_at_best_pos!(permutation_solution, val)
+    insert_val_at_best_pos!(::PermutationSolution, val)
 
 Insert `val` at the best position in the solution.
+
 The objective value of the solution is assumed to be valid and is
 incrementally updated.
 """
 insert_val_at_best_pos!(s::PermutationSolution, val) = 
     error("Abstract function insert_val_at_best_pos(::PermutationSolution, ::Any) called")
-
-end  # module

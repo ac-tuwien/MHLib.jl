@@ -16,20 +16,20 @@ const settings_cfg = ArgParseSettings()
 
 
 """
-    settings::Dict{Symbol,Any}
+    settings::Dict{Symbol, Any}
 
 Global settings, i.e., dictionary with all parameters and their values.
 
-
-Settings can be given by command line arguments, in a configuration file or in code, e.g.,
+Settings can be given by command line arguments, in a configuration file, or in code, e.g.,
 provided in the main program.
 
-For using module-specific settings, define them via `ArgParseSettings` and `@add_arg_table!`
-and call `parse_settings!`, values can then be accessed via `settings[:<name>]::<Type>`.
+For using application-specific settings, define them via `ArgParseSettings` and 
+`@add_arg_table!`nand call `parse_settings!`, values can then be accessed 
+via `settings[:<name>]::<Type>`.
 The type-cast is optional but may frequently help to achieve type-stability.
 
 """
-const settings = Dict{Symbol,Any}()
+const settings = Dict{Symbol, Any}()
 
 @add_arg_table! settings_cfg begin
     "--seed"
@@ -61,15 +61,16 @@ end
 
 
 """
-    parse_settings!(settings_cfgs::Vector{ArgParseSettings}; args=ARGS)
+    parse_settings!(settings_cfgs::Vector{ArgParseSettings}=mhlib_settings_cfgs; args=ARGS)
 
-Parses the arguments initializing the global `settings` correspondingly,
-and seed the random number generator if `settings[:seed] != 0`.
+Parses the arguments and initializesn the global `settings` correspondingly,
+
+Also initializes the random number generator, if `settings[:seed] != 0` randomly.
 In `settings_cfgs` a list of the ArgParseSettings of individual modules
 to be used in addition to the basic `settings_cfg` of this module has to be provided.
-`MHLib.all_settings_cfgs` can be used to include all settings of all modules.
+`MHLib.mhlib_settings_cfgs` can be used to include all settings of all modules.
 """
-function parse_settings!(settings_cfgs::Vector{ArgParseSettings} = all_settings_cfgs,
+function parse_settings!(settings_cfgs::Vector{ArgParseSettings} = mhlib_settings_cfgs,
         args = ARGS)
     settings_cfg.fromfile_prefix_chars = Set('@')
     settings_cfg.autofix_names = true
@@ -100,7 +101,9 @@ end
 
 """
     seed_random_generator!(seed=-1)
+
 Initialize random number generators with settings.seed.
+
 If zero, a random seed is generated, if -1 `settings[:seed]` is used.
 """
 function seed_random_generator(seed::Int=-1)

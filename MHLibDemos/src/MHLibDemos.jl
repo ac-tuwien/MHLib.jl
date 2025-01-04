@@ -48,12 +48,12 @@ function create_or_read_simple_graph(name::AbstractString) :: SimpleGraph{Int}
 end
 
 
-include("OneMax.jl")
 include("MAXSAT.jl")
 include("GraphColoring.jl")
 include("MISP.jl")
 include("MKP.jl")
 include("TSP.jl")
 
+include("../test/tests.jl")
 
-end # module MHLibDemos
+end  # module MHLibDemos

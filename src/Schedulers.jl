@@ -1,17 +1,11 @@
-"""
-    Schedulers
+#     Schedulers.jl
 
-General scheduler for realizing (G)VNS, GRASP, IG and similar metaheuristics.
+# General scheduler for realizing (G)VNS, GRASP, IG and similar metaheuristics.
 
-The module is intended for metaheuristics in which a set of methods
-(or several of them) are in some way repeatedly applied to candidate solutions.
-"""
-module Schedulers
+# The module is intended for metaheuristics in which a set of methods
+# (or several of them) are in some way repeatedly applied to candidate solutions.
 
-using ArgParse
-using Random
 using DataStructures  # SortedDict for method_stats
-using MHLib
 
 import Logging: AbstractLogger
 
@@ -19,9 +13,9 @@ export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerParameters,
     perform_method!, next_method, update_incumbent!, check_termination, 
     perform_sequentially!, main_results, method_statistics, delayed_success_update!, 
     log_iteration, log_iteration_header, construct!, local_improve!, shaking!, 
-    perform_method_pair!, reinitialize!
+    perform_method_pair!, reinitialize!, scheduler_settings_cfg
 
-const settings_cfg = ArgParseSettings()
+const scheduler_settings_cfg = ArgParseSettings()
 
 @add_arg_table! settings_cfg begin
     "--mh_titer"
@@ -63,6 +57,17 @@ end
     SchedulerParameters
 
 Parameters for the scheduler adopted from settings by default.
+
+# Elements
+- `titer`: maximum number of iterations (<0: turned off)
+- `lnewinc`: always write iteration log if new incumbent solution
+- `lfreq`: frequency of writing iteration logs (0: none, >0: number of iterations, 
+    -1: iteration 1,2,5,10,20,...)
+- `tciter`: maximum number of iterations without improvement (<0: turned off)
+- `ttime`: time limit [s] (<0: turned off)
+- `tctime`: maximum time [s] without improvement (<0: turned off)
+- `tobj`: objective value at which should be terminated when reached (<0: turned off)
+- `checkit`: call `check` for each solution after each method application
 """
 Base.@kwdef struct SchedulerParameters
     titer::Int = settings[:mh_titer]
@@ -81,7 +86,7 @@ end
 
 Data in conjunction with a method application's result.
 
-Attributes
+# Elements
 - `changed`: if `false`, the solution has not been changed by the method application
 - `is_local_optimum`: if `true`, the solution is considered a local optimum in respect to
     the applied method
@@ -101,18 +106,22 @@ Result() = Result(true, false, false, "")
 """
     MHMethod
 
-A method to be applied to a solution by the scheduler.
+(Wrapper for) a method (function) to be applied to a solution by the scheduler.
 
-Attributes
+# Elements
 - 'name`: name of the method; must be unique over all used methods
-- `method`: a function called for a Solution object
-- `par`: a parameter provided when calling the method
+- `method`: a function called for a Solution object; 
+    the function must have exactly three parameters, which are the solution,
+        a general parameter of arbitrary type (or `nothing`), and a `Result` structure
+- `par`: a parameter provided when calling the method; can be `nothing`
 """
 struct MHMethod
     name::String
-    func::Function
+    method::Function
     par::Any
 end
+
+MHMethod(name::String, method::Function) = MHMethod(name, method, nothing)
 
 
 """
@@ -145,7 +154,7 @@ MHMethodStatistics() = MHMethodStatistics(0, 0.0, 0, 0.0, 0.0)
 
 Type for metaheuristics that work by iteratively applying certain methods/operations.
 
-Attributes
+# Elements
 - `incumbent`: incumbent solution, i.e., initial solution and always best solution so far
     encountered
 - `incumbent_valid`: `true` if incumbent is a valid solution to be considered
@@ -185,14 +194,14 @@ valid initial solution; otherwise it is assumed to be uninitialized.
 function Scheduler(sol::Solution, methods::Vector{MHMethod},
         consider_initial_sol::Bool=false; params::SchedulerParameters=SchedulerParameters())
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
-    logger = Log.get_logger(sol)
-    s = Scheduler{typeof(sol)}(sol, consider_initial_sol, 0, 0.0, methods, method_stats, 0,
-        time(), missing, logger, params)
-    log_iteration_header(s)
-    if s.incumbent_valid
-        log_iteration(s, "-", NaN, sol, true, true, "")
+    logger = get_logger(sol)
+    sched = Scheduler{typeof(sol)}(sol, consider_initial_sol, 0, 0.0, methods, 
+        method_stats, 0, time(), missing, logger, params)
+    log_iteration_header(sched)
+    if sched.incumbent_valid
+        log_iteration(sched, "-", NaN, sol, true, true, "")
     end
-    s
+    return sched
 end
 
 """
@@ -200,15 +209,16 @@ end
 
 Reset scheduler with given solution, which however, is not considered, for a new run.
 """
-function reinitialize!(s::Scheduler{TSolution}, sol::TSolution) where {TSolution <: Solution}
-    s.incumbent = sol     
-    s.incumbent_valid = false
-    s.incumbent_iteration = 0
-    s.incumbent_time = 0.0
-    s.iteration = 0
-    s.time_start = time()
-    s.run_time = missing
-    for ms in values(s.method_stats)
+function reinitialize!(sched::Scheduler{TSolution}, sol::TSolution) where 
+        {TSolution <: Solution}
+    sched.incumbent = sol     
+    sched.incumbent_valid = false
+    sched.incumbent_iteration = 0
+    sched.incumbent_time = 0.0
+    sched.iteration = 0
+    sched.time_start = time()
+    sched.run_time = missing
+    for ms in values(sched.method_stats)
         ms.applications = 0
         ms.netto_time = 0.0
         ms.successes = 0
@@ -220,15 +230,14 @@ end
 """
     update_incumbent!(scheduler, solution, current_time)
 
-If the given solution is better than the incumbent (or we do not have an incumbent yet)
-update it.
+If given solution is better than incumbent or we do not have an incumbent yet update it.
 """
-function update_incumbent!(s::Scheduler, sol::Solution, current_time::Float64)
-    if !s.incumbent_valid || is_better(sol, s.incumbent)
-        copy!(s.incumbent, sol)
-        s.incumbent_iteration = s.iteration
-        s.incumbent_time = current_time
-        s.incumbent_valid = true
+function update_incumbent!(sched::Scheduler, sol::Solution, current_time::Float64)
+    if !sched.incumbent_valid || is_better(sol, sched.incumbent)
+        copy!(sched.incumbent, sol)
+        sched.incumbent_iteration = sched.iteration
+        sched.incumbent_time = current_time
+        sched.incumbent_valid = true
         return true
     end
     false
@@ -238,9 +247,13 @@ end
 """
     next_method(meths; randomize=false, repeat=false)
 
-Generator for obtaining a next method from a given vector of methods, iterating through
-all of them. `randomize`: random order, otherwise consider given order;
-`repeat`: repeat infinitely, otherwise just do one pass.
+Generator for obtaining a next method from a given vector of methods.
+    
+It iterates through all methods.
+
+# Parameters
+- `randomize`: random order, otherwise consider given order
+- `repeat`: repeat infinitely, otherwise just do one pass
 """
 function next_method(meths::Vector{MHMethod}; randomize::Bool=false, repeat::Bool=false)
     if randomize
@@ -273,17 +286,17 @@ Furthermore checks the termination condition and eventually sets terminate in th
 returned Results object. If `delayed_success`, the success is not immediately determined
 and the statistics updated accordingly but at some later call of `delayed_success_update`.
 """
-function perform_method!(s::Scheduler, method::MHMethod, sol::Solution;
+function perform_method!(sched::Scheduler, method::MHMethod, sol::Solution;
         delayed_success=false)::Result
     res = Result()
     obj_old = obj(sol)
     t_start = time()
-    method.func(sol, method.par, res)
+    method.method(sol, method.par, res)
     t_end = time()
-    if s.params.checkit
+    if sched.params.checkit
         check(sol)
     end
-    ms = s.method_stats[method.name]
+    ms = sched.method_stats[method.name]
     ms.applications += 1
     ms.netto_time += t_end - t_start
     obj_new = obj(sol)
@@ -294,12 +307,12 @@ function perform_method!(s::Scheduler, method::MHMethod, sol::Solution;
             ms.obj_gain += obj_new - obj_old
         end
     end
-    s.iteration += 1
-    new_incumbent = update_incumbent!(s, sol, t_end - s.time_start)
-    terminate = check_termination(s)
-    log_iteration(s, method.name, obj_old, sol, new_incumbent, terminate, res.log_info)
+    sched.iteration += 1
+    new_incumbent = update_incumbent!(sched, sol, t_end - sched.time_start)
+    terminate = check_termination(sched)
+    log_iteration(sched, method.name, obj_old, sol, new_incumbent, terminate, res.log_info)
     if terminate
-        s.run_time = time() - s.time_start
+        sched.run_time = time() - sched.time_start
         res.terminate = true
     end
     res
@@ -311,14 +324,14 @@ end
 
 Check termination conditions and return `true` when to terminate.
 """
-function check_termination(s::Scheduler)::Bool
+function check_termination(sched::Scheduler)::Bool
     t = time()
-    if 0 <= s.params.titer <= s.iteration ||
-        0 <= s.params.tciter <= s.iteration - s.incumbent_iteration ||
-        0 <= s.params.ttime <= t - s.time_start ||
-        0 <= s.params.tctime::Float64 <= t - s.incumbent_time ||
-        0 <= s.params.tobj && !is_worse_obj(s.incumbent, obj(s.incumbent), 
-            s.params.tobj)
+    if 0 <= sched.params.titer <= sched.iteration ||
+        0 <= sched.params.tciter <= sched.iteration - sched.incumbent_iteration ||
+        0 <= sched.params.ttime <= t - sched.time_start ||
+        0 <= sched.params.tctime::Float64 <= t - sched.incumbent_time ||
+        0 <= sched.params.tobj && !is_worse_obj(sched.incumbent, obj(sched.incumbent), 
+            sched.params.tobj)
         return true
     end
     false
@@ -332,10 +345,10 @@ Applies the given methods sequentially, finally keeping the best solution as inc
 
 Returns true if the termination condition has been fulfilled, else false.
 """
-function perform_sequentially!(s::Scheduler, sol::Solution, meths::Vector{MHMethod})
+function perform_sequentially!(sched::Scheduler, sol::Solution, meths::Vector{MHMethod})
     for m in next_method(meths)
-        res = perform_method!(s, m, sol)
-        update_incumbent!(s, sol, time() - s.time_start)
+        res = perform_method!(sched, m, sol)
+        update_incumbent!(sched, sol, time() - sched.time_start)
         res.terminate && return true
     end
     return false
@@ -346,14 +359,15 @@ end
 """
     delayed_success_update!(scheduler, method, obj_old, t_start, solution)
 
-Update an earlier performed method's success information in method_stats using the
-given solution, old objective value and the given thime when the application of the
+Update an earlier performed method's success information in method_stats.
+
+Uses the given solution, old objective value and the given thime when the application of the
 method had started.
 """
-function delayed_success_update!(s::Scheduler, method::MHMethod, obj_old, t_start::Float64,
-    sol::Solution)
+function delayed_success_update!(sched::Scheduler, method::MHMethod, obj_old, 
+        t_start::Float64, sol::Solution)
     t_end = time()
-    ms = s.method_stats[method.name]
+    ms = sched.method_stats[method.name]
     ms.brutto_time += t_end - t_start
     obj_new = obj(sol)
     if is_better_obj(sol, obj(sol), obj_old)
@@ -372,19 +386,19 @@ Also updates incumbent, iteration and the method's statistics in method_stats.
 Furthermore checks the termination condition and eventually sets terminate in the 
 returned `Results` structure.
 """
-function perform_method_pair!(scheduler::Scheduler, destroy::MHMethod, repair::MHMethod, 
+function perform_method_pair!(sched::Scheduler, destroy::MHMethod, repair::MHMethod, 
         sol::Solution)
     res = Result()
     obj_old = obj(sol)
     t_start = time()
-    destroy.func(sol, destroy.par, res)
+    destroy.method(sol, destroy.par, res)
     t_destroyed = time()
-    repair.func(sol, repair.par, res)
+    repair.method(sol, repair.par, res)
     t_end = time()
-    if scheduler.params.checkit
+    if sched.params.checkit
         check(sol)
     end                                      
-    update_stats_for_method_pair!(scheduler, destroy, repair, sol, res, obj_old,
+    update_stats_for_method_pair!(sched, destroy, repair, sol, res, obj_old,
                                       t_destroyed - t_start, t_end - t_destroyed)
     return res
 end
@@ -392,17 +406,18 @@ end
 """
     update_stats_for_method_pair!(sched, dest, repair, sol, res, obj_old, t_dest, t_repair)
 
-Update statistics, incumbent and check termination condition after having performed a
-destroy+repair.
+Update statistics, incumbent, and check termination condition.
+
+To be applied after having performed a destroy+repair.
 """
-function update_stats_for_method_pair!(scheduler::Scheduler, destroy::MHMethod,
+function update_stats_for_method_pair!(sched::Scheduler, destroy::MHMethod,
          repair::MHMethod, sol::Solution, res::Result, obj_old, t_destroy::Float64,
          t_repair::Float64)
-     ms_destroy = scheduler.method_stats[destroy.name]
+     ms_destroy = sched.method_stats[destroy.name]
      ms_destroy.applications += 1
      ms_destroy.netto_time += t_destroy
      ms_destroy.brutto_time += t_destroy
-     ms_repair = scheduler.method_stats[repair.name]
+     ms_repair = sched.method_stats[repair.name]
      ms_repair.applications += 1
      ms_repair.netto_time += t_repair
      ms_repair.brutto_time += t_repair
@@ -413,66 +428,60 @@ function update_stats_for_method_pair!(scheduler::Scheduler, destroy::MHMethod,
          ms_repair.successes += 1
          ms_repair.obj_gain += obj_new - obj_old
      end
-     scheduler.iteration += 1
-     new_incumbent = update_incumbent!(scheduler, sol, time() - scheduler.time_start)
-     terminate = check_termination(scheduler)
-     log_iteration(scheduler, destroy.name * "+" * repair.name, obj_old, sol, new_incumbent, terminate, res.log_info)
+     sched.iteration += 1
+     new_incumbent = update_incumbent!(sched, sol, time() - sched.time_start)
+     terminate = check_termination(sched)
+     log_iteration(sched, destroy.name * "+" * repair.name, obj_old, sol, new_incumbent, terminate, res.log_info)
      if terminate
-         scheduler.run_time = time() - scheduler.time_start
+         sched.run_time = time() - sched.time_start
          res.terminate = true
      end
 end
 
 
-# --------------------- Diverse generic Scheduler methods -----------------------
+# ------------- Diverse generic scheduler methods (MHMethod functions)m--------------------
 
 """
-    construct!(solution, par, result)
+    construct!(::Solution, par, result)
 
-Scheduler method that constructs a new solution.
+`MHMethod` that constructs a new solution.
+
 Will usually be specialized for a specific problem.
 """
-construct!(s::Solution, par::Int, result::Result) =
-    initialize!(s)
+construct!(sol::Solution, ::Nothing, ::Result) = initialize!(sol)
 
 """
-    local_improve!(solution, par, result)
+    local_improve!(::Solution, par, result)
 
-Scheduler method that tries to locally improve the solution.
-Will usually be specialized for a specific problem.
-This abstract implementation just throws an exception.
-"""
-local_improve!(s::Solution, par::Int, result::Result) =
-    error("Abstract method local_improve! called")
+`MHMethod` that tries to locally improve the solution.
 
+To be specialized for a specific problem.
 """
-    shaking!(solution, par, result)
-
-Scheduler method that performs shaking.
-Will usually be specialized for a specific problem.
-This abstract implementation just throws an exception.
-"""
-shaking!(s::Solution, par::Int, result::Result) =
-    error("Abstract method shaking! called")
+function local_improve! end
 
 """
-    local_improve!(bool_vector_solution, par, result)
+    shaking!(::Solution, par, result)
 
-Scheduler method that tries to locally improve the solution.
+`MHMethod` that performs shaking.
+
+To be specialized for a specific problem.
+"""
+function shaking! end
+
+"""
+    local_improve!(::BoolVectorSolution, par, result)
+
+`MHMethod` that tries to locally improve the solution.
+
 Perform one `k_flip_neighborhood_search`.
 """
-local_improve!(s::BoolVectorSolution, par::Int, result::Result) =
+local_improve!(s::BoolVectorSolution, par::Int, ::Result) =
     k_flip_neighborhood_search!(s, par, false)
 
 """
-    shaking!(bool_vector_solution, par, result)
+    shaking!(::BoolVectorSolution, k, result)
 
-Scheduler method that performs shaking.
-Will usually be specialized for a specific problem.
-This abstract implementation just throws an exception.
+`MHethod` that performs shaking by flipping `k` random bits.
 """
-shaking!(s::BoolVectorSolution, par::Int, result::Result) =
-    k_random_flips!(s, par)
+shaking!(s::BoolVectorSolution, k::Int, ::Result) = k_random_flips!(s, k)
 
-
-end  # module

@@ -127,14 +127,13 @@ function MHLib.calc_objective(s::MAXSATSolution)::Int
             end
         end
     end
-    satisfied
+    return satisfied
 end
 
 
 function MHLib.flip_variable!(s::MAXSATSolution, pos::Int)::Int
     obj(s)
-    val = !s.x[pos]
-    s.x[pos] = val
+    s.x[pos] = val = !s.x[pos]
     for clause in s.inst.variable_usage[pos]
         fulfilled_by_other = false
         val_fulfills_now = false
@@ -158,12 +157,11 @@ end
 """
     destroy(maxsat_solution, par, result)
 
-Destroy operator for LNS selects `3 par` positions uniformly at random for removal.
-end  # module
+`MHMethod` that selects `3 * par` positions uniformly at random for removal.
 
 Selected positions are stored with the solution in list `self.destroyed`.
 """
-function MHLib.LNSs.destroy!(sol::MAXSATSolution, par::Int, result::Result)
+function MHLib.destroy!(sol::MAXSATSolution, par::Int, ::Result)
     x = sol.x
     num = get_number_to_destroy(sol, length(x); min_abs=3par, max_abs=3par)
     sol.destroyed = sample(1:length(x), num, replace=false)
@@ -172,17 +170,17 @@ end
 
 
 """
-    repair!(maxsat_solution, par, result)
+    repair!(::MAXSATSolution, ::Nothing, result)
 
-Repair operator for LNS assigns new random values to all positions in `sol.destroyed`.
+`MHMethod`that assigns new random values to all positions in `sol.destroyed`.
 """
-function MHLib.LNSs.repair!(sol::MAXSATSolution, par::Int, result::Result)
-    @assert !(length(sol.destroyed) == 0)
+function MHLib.repair!(sol::MAXSATSolution, ::Nothing, ::Result)
+    @assert !isempty(sol.destroyed)
     x = sol.x
     for p in sol.destroyed
         x[p] = rand(0:1)
     end
-    sol.destroyed = []
+    empty!(sol.destroyed)
     invalidate!(sol)
 end
 
@@ -204,9 +202,9 @@ function solve_maxsat(args=ARGS)
 
     # set some new default values for parameters and parse all relevant arguments
     settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/maxsat-adv1.cnf")
-    settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
-    parse_settings!([MHLib.Schedulers.settings_cfg,
-        MHLib.LNSs.settings_cfg, MHLib.ALNSs.settings_cfg, maxsat_settings_cfg], args)
+    settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 1000)
+    parse_settings!([MHLib.scheduler_settings_cfg,
+        MHLib.lns_settings_cfg, MHLib.alns_settings_cfg, maxsat_settings_cfg], args)
     println(get_settings_as_string())
     
     inst = MAXSATInstance(settings[:ifile])
@@ -215,24 +213,24 @@ function solve_maxsat(args=ARGS)
 
     # Depending on the parameter `alg`, we create the respective algorithm object
     if settings[:alg] === "lns"
-        alg = LNS(sol, [MHMethod("construct", construct!, 0)],
+        alg = LNS(sol, [MHMethod("construct", construct!)],
             [MHMethod("de", destroy!, 1)],
-            [MHMethod("re", repair!, 0)];
+            [MHMethod("re", repair!)];
             meths_compat = [true;;])
     elseif settings[:alg] === "weighted-lns"
         num_de = 5
         method_selector = WeightedRandomMethodSelector(num_re:-1:1, 1:1)
-        alg = LNS(sol, [MHMethod("construct", construct!, 0)],
+        alg = LNS(sol, [MHMethod("construct", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-            [MHMethod("re", repair!, 0)];
+            [MHMethod("re", repair!, nothing)];
             method_selector)
     elseif settings[:alg] === "alns"
         num_de = 5
-        alg = ALNS(sol, [MHMethod("construct", construct!, 0)],
+        alg = ALNS(sol, [MHMethod("construct", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-            [MHMethod("re", repair!, 0)])
+            [MHMethod("re", repair!)])
     elseif settings[:alg] === "gvns"
-        alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+        alg = GVNS(sol, [MHMethod("con", construct!)],
             [MHMethod("li1", local_improve!, 1)],
             [MHMethod("sh$i", shaking!, i) for i in 1:5])
     else

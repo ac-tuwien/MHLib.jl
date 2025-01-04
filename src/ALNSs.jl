@@ -1,24 +1,16 @@
-"""
-    ALNSs
+#     ALNSs.jl
 
-A adaptive large neighborhood search.
+# A adaptive large neighborhood search.
 
-It extends the more general scheduler module/class by distinguishing between construction
-heuristics, destroy methods and repair methods. Moreover it contain score_data which
-tracks the success of methods and a next_segment attribute.
-"""
-module ALNSs
-
-using MHLib
-using MHLib.Schedulers
-using MHLib.LNSs
-using StatsBase
-using ArgParse
-
-export ALNS, ALNSParameters, ALNSMethodSelector
+# It extends the more general scheduler module/class by distinguishing between construction
+# heuristics, destroy methods and repair methods. Moreover it contain score_data which
+# tracks the success of methods and a next_segment attribute.
 
 
-const settings_cfg = ArgParseSettings()
+export ALNS, ALNSParameters, alns_settings_cfg, ALNSMethodSelector
+
+
+const alns_settings_cfg = ArgParseSettings()
 
 @add_arg_table! settings_cfg begin
     "--alns_segment_size"
@@ -58,7 +50,7 @@ end
 
 
 """
-    ScoreData
+    ALNSScoreData
 
 Weight of a method and all data relevant to calculate the score and update the weight.
 
@@ -67,13 +59,13 @@ Attributes
 - `score`: current score in current segment
 - `applied`: number of applications in current segment
 """
-mutable struct ScoreData
+mutable struct ALNSScoreData
     weight::Float64
     score::Int
     applied::Int
 end
 
-ScoreData() = ScoreData(1.0, 0, 0)
+ALNSScoreData() = ALNSScoreData(1.0, 0, 0)
 
 
 """
@@ -85,17 +77,17 @@ Attributes
 - `next_segment`: iteration number of next segment for updating operator weights
 - `params`: `ALNSParameters`, by default adopted from global settings
 """
-mutable struct ALNSMethodSelector <: LNSs.MethodSelector
-    score_data_de::Vector{ScoreData}
-    score_data_re::Vector{ScoreData}
+mutable struct ALNSMethodSelector <: MethodSelector
+    score_data_de::Vector{ALNSScoreData}
+    score_data_re::Vector{ALNSScoreData}
     next_segment::Int
     params::ALNSParameters
 end
 
 ALNSMethodSelector(meths_de::Vector{MHMethod}, meths_re::Vector{MHMethod};
         params::ALNSParameters=ALNSParameters()) =
-    ALNSMethodSelector([ScoreData() for _ in 1:length(meths_de)], 
-        [ScoreData() for _ in 1:length(meths_re)], 0, params)
+    ALNSMethodSelector([ALNSScoreData() for _ in 1:length(meths_de)], 
+        [ALNSScoreData() for _ in 1:length(meths_re)], 0, params)
 
 
 """
@@ -124,7 +116,7 @@ end
 
 Select a method proportionally to the scores at random.
 """
-function LNSs.select_method(lns::LNS{ALNSMethodSelector}, 
+function select_method(lns::LNS{ALNSMethodSelector}, 
         candidates, is_destroy::Bool) :: Int
     sel = lns.method_selector
     score_data = is_destroy ? sel.score_data_de : sel.score_data_re
@@ -160,7 +152,7 @@ end
 
 Initialize method selector with current state of LNS.
 """
-function LNSs.init_method_selector!(lns::LNS{ALNSMethodSelector})
+function init_method_selector!(lns::LNS{ALNSMethodSelector})
     sel = lns.method_selector
     sel.next_segment = lns.scheduler.iteration + sel.params.segment_size
 end
@@ -171,7 +163,7 @@ end
 
 Update score data according to performed destroy+repair and case of result.
 """
-function LNSs.update_method_selector!(lns::LNS{ALNSMethodSelector}, 
+function update_method_selector!(lns::LNS{ALNSMethodSelector}, 
         destroy::Int, repair::Int, case::Symbol,  Δ, Δ_inc)
     sel = lns.method_selector
     destroy_data = sel.score_data_de[destroy]
@@ -190,5 +182,3 @@ function LNSs.update_method_selector!(lns::LNS{ALNSMethodSelector},
     repair_data.score += score
     update_operator_weights!(lns)
 end
-
-end  # module

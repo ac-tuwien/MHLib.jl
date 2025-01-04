@@ -1,24 +1,20 @@
-"""
-    SubsetVectorSolutions
+#     SubsetVectorSolutions
 
-A module for solutions that are arbitrary cardinality subsets of a given set
-represented in vector form. The front part represents the selected
-elements, the back part optionally the unselected ones.
-"""
-module SubsetVectorSolutions
+# A module for solutions that are arbitrary cardinality subsets of a given set
+# represented in vector form. The front part represents the selected
+# elements, the back part optionally the unselected ones.
 
-using Random
-using MHLib
 
-export SubsetVectorSolution, clear!, remove_some!, fillup!,
+export SubsetVectorSolution, empty!, remove_some!, fillup!,
     two_exchange_random_fill_neighborhood_search!, element_removed_delta_eval!,
     element_added_delta_eval!, may_be_extendible, unselected_elems_in_x, all_elements
 
 """
     SubsetVectorSolution{T}
 
-A type for solutions that are arbitrary cardinality subsets of a given set
-represented in vector form. The front part represents the selected
+A type for solutions that are arbitrary cardinality subsets of a given set.
+
+Represented in vector form. The front part represents the selected
 elements, the back part optionally the unselected ones.
 
 A concrete type must implement the following:
@@ -31,16 +27,17 @@ A concrete type must implement the following:
 abstract type SubsetVectorSolution{T} <: VectorSolution{T} end
 
 """
-    unselected_elems_in_x(subset_vector_solution)
+    unselected_elems_in_x(::SubsetVectorSolution)
 
-Indicator function for specifying if unselected elements are maintained in
-`x[sel+1:end]`, i.e., behind the selected ones.
+Indicator function for specifying if unselected elements are maintained in`x[sel+1:end]`.
+
+I.e., behind the selected ones.
 The default is that this is the case, otherwise override the function for your type.
 """
 unselected_elems_in_x(::SubsetVectorSolution) = true
 
 """
-    all_elements(subset_vector_solution)
+    all_elements(::SubsetVectorSolution)
 
 Return a set with all elements.
 
@@ -51,11 +48,11 @@ all_elements(::SubsetVectorSolution) =
     error("Abstract all_elements(subset_vector_solution called")
 
 """
-    clear!(::SubsetVectorSolution)
+    empty!(::SubsetVectorSolution)
 
 Reset the solution to the empty solution.
 """
-function clear!(s::SubsetVectorSolution)
+function Base.empty!(s::SubsetVectorSolution)
     s.sel = 0
     invalidate!(s)
 end
@@ -72,10 +69,9 @@ function sort_sel!(s::SubsetVectorSolution)
 end
 
 """
-    fillup!(subset_vector_solution, pool, random_order)
+    fillup!(::SubsetVectorSolution, pool, random_order)
 
-Scans elements from pool (by default in random order) and selects those whose inclusion is
-feasible.
+Scans elements from pool and selects those whose inclusion is feasible.
 
 Elements in `pool` must not yet be selected.
 Parameter `pool` must either be nothing, in which case `x[sel+1:end]` is used as `pool`,
@@ -115,7 +111,7 @@ function fillup!(s::SubsetVectorSolution{T},
 end
 
 """
-    remove_some!(subset_vector_solution, k)
+    remove_some!(::SubsetVectorSolution, k)
 
 Removes `min(k,sel)` randomly selected elements from the solution.
 
@@ -139,18 +135,18 @@ function remove_some!(s::SubsetVectorSolution, k::Int)
 end
 
 """
-    initialize!(subset_vector_solution)
+    initialize!(::SubsetVectorSolution)
 
-Random construction of a new solution by applying `fillup!` to an initially empty solution.
+Randomly construct a new solution by emptying itnand applying `fillup!`.
 """
-function MHLib.initialize!(s::SubsetVectorSolution)
-    clear!(s)
+function initialize!(s::SubsetVectorSolution)
+    empty!(s)
     fillup!(s)
     invalidate!(s)
 end
 
 """
-    check(subset_vector_solution; unsorted, ...)
+    check(::SubsetVectorSolution; unsorted, ...)
 
 Check correctness of solution; throw an exception if error detected.
 
@@ -183,7 +179,7 @@ function MHLib.check(s::SubsetVectorSolution; unsorted::Bool=true, kwargs...)
 end
 
 """
-    two_exchange_random_fill_neighborhood_search!(subset_vector_solution, best_improvement)
+    two_exchange_random_fill_neighborhood_search!(::SubsetVectorSolution, best_improvement)
 
 Search 2-exchange neighborhood followed by `fillup!()` with random ordering.
 
@@ -278,7 +274,7 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
 end
 
 """
-    get_extension_pool(subset_vector_solution)
+    get_extension_pool(::SubsetVectorSolution)
 
 Return a list of yet unselected elements that may possibly be added.
 """
@@ -290,7 +286,7 @@ function get_extension_pool(s::SubsetVectorSolution)
 end
 
 """
-    may_be_extensible(subset_vector_solution)
+    may_be_extensible(::SubsetVectorSolution)
 
 Quick check if the solution has chances to be extended by adding further elements.
 """
@@ -299,7 +295,7 @@ function may_be_extendible(s::SubsetVectorSolution)
 end
 
 """
-    element_removed_delta_eval!(subset_vector_solution)
+    element_removed_delta_eval!(::SubsetVectorSolution)
 
 Element `x[sel]` has been removed in the solution, if feasible update other solution data,
 else revert.
@@ -326,7 +322,7 @@ function element_removed_delta_eval!(s::SubsetVectorSolution; update_obj_val::Bo
 end
 
 """
-    element_added_delta_eval!(subset_vector_solution)
+    element_added_delta_eval!(SubsetVectorSolution)
 
 Element `x[sel-1]`` was added to a solution, if feasible update further solution data, 
 else revert.
@@ -351,5 +347,3 @@ function element_added_delta_eval!(s::SubsetVectorSolution; update_obj_val::Bool
     end
     return true
 end
-
-end  # module

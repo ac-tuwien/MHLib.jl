@@ -3,11 +3,8 @@
 
 OneMax demo problem: Maximize the number of set bits in a binary string.
 
-This problem is just for simple demonstration/debugging purposes.
+This problem is just for very simple demonstration/testing purposes.
 """
-
-using ArgParse
-using MHLib
 
 export OneMaxSolution, onemax_settings_cfg, solve_onemax
 
@@ -51,6 +48,25 @@ end
 
 Base.copy(s::OneMaxSolution) = OneMaxSolution(s.obj_val, s.obj_val_valid, copy(s.x))
 
+"""
+    destroy!(sol::OneMaxSolution, k::Int, result::Result)
+
+`MHMethod` that destroys `k` bits in the solution `sol` by calling `shaking!`.
+
+Note that this is not really a meaningful destroy operation for the OneMax problem.
+It is just for testing purposes to be able to use the (A)LNS on this problem.
+"""
+destroy!(sol::OneMaxSolution, k::Int, result::Result) = shaking!(sol, k, result)
+
+"""
+    repair!(sol::OneMaxSolution, ::Nothing, result::Result)
+
+`MHMethod` that "repairs" one bit in the solution `sol` by calling `shaking!`.
+
+Note that this is not really a meaningful repair operation for the OneMax problem.
+It is just for testing purposes to be able to use the (A)LNS on this problem.
+"""
+repair!(sol::OneMaxSolution, ::Nothing, result::Result) = shaking!(sol, 1, result)
 
 # -------------------------------------------------------------------------------
 
@@ -59,8 +75,8 @@ function solve_onemax(args=ARGS)
     args isa AbstractString && (args = split(args))
 
     # We set some new default values for parameters and parse all relevant arguments
-    settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 100)
-    parse_settings!([MHLib.Schedulers.settings_cfg, onemax_settings_cfg], args)
+    settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 100)
+    parse_settings!([MHLib.scheduler_settings_cfg, onemax_settings_cfg], args)
     println(get_settings_as_string())
         
     sol = OneMaxSolution(settings[:onemax_n])
@@ -69,7 +85,7 @@ function solve_onemax(args=ARGS)
 
     # We apply here a variable neighborhood search, making use of a simple construction
     # heuristic, a local improvement method, and a shaking method.
-    alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+    alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], 
         consider_initial_sol = true)
     run!(alg)

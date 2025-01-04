@@ -12,7 +12,8 @@ using StatsBase
 using Graphs
 using MHLib
 
-export GraphColoringInstance, GraphColoringSolution, solve_graph_coloring
+export GraphColoringInstance, GraphColoringSolution, solve_graph_coloring,
+    graph_coloring_settings_cfg
 
 # We define a problem-specific parameter:
 const graph_coloring_settings_cfg = ArgParseSettings()
@@ -58,7 +59,7 @@ function GraphColoringInstance(name::AbstractString)
     GraphColoringInstance(graph, n, m, colors)
 end
 
-function show(io::IO, inst::GraphColoringInstance)
+function Base.show(io::IO, inst::GraphColoringInstance)
     println(io, "n=$(inst.n), m=$(inst.m)")
 end
 
@@ -128,24 +129,23 @@ end
 
 
 """
-    construct!(s::GraphColoringSolution, par, result)
+    construct!(s::GraphColoringSolution, ::Nothing, result)
 
-Constructs a new solution. Here we just call initialize!.
+`MHMethod` that constructs a new solution. Here we just call initialize!.
 """
-function MHLib.Schedulers.construct!(s::GraphColoringSolution, par::Int, result::Result)
-    initialize!(s)
-end
-
+MHLib.construct!(s::GraphColoringSolution, ::Nothing, ::Result) = initialize!(s)
 
 
 """
     local_improve!(s::GraphColoringSolution, par, result)
 
-Performs one iteration of a local search following a first improvement strategy.
+`MHMethod` that performs one iteration of a local search.
+
+Following a first improvement strategy.
 The neighborhood used is defined by all solutions that can be created by changing the color
 of a vertex involved in a conflict.
 """
-function MHLib.Schedulers.local_improve!(s::GraphColoringSolution, par::Int, result::Result)
+function MHLib.local_improve!(s::GraphColoringSolution, ::Nothing, result::Result)
     n = length(s.x)
     order = sample(1:n, n, replace = false)
     for p in order
@@ -177,10 +177,9 @@ end
 """
     shaking!(s::GraphColoringSolution, par, result)
 
-Perform shaking by randomly assigning a different color
-to 'par' many random vertices that are involved in conflicts.
+`MHMethod` that randomly assigns different colors to 'par' vertices involved in conflicts.
 """
-function MHLib.Schedulers.shaking!(s::GraphColoringSolution, par::Int, result::Result)
+function MHLib.shaking!(s::GraphColoringSolution, par::Int, result::Result)
     under_conflict = Vector{Int}()
     result.changed = false
 
@@ -194,10 +193,8 @@ function MHLib.Schedulers.shaking!(s::GraphColoringSolution, par::Int, result::R
         end
     end
 
-    for i in 1:par
-        if length(under_conflict) == 0
-            return
-        end
+    for _ in 1:par
+        iszero(under_conflict) && return
 
         index = sample(1:length(under_conflict))[1]
         u = under_conflict[index]
@@ -229,9 +226,9 @@ function solve_graph_coloring(args=ARGS)
     args isa AbstractString && (args = split(args))
 
     # We set some new default values for parameters and parse all relevant arguments
-    settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
+    settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 1000)
     settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/fpsol2.i.1.col")
-    parse_settings!([MHLib.Schedulers.settings_cfg, graph_coloring_settings_cfg], args)
+    parse_settings!([MHLib.schedulers_settings_cfg, graph_coloring_settings_cfg], args)
     println(get_settings_as_string())
         
     inst = GraphColoringInstance(settings[:ifile])
@@ -239,7 +236,7 @@ function solve_graph_coloring(args=ARGS)
     initialize!(sol)
     println(sol)
 
-    alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+    alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], 
         consider_initial_sol = true)
     run!(alg)

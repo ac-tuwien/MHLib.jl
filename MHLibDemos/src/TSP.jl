@@ -133,7 +133,7 @@ Base.show(io::IO, s::TSPSolution) =
     println(io, s.x)
 
 """
-    calc_objective(tsp_solution)
+    calc_objective(::TSPSolution)
 
 Determines TSP tour length from scratch.
 
@@ -145,20 +145,18 @@ function MHLib.calc_objective(s::TSPSolution)
 end
 
 """
-    construct!(tsp_solution, par, result)
+    construct!(tsp_solution, ::Nothing, result)
 
-Construct new solution by random initialization.
+`MHMethod` that constructs a new solution by random initialization.
 """
-function MHLib.Schedulers.construct!(s::TSPSolution, par::Int, result::Result)
-    initialize!(s)
-end
+MHLib.construct!(s::TSPSolution, ::Nothing, result::Result) = initialize!(s)
 
 """
-    local_improve!(tsp_solution, par, result)
+    local_improve!(tsp_solution, ::Nothing, result)
 
-Perform two-opt local search.
+`MHMethod` that performs two-opt local search.
 """
-function MHLib.Schedulers.local_improve!(s::TSPSolution, par::Int, result::Result)
+function MHLib.local_improve!(s::TSPSolution, ::Nothing, result::Result)
     if !two_opt_neighborhood_search!(s, false)
         result.changed = false
     end
@@ -167,32 +165,30 @@ end
 """
     shaking!(tsp_solution, par, result)
 
-Perform shaking by making `par` random 2-exchange move
+`MHMethod` that performs shaking by making `par` random 2-exchange move.
 """
-function MHLib.Schedulers.shaking!(s::TSPSolution, par::Int, result::Result)
+function MHLib.shaking!(s::TSPSolution, par::Int, result::Result)
     random_two_exchange_moves!(s, par)
 end
 
 """
     destroy!(tsp_solution, par, result)
 
-Perform destroy operation, e.g., for an LNS, by removing nodes from the solution.
+`MHMethod` that Performs a destroy operation by removing nodes from the solution.
 
-The number of removed nodes is `3 par`.
+The number of removed nodes is `3 * par`.
 """
-function MHLib.LNSs.destroy!(s::TSPSolution, par::Int, result::Result)
+function MHLib.destroy!(s::TSPSolution, par::Int, ::Result)
     random_remove_elements!(s, get_number_to_destroy(s, length(s.x); 
         min_abs=3par, max_abs=3par))
 end
 
 """
-    repair!(tsp_solution, par, result)
+    repair!(tsp_solution, ::Nothing, result)
     
-Perform repair operation by reinserting removed nodes randomly.
+`MHMethod` that performs a repair by reinserting removed nodes randomly.
 """
-function MHLib.LNSs.repair!(s::TSPSolution, par::Int, result::Result)
-    greedy_reinsert_removed!(s)
-end
+MHLib.repair!(s::TSPSolution, ::Nothing, ::Result) = greedy_reinsert_removed!(s)
 
 """
     insert_val_at_best_pos!(tsp_solution, val)
@@ -200,7 +196,7 @@ end
 Inserts `val` greedily at the best position.
 The solution's objective value is assumed to be valid and is incrementally updated.
 """
-function PermutationSolutions.insert_val_at_best_pos!(s::TSPSolution, val::Int)
+function MHLib.insert_val_at_best_pos!(s::TSPSolution, val::Int)
     x = s.x
     d = s.inst.d
     best_pos = length(x) + 1
@@ -221,7 +217,7 @@ end
 
 Return efficiently the delta in the objective value when 2-opt move would be applied.
 """
-function MHLib.PermutationSolutions.two_opt_move_delta_eval(s::TSPSolution, p1::Integer, 
+function MHLib.two_opt_move_delta_eval(s::TSPSolution, p1::Integer, 
         p2::Integer)
     @assert 1 <= p1 < p2 <= length(s)
     if p1 == 1 && p2 == length(s)
@@ -257,9 +253,8 @@ function solve_tsp(args=ARGS)
 
     # set some new default values for parameters and parse all relevant arguments
     settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/xqf131.tsp")
-    settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 10000)
-    parse_settings!([MHLib.Schedulers.settings_cfg, MHLib.LNSs.settings_cfg, 
-        tsp_settings_cfg], args)
+    settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 10000)
+    parse_settings!([scheduler_settings_cfg, lns_settings_cfg, tsp_settings_cfg], args)
     println(get_settings_as_string())
 
     inst = TSPInstance(settings[:ifile])
@@ -268,12 +263,12 @@ function solve_tsp(args=ARGS)
     println(sol)
 
     if settings[:alg] === "lns"
-        alg = LNS(sol, MHMethod[MHMethod("con", construct!, 0)],
-            [MHMethod("de$i", LNSs.destroy!, i) for i in 1:3],
-            [MHMethod("re", LNSs.repair!, 1)], 
+        alg = LNS(sol, MHMethod[MHMethod("con", construct!)],
+            [MHMethod("de$i", destroy!, i) for i in 1:3],
+            [MHMethod("re", repair!)], 
             consider_initial_sol = true)
     elseif settings[:alg] === "gvns"
-        alg = GVNS(sol, [MHMethod("con", construct!, 0)],
+        alg = GVNS(sol, [MHMethod("con", construct!)],
             [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], 
             consider_initial_sol = true)
     else

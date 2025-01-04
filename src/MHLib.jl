@@ -11,7 +11,7 @@ using StatsBase
 export Solution, to_maximize, obj, initialize!, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
     run!, git_version, get_number_to_destroy,
-    settings
+    settings, mhlib_settings_cfgs
 
 # ----------------------------- Solution ------------------------------
 
@@ -348,7 +348,6 @@ function git_version() :: String
 end
 
 # -----------------------------------------------------------
-using Reexport
 
 include("Settings.jl")
 include("Schedulers.jl")
@@ -358,21 +357,23 @@ include("ALNSs.jl")
 include("SubsetVectorSolutions.jl")
 include("PermutationSolutions.jl")
 include("Log.jl")
-@reexport using .Schedulers
-@reexport using .GVNSs
-@reexport using .LNSs
-@reexport using .ALNSs
-@reexport using .SubsetVectorSolutions
-@reexport using .PermutationSolutions
-@reexport using .Log
+include("OneMax.jl")
 
+"""
+    mhlib_settings_cfgs
 
+List of all settings configurations of the MHLib modules.
 
-const all_settings_cfgs = [
-        Schedulers.settings_cfg,
-        LNSs.settings_cfg,
-        ALNSs.settings_cfg,
+This list can be used to parse all settings of all modules and is the default in
+`parse_settings!`
+"""
+const mhlib_settings_cfgs = [
+        scheduler_settings_cfg,
+        lns_settings_cfg,
+        alns_settings_cfg,
+        onemax_settings_cfg,
     ]
 
+include("../test/tests.jl")
 
-end # module
+end  # module

@@ -3,8 +3,17 @@
 
 Major changes in releases:
 
+## Version 0.1.16
+- `clear!` renamed to `Base.empty!`
+- Module tests use now `TestItems.jl`, which has support integrated in VSCode
+- All submodules within MHLib removed
+- MaxSat demo added directly in `MHLib` to be able to perform basic tests of all algorithms.
+- Other tests for different problems moved to `MHLibDemos`
+- Directory reorganization: Package `MHLib`has its own directory with the same name
+- Docstrings improved
+
 ## Version 0.1.15
-- `Tuning`renamed to `tuning`and small fixes in it, updates for Julia 1.11.
+- `Tuning`renamed to `tuning`and small fixes in it, updates for Julia 1.11
 
 ## Version 0.1.14
 - `Results` from `Scheduler` is extended with field `is_local_optimum` to be able to 

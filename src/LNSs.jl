@@ -1,24 +1,17 @@
-"""
-    LNSs
+#     LNSs.jl
 
-A basic large neighborhood search.
+# A basic large neighborhood search.
 
-It extends the more general scheduler module/class by distinguishing between construction
-heuristics, destroy methods and repair methods.
-"""
-module LNSs
+# It extends the more general scheduler module/class by distinguishing between construction
+# heuristics, destroy methods and repair methods.
 
-using MHLib
-using MHLib.Schedulers
-using StatsBase
-using ArgParse
 
-export LNS, LNSParameters,
+export LNS, LNSParameters, lns_settings_cfg,
     MethodSelector, UniformRandomMethodSelector, WeightedRandomMethodSelector,
     destroy!, repair!, ResultCase, reinitialize!
 
 
-const settings_cfg = ArgParseSettings()
+const lns_settings_cfg = ArgParseSettings()
 
 @add_arg_table! settings_cfg begin
     "--lns_init_temp_factor"
@@ -39,7 +32,6 @@ Parameters for LNS adopted from settings by default.
 Base.@kwdef struct LNSParameters
     init_temp_factor::Float64 = settings[:lns_init_temp_factor]
     temp_dec_factor::Float64 = settings[:lns_temp_dec_factor]
-    logscores::Bool = true
 end
 
 """
@@ -118,7 +110,7 @@ end
 
 Reset the LNS to the given solution with possibly a new problem instance for a new run.
 """
-function Schedulers.reinitialize!(lns::LNS{<:MethodSelector, TSolution}, 
+function reinitialize!(lns::LNS{<:MethodSelector, TSolution}, 
         sol::TSolution) where {TSolution <: Solution}
     copy!(lns.solution, sol)
     copy!(lns.new_solution, sol)
@@ -267,7 +259,7 @@ end
 
 Perform the construction heuristics followed by a LNS.
 """
-function MHLib.run!(lns::LNS)
+function run!(lns::LNS)
     sol = copy(lns.scheduler.incumbent)
     @assert lns.scheduler.incumbent_valid || !isempty(lns.meths_ch)
     terminate = perform_sequentially!(lns.scheduler, sol, lns.meths_ch)
@@ -332,5 +324,3 @@ function select_method(lns::LNS{WeightedRandomMethodSelector}, candidates,
     return sample(candidates, Weights(weights))
 end
 
-
-end  # module

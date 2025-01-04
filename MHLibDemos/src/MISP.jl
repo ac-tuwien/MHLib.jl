@@ -85,7 +85,7 @@ MISPSolution(inst::MISPInstance) =
 
 unselected_elems_in_x(::MISPSolution) = false
 
-MHLib.SubsetVectorSolutions.all_elements(s::MISPSolution) = s.inst.all_nodes
+MHLib.all_elements(s::MISPSolution) = s.inst.all_nodes
 
 function Base.copy!(s1::MISPSolution, s2::MISPSolution)
     s1.inst = s2.inst
@@ -125,26 +125,26 @@ function MHLib.check(s::MISPSolution; kwargs...)
     end
 end
 
-function MHLib.clear!(s::MISPSolution)
+function Base.empty!(s::MISPSolution)
     fill!(s.covered, 0)
-    invoke(MHLib.clear!, Tuple{SubsetVectorSolution}, s)
+    invoke(Base.empty!, Tuple{SubsetVectorSolution}, s)
 end
 
 """
-    construct!(misp_solution, par, result)
+    construct!(misp_solution, ::Nothing, result)
 
-Construct new solution by random initialization.
+`MHMethod that constructs new solution by random initialization.
 """
-function MHLib.Schedulers.construct!(s::MISPSolution, par::Int, result::Result)
+function MHLib.construct!(s::MISPSolution, ::Nothing, result::Result)
     initialize!(s)
 end
 
 """
-    local_improve!(misp_solution, par, result)
+    local_improve!(misp_solution, ::Nothing, result)
 
-Perform two-exchange local search followed by random fill.
+`MHMethod` that performs two-exchange local search followed by random fill.
 """
-function MHLib.Schedulers.local_improve!(s::MISPSolution, par::Int, result::Result)
+function MHLib.local_improve!(s::MISPSolution, ::Nothing, result::Result)
     if !two_exchange_random_fill_neighborhood_search!(s, false)
         result.changed = false
     end
@@ -153,9 +153,9 @@ end
 """
     shaking!(misp_solution, par, result)
 
-Perform shaking by removing par randomly selected elements followed ba a random fill.
+`MHMethod` that performs shaking by removing `par` random elements followed by random fill.
 """
-function MHLib.Schedulers.shaking!(s::MISPSolution, par::Int, result::Result)
+function MHLib.shaking!(s::MISPSolution, par::Int, ::Result)
     remove_some!(s, par)
     fillup!(s)
 end
@@ -165,10 +165,10 @@ end
 
 Quick check if the solution may possibly be extended by adding further elements.
 """
-MHLib.SubsetVectorSolutions.may_be_extendible(s::MISPSolution) =
+MHLib.may_be_extendible(s::MISPSolution) =
     any(s.covered .== 0)
 
-function MHLib.SubsetVectorSolutions.element_removed_delta_eval!(s::MISPSolution; 
+function MHLib.element_removed_delta_eval!(s::MISPSolution; 
         update_obj_val::Bool=true, allow_infeasible::Bool=false)
     u = s.x[s.sel+1]
     s.covered[u] -= 1
@@ -181,7 +181,7 @@ function MHLib.SubsetVectorSolutions.element_removed_delta_eval!(s::MISPSolution
     return true
 end
 
-function MHLib.SubsetVectorSolutions.element_added_delta_eval!(s::MISPSolution; 
+function MHLib.element_added_delta_eval!(s::MISPSolution; 
         update_obj_val::Bool=true, allow_infeasible::Bool=false)
     u = s.x[s.sel]
     if allow_infeasible || s.covered[u] == 0
@@ -209,8 +209,8 @@ function solve_misp(args=ARGS)
 
     # set some new default values for parameters and parse all relevant arguments
     settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/frb40-19-1.mis")
-    settings_new_default_value!(MHLib.Schedulers.settings_cfg, "mh_titer", 1000)
-    parse_settings!([MHLib.Schedulers.settings_cfg], args)
+    settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 1000)
+    parse_settings!([MHLib.scheduler_settings_cfg], args)
     println(get_settings_as_string())
 
     inst = MISPInstance(settings[:ifile])
@@ -220,8 +220,8 @@ function solve_misp(args=ARGS)
     # println(sol)
 
     # we apply a variable neighborhod search:
-    alg = GVNS(sol, [MHMethod("con", construct!, 0)],
-        [MHMethod("li1", local_improve!, 1)],
+    alg = GVNS(sol, [MHMethod("con", construct!)],
+        [MHMethod("li1", local_improve!)],
         [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
             MHMethod("sh3", shaking!, 3)], 
         consider_initial_sol = true)

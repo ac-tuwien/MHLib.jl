@@ -60,15 +60,13 @@ if variant_to_use == "1":
     # exemplary wrapper for Julia function to tune
     def f(config: Configuration, instance: str, seed: int) -> float:
         x = float(config["x"]); y = int(config["y"]); z = str(config["z"])
-        print(f'f({instance}, {seed}, {x}, {y}, {y})', end=" -> ")
+        print(f'f({instance}, {seed}, {x}, {y}, {z})', end=" -> ")
         res = jl.f(instance, seed, x, y, z)
         print(res)
         return res
     
     smac = AlgorithmConfigurationFacade(scenario, f, overwrite=True)
     # smac = HyperparameterOptimizationFacade(scenario, f, overwrite=True)
-
-
 
 elif variant_to_use == "2":
 
