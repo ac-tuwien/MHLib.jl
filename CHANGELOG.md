@@ -3,7 +3,7 @@
 
 Major changes in releases:
 
-## Version 0.1.16
+## Version 0.2.0
 - `clear!` renamed to `Base.empty!`
 - Unit tests use now `TestItems.jl`, which has support integrated in VSCode
 - All submodules within MHLib removed

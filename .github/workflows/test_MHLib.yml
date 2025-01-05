@@ -5,12 +5,27 @@ on:
   #   - cron: '0 2 * * *'  # Daily at 2 AM UTC (8 PM CST)
   push:
     branches: [master, testing]
-    tags: ["*"]
+    tags: ['*']
   pull_request:
     branches: [master, testing]
-    tags: ["*"]
+    tags: ['*']
+  workflow_dispatch:
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 jobs:
   test:
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions: # needed to allow julia-actions/cache to proactively delete old caches that it has created
+      actions: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -27,12 +42,12 @@ jobs:
         arch:
           - x64
           # - x86
-        exclude:
-          # Test 32-bit only on Linux
-          - os: macOS-latest
-            arch: x86
-          - os: windows-latest
-            arch: x86
+        # exclude:
+        #   # Test 32-bit only on Linux
+        #   - os: macOS-latest
+        #     arch: x86
+        #   - os: windows-latest
+        #     arch: x86
         # include:
           # - os: ubuntu-latest
           #   version: 1.5
@@ -43,8 +58,9 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: actions/cache@v2
+      - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
+      # - uses: julia-actions/julia-runtest@v1
       - name: Install Julia dependencies and run tests
         shell: julia --project=monorepo {0}
         run: |
