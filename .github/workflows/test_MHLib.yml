@@ -5,10 +5,10 @@ on:
   #   - cron: '0 2 * * *'  # Daily at 2 AM UTC (8 PM CST)
   push:
     branches: [master, testing]
-    tags: ['*']
+    tags: ["*"]
   pull_request:
     branches: [master, testing]
-    tags: ['*']
+    tags: ["*"]
   workflow_dispatch:
 concurrency:
   # Skip intermediate builds: always.
@@ -23,11 +23,6 @@ jobs:
     permissions: # needed to allow julia-actions/cache to proactively delete old caches that it has created
       actions: write
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
-    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
