@@ -17,6 +17,7 @@ TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 [compat]
 ArgParse = "1"
 Graphs = "1.8"
+Revise = "3"
 StatsBase = "0.33, 0.34"
 Test = "1.11"
 TestItemRunner = "1.0"
