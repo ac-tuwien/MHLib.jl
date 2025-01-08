@@ -33,6 +33,7 @@ To use irace on these examples, call irace from the respective subdirectory.
 [SMAC3](https://automl.github.io/SMAC3) is another tool for automated algorithm 
 configuration and parameter tuning. It is based on Bayesian optimization and utilizes
 racing mechanisms and random forests.
+Ensure that Python is installed with the packages  `juliacall`, `smac` and `ConfigSpace`.
 
 The directory `tuning/smac`contains an example with three different variants on how SMAC3 can 
 specifically be used for tuning parameters of algorithms implemented in Julia. 

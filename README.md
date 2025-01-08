@@ -109,9 +109,9 @@ solving your own problem.
 
 Further smaller usage examples can also be found in the test directory of the MHLibDemos package.
 
-## Parameter Tuning with SMAC3
+## Parameter Tuning
 
-Subdirectory `Tuning` contains examples on how SMAC3 can specifically be used for tuning
+Subdirectory `Tuning` contains examples on how irace (or SMAC3) can specifically be used for tuning
 algorithms implemented in Julia. See [Tuning/README.md](Tuning/README.md) for details.
 
 ## News

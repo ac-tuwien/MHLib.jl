@@ -52,5 +52,5 @@
         "typeof",
         "uuid"
     ],
-    "julia.environmentPath": "MHLibDemos"
+    "julia.environmentPath": "/home/guenther/proj/MHLib/tuning/smac"
 }

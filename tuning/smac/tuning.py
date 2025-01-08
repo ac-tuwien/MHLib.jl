@@ -12,7 +12,6 @@ from smac.intensifier.intensifier import Intensifier
 import os
 import sys
 
-# print(os.getcwd()); os.chdir("tuning") #!!!
 
 
 # simple way to specify a configuration space
@@ -24,14 +23,14 @@ config_space = ConfigurationSpace({
 
 # alternative long form, advanced configuration aspects possible:
 config_space2 = ConfigurationSpace()
-config_space2.add([
+config_space2.add_hyperparameters([
     ConfigSpace.UniformFloatHyperparameter("x", 0.1, 4.0),
     ConfigSpace.UniformIntegerHyperparameter("y", 1, 3),
     ConfigSpace.CategoricalHyperparameter("z", ["opt1", "opt2"]),
 ])
 
 # directory containing the problem instances; here we exemplarily just use the current one
-instance_dir = "../../test/data"
+instance_dir = "../../MHLibDemos/data"
 # names of problem instances to be used for tuning
 instances = [fn for fn in os.listdir(instance_dir) if fn.startswith("maxsat")]
 instances = instances[:1]  # limit to first two instances for testing
@@ -55,7 +54,7 @@ if variant_to_use == "1":
 
     from juliacall import Main as jl
     from juliacall import Pkg; Pkg.activate(".")  # activate correct Julia environment
-    jl.include("julia-function-to-tune.jl")  # or Main.using("ModuleOrPackageToUse")
+    jl.include("../julia-function-to-tune.jl")  # or Main.using("ModuleOrPackageToUse")
 
     # exemplary wrapper for Julia function to tune
     def f(config: Configuration, instance: str, seed: int) -> float:
