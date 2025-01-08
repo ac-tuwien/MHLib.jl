@@ -10,7 +10,7 @@ for arg in ARGS
     d[name] = value
 end
 
-include("julia-function-to-tune.jl")
+include("../julia-function-to-tune.jl")
 
 # open("args.txt", "w") do f
 #     println(f, d)

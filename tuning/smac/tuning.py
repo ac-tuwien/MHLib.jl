@@ -31,7 +31,7 @@ config_space2.add([
 ])
 
 # directory containing the problem instances; here we exemplarily just use the current one
-instance_dir = "../test/data"
+instance_dir = "../../test/data"
 # names of problem instances to be used for tuning
 instances = [fn for fn in os.listdir(instance_dir) if fn.startswith("maxsat")]
 instances = instances[:1]  # limit to first two instances for testing

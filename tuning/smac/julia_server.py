@@ -9,7 +9,7 @@ from ConfigSpace import Configuration
 
 # start Julia subprocess and load relevant code
 julia = subprocess.Popen(["julia"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-julia.stdin.write(b'include("julia-function-to-tune.jl")\n')
+julia.stdin.write(b'include("../julia-function-to-tune.jl")\n')
 julia.stdin.flush()
 reply = julia.stdout.readline()
 print(reply, "Julia process started ................................")
@@ -25,6 +25,3 @@ def f(config: Configuration, instance, seed: int=0) -> float:
     res = float(reply)
     print(cmd, "-> ", res)
     return res
-
-
-

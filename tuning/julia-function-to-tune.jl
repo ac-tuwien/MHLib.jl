@@ -3,12 +3,12 @@
 """
     f(instance::AbstractString, seed::Int, x::Float64, y::Int, z::String)::Float64
 
-Demo function to tune with SMAC3 in different ways.
+Demo function to tune.
 """
 function f(instance::AbstractString, seed::Int, x::Float64, y::Int, z::AbstractString)::Float64
     # just some busy waiting:
     xx=3
-    for i in 1:10000000
+    for i in 1:1000000
         xx = xx + 1e-6 *sin(xx)
     end
 
