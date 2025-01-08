@@ -1,9 +1,6 @@
 module MHLibDemos
 
-using Revise
-using ArgParse
 using Graphs
-
 using MHLib
 
 export create_or_read_simple_graph

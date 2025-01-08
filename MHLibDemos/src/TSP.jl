@@ -252,7 +252,7 @@ function solve_tsp(args=ARGS)
     args isa AbstractString && (args = split(args))
 
     # set some new default values for parameters and parse all relevant arguments
-    settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/xqf131.tsp")
+    settings_new_default_value!(MHLib.settings_cfg, "ifile", "MHLibDemos/data/xqf131.tsp")
     settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 10000)
     parse_settings!([scheduler_settings_cfg, lns_settings_cfg, tsp_settings_cfg], args)
     println(get_settings_as_string())

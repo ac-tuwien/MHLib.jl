@@ -1,11 +1,11 @@
 # The function for which to tune the parameters, i.e., minimize the returned value
 
 """
-    f(instance::AbstractString, seed::Int, x::Float64, y::Int, z::String)::Float64
+    f(inst::AbstractString, seed::Int, x::Float64, y::Int, z::String)::Float64
 
 Demo function to tune.
 """
-function f(instance::AbstractString, seed::Int, x::Float64, y::Int, z::AbstractString)::Float64
+function f(inst::AbstractString, seed::Int, x::Float64, y::Int, z::AbstractString)::Float64
     # just some busy waiting:
     xx=3
     for i in 1:1000000

@@ -7,7 +7,6 @@ The goal is to maximize the number of clauses satisfied in a boolean function gi
 conjunctive normal form.
 """
 
-using ArgParse
 using Random
 using StatsBase
 using MHLib
@@ -201,7 +200,8 @@ function solve_maxsat(args=ARGS)
     args isa AbstractString && (args = split(args))
 
     # set some new default values for parameters and parse all relevant arguments
-    settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/maxsat-adv1.cnf")
+    settings_new_default_value!(MHLib.settings_cfg, "ifile", 
+        "MHLibDemos/data/maxsat-adv1.cnf")
     settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 1000)
     parse_settings!([MHLib.scheduler_settings_cfg,
         MHLib.lns_settings_cfg, MHLib.alns_settings_cfg, maxsat_settings_cfg], args)

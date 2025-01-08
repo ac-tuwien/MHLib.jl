@@ -5,7 +5,7 @@ Managing global parameters/settings via decentralized specifications.
 using ArgParse
 using Random
 
-export settings, parse_settings!, add_arg_table!,
+export ArgParseSettings, @add_arg_table!, settings, parse_settings!, add_arg_table!,
     get_settings_as_string, seed_random_generator, settings_new_default_value!
 
 

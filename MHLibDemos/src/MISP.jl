@@ -208,7 +208,8 @@ function solve_misp(args=ARGS)
     args isa AbstractString && (args = split(args))
 
     # set some new default values for parameters and parse all relevant arguments
-    settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/frb40-19-1.mis")
+    settings_new_default_value!(MHLib.settings_cfg, "ifile", 
+        "MHLibDemos/data/frb40-19-1.mis")
     settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 1000)
     parse_settings!([MHLib.scheduler_settings_cfg], args)
     println(get_settings_as_string())

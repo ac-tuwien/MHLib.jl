@@ -9,7 +9,6 @@ Find a subset of the items with maximum total price that does not exceed the res
 capacities.
 """
 
-using ArgParse
 using MHLib
 
 export MKPInstance, MKPSolution, solve_mkp
@@ -206,7 +205,7 @@ function solve_mkp(args=ARGS)
     args isa AbstractString && (args = split(args))
 
     # set some new default values for parameters and parse all relevant arguments
-    settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/mknapcb5-01.txt")
+    settings_new_default_value!(MHLib.settings_cfg, "ifile", "MHLibDemos/data/mknapcb5-01.txt")
     settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 5000)
     parse_settings!([MHLib.scheduler_settings_cfg], args)
     println(get_settings_as_string())

@@ -17,7 +17,7 @@ export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerParameters,
 
 const scheduler_settings_cfg = ArgParseSettings()
 
-@add_arg_table! settings_cfg begin
+@add_arg_table! scheduler_settings_cfg begin
     "--mh_titer"
         help = "maximum number of iterations (<0: turned off)"
         arg_type = Int
