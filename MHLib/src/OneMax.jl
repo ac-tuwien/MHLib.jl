@@ -95,7 +95,7 @@ function solve_onemax(args=ARGS)
     return sol
 end
 
-# To run from REPL, use `MHLibDemos` and call `solve_onemax(<args>)` where `<args>`
+# To run from REPL, use `MHLib` and call `solve_onemax(<args>)` where `<args>`
 # is a single string or list of strings being passed as arguments for setting global 
 # parameters, e.g. `solve_onemax("--seed=1 --mh_titer=120")`.
 # `@<filename>` may be used to read arguments from a configuration file <filename>

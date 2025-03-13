@@ -111,15 +111,16 @@ end
 
 
 # --------------------- Output logging methods ---------------------
+
 """
-    log_iteration_header(scheduler)
+    log_iteration_header(::Scheduler)
 
 Write iteration log header.
 """
 function log_iteration_header(sched::Scheduler)
+    !sched.params.log && return
     s = "I       iter             best          obj_old          obj_new" *
         "        time              method info"
-    println(s)
     with_logger(sched.logger) do 
         @logmsg HeaderLevel s
     end 
@@ -136,7 +137,7 @@ end
 
 
 """
-    log_iteration(scheduler, method_name, obj_old, new_sol, new_incumbent, in_any_case,
+    log_iteration(::Scheduler, method_name, obj_old, new_sol, new_incumbent, in_any_case,
         log_info)
 
 Writes iteration log info.
@@ -152,6 +153,7 @@ A line is written if in_any_case is set or in dependence of
 """
 function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::Solution,
         new_incumbent::Bool, in_any_case::Bool, log_info::String="")
+    !sched.params.log && return
     log = in_any_case || new_incumbent && sched.params.lnewinc
     if !log
         lfreq = sched.params.lfreq
@@ -180,14 +182,16 @@ Safe division: return x/y if y!=0 and nan otherwise.
 sdiv(x::Real, y::Real) = (y == 0) ? NaN : x/y
 
 """
-    method_statistics(s::Scheduler)
+    method_statistics(::Scheduler)
 
 Write overall statistics.
 """
-function method_statistics(s::Scheduler)
+function method_statistics(sched::Scheduler)
 
-    if s.run_time === missing
-        s.run_time = time() - s.time_start
+    !sched.params.log && return
+
+    if sched.run_time === missing
+        sched.run_time = time() - sched.time_start
     end
 
     total_applications = 0
@@ -196,7 +200,7 @@ function method_statistics(s::Scheduler)
     total_brutto_time = 0.0
     total_obj_gain = 0.0
 
-    for ms in values(s.method_stats)
+    for ms in values(sched.method_stats)
         total_applications += ms.applications
         total_netto_time += ms.netto_time
         total_successes += ms.successes
@@ -205,18 +209,18 @@ function method_statistics(s::Scheduler)
     end
 
     res = "\nMethod statistics\n" *
-          "S  method    iter  succ  succ-rate%  tot-obj-gain  avg-obj-gain  rel-succ%  net-time  " *
-          "net-time%  brut-time  brut-time%\n"
+          "S  method    iter  succ  succ-rate%  tot-obj-gain  avg-obj-gain  rel-succ%  \
+            net-time  net-time%  brut-time  brut-time%\n"
 
-    for key in keys(s.method_stats)
-        e = s.method_stats[key]
+    for key in keys(sched.method_stats)
+        e = sched.method_stats[key]
         temp = ("S  " * key * "       ")[1:11]
         res *=@sprintf("%s%6d%6d%12.5f%14.5f%14.5f%11.5f%10.5f%11.5f%11.5f%12.5f",
           temp, e.applications, e.successes, sdiv(e.successes, e.applications) * 100,
           e.obj_gain, sdiv(e.obj_gain, e.applications),
           sdiv(e.successes, total_successes) * 100,
-          e.netto_time, sdiv(e.netto_time, s.run_time) * 100,
-          e.brutto_time, sdiv(e.brutto_time, s.run_time) * 100)
+          e.netto_time, sdiv(e.netto_time, sched.run_time) * 100,
+          e.brutto_time, sdiv(e.brutto_time, sched.run_time) * 100)
         res *= "\n"
     end
 
@@ -224,32 +228,33 @@ function method_statistics(s::Scheduler)
     res *=@sprintf("%s%6d%6d%12.5f%14.5f%14.5f%11.5f%10.5f%11.5f%11.5f%12.5f",
       temp, total_applications, total_successes, sdiv(total_successes, total_applications) * 100,
       total_obj_gain, sdiv(total_obj_gain, total_applications),
-      sdiv(sdiv(total_successes, length(s.method_stats)), total_successes) * 100,
-      total_netto_time, sdiv(total_netto_time, s.run_time) * 100,
-      total_brutto_time, sdiv(total_brutto_time, s.run_time) * 100)
+      sdiv(sdiv(total_successes, length(sched.method_stats)), total_successes) * 100,
+      total_netto_time, sdiv(total_netto_time, sched.run_time) * 100,
+      total_brutto_time, sdiv(total_brutto_time, sched.run_time) * 100)
     res *= "\n"
 
     println(res)
-    with_logger(s.logger) do 
+    with_logger(sched.logger) do 
         @logmsg StatsLevel res
     end
 end
 
 
 """
-    main_results(scheduler)
+    main_results(::Scheduler)
 
 Print main results.
 """
-function main_results(s::Scheduler)
-    str = "T best solution: $(s.incumbent)\nT best obj: $(obj(s.incumbent))\n" *
-        "T best iteration: $(s.incumbent_iteration)\n" *
-        "T total iterations: $(s.iteration)\n" *
-        @sprintf("T best time [s]: %.3f\n", s.incumbent_time) *
-        @sprintf("T total time [s]: %.4f\n", s.run_time)
+function main_results(sched::Scheduler)
+    !sched.params.log && return
+    str = "T best solution: $(sched.incumbent)\nT best obj: $(obj(sched.incumbent))\n" *
+        "T best iteration: $(sched.incumbent_iteration)\n" *
+        "T total iterations: $(sched.iteration)\n" *
+        @sprintf("T best time [s]: %.3f\n", sched.incumbent_time) *
+        @sprintf("T total time [s]: %.4f\n", sched.run_time)
     print(str)
-    with_logger(s.logger) do 
+    with_logger(sched.logger) do 
         @logmsg SummaryLevel str
     end
-    check(s.incumbent)
+    check(sched.incumbent)
 end

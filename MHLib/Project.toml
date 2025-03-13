@@ -1,6 +1,6 @@
 name = "MHLib"
 uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
-authors = ["Guenther Raidl <raidl@ac.tuwien.ac.at> and others"]
+authors = ["Guenther Raidl <raidl@ac.tuwien.ac.at> et al."]
 version = "0.2.0"
 
 [deps]

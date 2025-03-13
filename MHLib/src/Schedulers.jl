@@ -22,6 +22,10 @@ const scheduler_settings_cfg = ArgParseSettings()
         help = "maximum number of iterations (<0: turned off)"
         arg_type = Int
         default = 100
+    "--mh_log"
+        help = "write log information"
+        arg_type = Bool
+        default = true
     "--mh_lnewinc"
         help = "always write iteration log if new incumbent solution"
         arg_type = Bool
@@ -68,6 +72,7 @@ Parameters for the scheduler adopted from settings by default.
 - `tctime`: maximum time [s] without improvement (<0: turned off)
 - `tobj`: objective value at which should be terminated when reached (<0: turned off)
 - `checkit`: call `check` for each solution after each method application
+- `log`: if true write all log information, else none
 """
 Base.@kwdef struct SchedulerParameters
     titer::Int = settings[:mh_titer]
@@ -78,6 +83,7 @@ Base.@kwdef struct SchedulerParameters
     tctime::Float64 = settings[:mh_tctime]
     tobj::Float64 = settings[:mh_tobj]
     checkit::Bool = settings[:mh_checkit]
+    log::Bool = settings[:mh_log]
 end
 
 

@@ -12,6 +12,7 @@ Major changes in releases:
 - Other tests for different problems moved to `MHLibDemos`
 - Directory reorganization: Package `MHLib`has its own directory with the same name
 - Docstrings improved
+- New setting `mh_log` for turning of logging completely
 
 ## Version 0.1.15
 - `Tuning`renamed to `tuning`and small fixes in it, updates for Julia 1.11
