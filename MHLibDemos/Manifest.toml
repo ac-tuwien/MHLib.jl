@@ -162,9 +162,9 @@ version = "1.11.0"
 
 [[deps.MHLib]]
 deps = ["ArgParse", "DataStructures", "Logging", "Printf", "Random", "StatsBase", "Test", "TestItemRunner", "TestItems"]
-path = "../MHLib"
+path = ".."
 uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
-version = "0.2.0"
+version = "0.2.1"
 
 [[deps.MacroTools]]
 git-tree-sha1 = "72aebe0b5051e5143a079a4685a46da330a40472"
