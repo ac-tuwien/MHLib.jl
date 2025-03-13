@@ -4,4 +4,7 @@
 
 using TestItemRunner
 
+using Pkg; Pkg.activate(joinpath(@__DIR__, ".."))
+using MHLibDemos
+
 @run_package_tests;

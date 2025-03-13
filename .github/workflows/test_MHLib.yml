@@ -53,11 +53,11 @@ jobs:
           # dev mono repo versions
           pkg"registry up"
           Pkg.update()
-          pkg"dev ./MHLib"
+          pkg"dev ."
           Pkg.test("MHLib"; coverage=true)
       - uses: julia-actions/julia-processcoverage@v1
         with:
-          directories: MHLib/src
+          directories: src
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

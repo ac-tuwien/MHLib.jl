@@ -5,7 +5,8 @@
 using TestItems
 
 # This initialization is executed before each test item
-@testsnippet TestInit begin
+@testsnippet MHLibTestInit begin
+    cd(@__DIR__)
     using Random
     using MHLib
     using MHLibDemos
@@ -13,7 +14,7 @@ using TestItems
 end
 
 
-@testitem "GVNS-MAXSAT" setup=[TestInit] begin
+@testitem "GVNS-MAXSAT" setup=[MHLibTestInit] begin
     inst = MAXSATInstance("data/maxsat-simple.cnf")
     sol = MAXSATSolution(inst)
     println(sol)
@@ -27,7 +28,7 @@ end
     @test obj(sol) >= 0
 end
 
-@testitem "MAXSAT-kflip" setup=[TestInit] begin
+@testitem "MAXSAT-kflip" setup=[MHLibTestInit] begin
     inst = MAXSATInstance("data/maxsat-adv1.cnf")
     sol = MAXSATSolution(inst)
 
@@ -41,7 +42,7 @@ end
     @test ndiff == k
 end
 
-@testitem "LNS-MAXSAT" setup=[TestInit] begin
+@testitem "LNS-MAXSAT" setup=[MHLibTestInit] begin
     settings[:mh_titer] = 120
     inst = MAXSATInstance("data/maxsat-adv1.cnf")
     sol = MAXSATSolution(inst)
@@ -57,7 +58,7 @@ end
     @test obj(sol) >= 0
 end
 
-@testitem "LNS-MAXSAT" setup=[TestInit] begin
+@testitem "LNS-MAXSAT" setup=[MHLibTestInit] begin
     settings[:mh_titer] = 120
     inst = TSPInstance(50)
     sol = TSPSolution(inst)
@@ -73,7 +74,7 @@ end
     @test obj(sol) >= 0
 end
 
-@testitem "ALNS-MAXSAT" setup=[TestInit] begin
+@testitem "ALNS-MAXSAT" setup=[MHLibTestInit] begin
     settings[:mh_titer] = 120
     inst = MAXSATInstance("data/maxsat-adv1.cnf")
     sol = MAXSATSolution(inst)
@@ -88,7 +89,7 @@ end
     @test obj(sol) >= 0
 end
 
-@testitem "GVNS-MKP" setup=[TestInit] begin
+@testitem "GVNS-MKP" setup=[MHLibTestInit] begin
     settings[:mh_titer] = 25
     inst = MKPInstance("data/mknapcb5-01.txt")
     sol = MKPSolution(inst)
@@ -103,7 +104,7 @@ end
     @test obj(sol) >= 0
 end
 
-@testitem "GVNS-MISP" setup=[TestInit] begin
+@testitem "GVNS-MISP" setup=[MHLibTestInit] begin
     settings[:mh_titer] = 25
     inst = MISPInstance("data/frb40-19-1.mis")
     sol = MISPSolution(inst)
@@ -118,7 +119,7 @@ end
     @test obj(sol) >= 0
 end
 
-@testitem "Random-Init-TSP" setup=[TestInit] begin
+@testitem "Random-Init-TSP" setup=[MHLibTestInit] begin
     rand_inst = TSPInstance()
     inst = TSPInstance("data/xqf131.tsp")
     sol = TSPSolution(inst)
@@ -133,7 +134,7 @@ end
     @test obj(sol) >= 0
 end
 
-@testitem "GVNS-TSP" setup=[TestInit] begin
+@testitem "GVNS-TSP" setup=[MHLibTestInit] begin
     settings[:mh_titer] = 300
     inst = TSPInstance("data/xqf131.tsp")
     sol = TSPSolution(inst)
@@ -152,7 +153,7 @@ end
     @test obj(sol) >= 0
 end
 
-@testitem "GVNS-GraphColoring1" setup=[TestInit] begin
+@testitem "GVNS-GraphColoring1" setup=[MHLibTestInit] begin
     parse_settings!([scheduler_settings_cfg, graph_coloring_settings_cfg], 
         ["--ifile=data/fpsol2.i.1.col", "--mh_titer=1000", "--gcp_colors=2"])
     inst = GraphColoringInstance(settings[:ifile])
@@ -173,7 +174,7 @@ end
     @test obj(sol) >= 0
 end
 
-@testitem "GVNS-GraphColoring2" setup=[TestInit] begin
+@testitem "GVNS-GraphColoring2" setup=[MHLibTestInit] begin
     parse_settings!([scheduler_settings_cfg, graph_coloring_settings_cfg], 
         ["--ifile=data/test.col", "--mh_titer=50", "--gcp_colors=3"])
     inst = GraphColoringInstance(settings[:ifile])

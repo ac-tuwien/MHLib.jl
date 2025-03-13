@@ -4,4 +4,5 @@
 
 using TestItemRunner
 
-@run_package_tests;
+@run_package_tests filter=ti->(!endswith(ti.filename, "MHLibDemos/test/tests.jl"));
+
