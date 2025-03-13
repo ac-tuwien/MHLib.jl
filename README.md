@@ -48,7 +48,7 @@ installed via
 Note that `MHLib.jl` is still behind the capabilities of the Python `pymhlib`, 
 however, much more performant.
 
-The main file `MHLib/src/MHLib.jl` provides the following types for candidate solutions and various functions for them:
+The main file `src/MHLib.jl` provides the following types for candidate solutions and various functions for them:
 - `Solution`:
     An abstract type that represents a candidate solution to an optimization problem.
 - `VectorSolution`:
@@ -89,12 +89,12 @@ Further files (modules):
     Adaptive large neighborhood search (ALNS). It is realized via `LNS` and 
     `ALNSMethodSelector`.
 - `OneMax`:
-    A simple test problem to which the above algorithms are applied in the module tests in `MHLib/test`.
+    A simple test problem to which the above algorithms are applied in the unit tests in `test`.
 
 ## MHLibDemos
 
 For demonstration purposes subdirectory [`MHLibDemos`](MHLibDemos/README.md) provides 
-a package (not officially registered at JuliaHub), with basic implementations for the 
+a package (not separately registered at JuliaHub), with basic implementations for the 
 following classical combinatorial optimization problems, to which some of 
 MHLib's metaheuristics are applied:
 
@@ -105,7 +105,8 @@ MHLib's metaheuristics are applied:
 - `MISP`: maximum independent set problem based on `SubsetVectorSolution`
 
 It is recommended to take the `MHLibDemos` package with one of the demos as template for 
-solving your own problem.
+solving your own problem. Remember to activate this package's onw Environment in order 
+to run the demos.
 
 Further smaller usage examples can also be found in the test directory of the MHLibDemos package.
 

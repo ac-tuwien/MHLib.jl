@@ -54,7 +54,7 @@ jobs:
           # dev mono repo versions
           pkg"registry up"
           Pkg.update()
-          pkg"dev ./MHLibDemos ./MHLib"
+          pkg"dev ./MHLibDemos ."
           Pkg.test("MHLibDemos"; coverage=true)
       - uses: julia-actions/julia-processcoverage@v1
         with:

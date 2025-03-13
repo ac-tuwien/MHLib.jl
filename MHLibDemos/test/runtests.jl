@@ -4,4 +4,6 @@
 
 using TestItemRunner
 
+using MHLibDemos
+
 @run_package_tests;
