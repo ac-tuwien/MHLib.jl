@@ -41,7 +41,7 @@ const settings = Dict{Symbol, Any}()
         arg_type = String
         default = ""
     "--ofile"
-        help = "File to log outputs"
+        help = "file to log outputs"
         arg_type = String
         default = ""
 end

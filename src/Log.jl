@@ -70,8 +70,7 @@ end
 
 # Constructors
 MHLogger(io::IO) = MHLogger(io, Vector{LogLevel}())
-MHLogger(file::String) = MHLogger(open(file, "w"), Vector{LogLevel}())
-MHLogger(file::String, lvls::Vector{LogLevel}) = MHLogger(open(file,"w"), lvls)
+MHLogger(file::String, lvls::Vector{LogLevel}=LogLevels[]) = MHLogger(open(file,"w"), lvls)
 
 # Required Logging Methods
 Logging.min_enabled_level(logger::MHLogger) =
@@ -225,7 +224,7 @@ function method_statistics(sched::Scheduler)
     end
 
     temp = ("S  SUM/AVG       ")[1:11]
-    res *=@sprintf("%s%6d%6d%12.5f%14.5f%14.5f%11.5f%10.5f%11.5f%11.5f%12.5f",
+    res *= @sprintf("%s%6d%6d%12.5f%14.5f%14.5f%11.5f%10.5f%11.5f%11.5f%12.5f",
       temp, total_applications, total_successes, sdiv(total_successes, total_applications) * 100,
       total_obj_gain, sdiv(total_obj_gain, total_applications),
       sdiv(sdiv(total_successes, length(sched.method_stats)), total_successes) * 100,
