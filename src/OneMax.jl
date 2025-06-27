@@ -86,7 +86,8 @@ function solve_onemax(n::Int=100; seed=nothing, kwargs...)
     # Apply a variable neighborhood search, making use of a simple construction
     # heuristic, a local improvement method, and a shaking method.
     alg = GVNS(sol, [MHMethod("con", construct!)],
-        [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], true;
+        [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
+        consider_initial_sol=true,
         kwargs_dict...)
     run!(alg)
     method_statistics(alg.scheduler)
