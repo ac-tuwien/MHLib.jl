@@ -36,7 +36,7 @@ Parameters for the scheduler.
 Base.@kwdef struct SchedulerParameters
     titer::Int = 100
     lnewinc::Bool = true
-    lfreq::Int = true
+    lfreq::Int = 0
     tciter::Int = -1
     ttime::Float64 = -1.0
     tctime::Float64 = -1.0
@@ -147,7 +147,7 @@ mutable struct Scheduler{TSolution <: Solution}
 end
 
 """
-    Scheduler(solution, methods, consider_initial_sol; kwargs...)
+    Scheduler(solution, methods; consider_initial_sol=false, kwargs...)
 
 Create a `MHMethod` scheduler.
 
@@ -158,8 +158,8 @@ valid initial solution; otherwise it is assumed to be uninitialized.
 The `kwargs` are used to initialize a `SchedulerParameters` structure, and consequently
 the elements of the `SchedulerParameters` structure can be set as keyword arguments.
 """
-function Scheduler(sol::Solution, methods::Vector{MHMethod},
-        consider_initial_sol::Bool=false; kwargs...)
+function Scheduler(sol::Solution, methods::Vector{MHMethod};
+        consider_initial_sol::Bool=false, kwargs...)
     params = SchedulerParameters(; kwargs...)
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
     logger = get_logger(sol)

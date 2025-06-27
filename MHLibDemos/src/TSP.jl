@@ -1,9 +1,9 @@
 """
     TSP
 
-Demo problem: Symmetric traveling salesperson problem.
+Demo problem: Symmetric euclidean traveling salesperson problem.
 
-Given an undirected, weighted, complete graph, find a Hamiltonian cycle with minimum length.
+Given points in the euclidean plane, find a Hamiltonian cycle with minimum length.
 """
 
 using Random
@@ -152,11 +152,11 @@ end
 MHLib.construct!(s::TSPSolution, ::Nothing, result::Result) = initialize!(s)
 
 """
-    local_improve!(tsp_solution, ::Nothing, result)
+    local_improve!(tsp_solution, ::Any, result)
 
 `MHMethod` that performs two-opt local search.
 """
-function MHLib.local_improve!(s::TSPSolution, ::Nothing, result::Result)
+function MHLib.local_improve!(s::TSPSolution, ::Any, result::Result)
     if !two_opt_neighborhood_search!(s, false)
         result.changed = false
     end
@@ -238,53 +238,55 @@ end
 
 # -------------------------------------------------------------------------------
 
-const tsp_settings_cfg = ArgParseSettings()
+"""
+    solve_tsp(alg::AbstractString, filename::AbstractString; seed=nothing, kwargs...)
 
-@add_arg_table! tsp_settings_cfg begin
-    "--alg"
-        help = "Algorithm to apply (gvns, lns)"
-        arg_type = String
-        default = "lns"
-end
+Solve a given TSP instance with the algorithm `alg`.
 
-function solve_tsp(args=ARGS)
-    println("TSP Demo version $(git_version())\nARGS: ", args)
-    args isa AbstractString && (args = split(args))
+# Parameters
+- `filename`: File name of the MAXSAT instance in CNF format
+- `alg`: Algorithm to apply ("gvns" or "lns")
+- `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
+- `kwargs`: Additional keyword arguments for the algorithm, e.g., `timter`, etc.
+"""
+function solve_tsp(alg::AbstractString="lns",
+        filename::AbstractString=joinpath(@__DIR__, "..", "data", "xqf131.tsp");
+        seed=nothing, kwargs...)
+    kwargs_dict = Dict{Symbol,Any}(kwargs)
+    isnothing(seed) && (seed = rand(0:typemax(Int32)))
+    Random.seed!(seed)
+    println("TSP Demo version $(git_version())")
+    println("alg=$alg, filename=$filename, seed=$seed, ", NamedTuple(kwargs_dict))
 
     # set some new default values for parameters and parse all relevant arguments
-    settings_new_default_value!(MHLib.settings_cfg, "ifile", "MHLibDemos/data/xqf131.tsp")
-    settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 10000)
-    parse_settings!([scheduler_settings_cfg, lns_settings_cfg, tsp_settings_cfg], args)
-    println(get_settings_as_string())
+    haskey(kwargs_dict, :titer) || push!(kwargs_dict, :titer => 1000)
 
-    inst = TSPInstance(settings[:ifile])
+    inst = TSPInstance(filename)
     sol = TSPSolution(inst)
     initialize!(sol)
     println(sol)
 
-    if settings[:alg] === "lns"
-        alg = LNS(sol, MHMethod[MHMethod("con", construct!)],
+    if alg === "lns"
+        heuristic = LNS(sol, MHMethod[MHMethod("con", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:3],
-            [MHMethod("re", repair!)], 
-            consider_initial_sol = true)
-    elseif settings[:alg] === "gvns"
-        alg = GVNS(sol, [MHMethod("con", construct!)],
-            [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], 
-            consider_initial_sol = true)
+            [MHMethod("re", repair!)]; 
+            consider_initial_sol=true, kwargs_dict...)
+    elseif alg === "gvns"
+        heuristic = GVNS(sol, [MHMethod("con", construct!)],
+            [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
+            consider_initial_sol=true, kwargs_dict...)
     else
-        error("Invalid parameter alg: $(settings[:alg])")
+        error("Invalid parameter alg: $alg")
     end
-    run!(alg)
-    method_statistics(alg.scheduler)
-    main_results(alg.scheduler)
+    run!(heuristic)
+    method_statistics(heuristic.scheduler)
+    main_results(heuristic.scheduler)
     check(sol)
     return sol
 end
 
-# To run from REPL, use MHLibDemos and call `solve_tsp(<args>)` where `<args>` is
-# a single string or list of strings being passed as arguments for setting global 
-# parameters, e.g. `solve_tsp("--seed=1 --mh_titer=120")`.
-# `@<filename>` may be used to read arguments from a configuration file <filename>
+# To run from REPL, activate `MHLibDemos` environment, use `MHLibDemos`,
+# and call e.g. `solve_tsp("lns", titer=200, seed=1)`.
 
 # Run with profiler:
 # @profview solve_tsp(args)

@@ -11,7 +11,7 @@ using Random
 using StatsBase
 using MHLib
 
-export MAXSATInstance, MAXSATSolution, destroy!, repair!, solve_maxsat, maxsat_settings_cfg
+export MAXSATInstance, MAXSATSolution, destroy!, repair!, solve_maxsat
 
 """
 A MAXSAT problem instance.
@@ -185,67 +185,67 @@ end
 
 # -------------------------------------------------------------------------------
 
-# We define a new problem-specific parameter alg, which is used in the demo program
-const maxsat_settings_cfg = ArgParseSettings()
-@add_arg_table! maxsat_settings_cfg begin
-    "--alg"
-        help = "Algorithm to apply (gvns, lns, weighted-lns, alns)"
-        arg_type = String
-        default = "alns"
-end
+"""
+    solve_maxsat(alg::AbstractString, filename::AbstractString; seed=nothing, kwargs...)
 
+Solve a given MAXSAT problem instance with the algorithm `alg`.
 
-function solve_maxsat(args=ARGS)
-    println("MAXSAT Demo version $(git_version())\nARGS: ", args)
-    args isa AbstractString && (args = split(args))
+# Parameters
+- `alg`: Algorithm to apply ("gvns", "lns", "weighted-lns", "alns")
+- `filename`: File name of the MAXSAT instance in CNF format
+- `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
+- `kwargs`: Additional keyword arguments for the algorithm, e.g., `timter`, etc.
+"""
+function solve_maxsat(alg::AbstractString="alns",
+        filename::AbstractString=joinpath(@__DIR__, "..", "data", "maxsat-adv1.cnf");
+        seed=nothing, kwargs...)
+    kwargs_dict = Dict{Symbol,Any}(kwargs)
+    isnothing(seed) && (seed = rand(0:typemax(Int32)))
+    Random.seed!(seed)
+    println("MAXSAT Demo version $(git_version())")
+    println("alg=$alg, filename=$filename, seed=$seed, ", NamedTuple(kwargs_dict))
 
     # set some new default values for parameters and parse all relevant arguments
-    settings_new_default_value!(MHLib.settings_cfg, "ifile", 
-        "MHLibDemos/data/maxsat-adv1.cnf")
-    settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 1000)
-    parse_settings!([MHLib.scheduler_settings_cfg,
-        MHLib.lns_settings_cfg, MHLib.alns_settings_cfg, maxsat_settings_cfg], args)
-    println(get_settings_as_string())
+    haskey(kwargs_dict, :titer) || push!(kwargs_dict, :titer => 1000)
     
-    inst = MAXSATInstance(settings[:ifile])
+    inst = MAXSATInstance(filename)
     sol = MAXSATSolution(inst)
     println(sol)
 
-    # Depending on the parameter `alg`, we create the respective algorithm object
-    if settings[:alg] === "lns"
-        alg = LNS(sol, [MHMethod("construct", construct!)],
+    # Depending on parameter `alg`, we create the respective algorithm
+    if alg === "lns"
+        heuristic = LNS(sol, [MHMethod("construct", construct!)],
             [MHMethod("de", destroy!, 1)],
             [MHMethod("re", repair!)];
-            meths_compat = [true;;])
-    elseif settings[:alg] === "weighted-lns"
+            meths_compat = [true;;], kwargs_dict...)
+    elseif alg === "weighted-lns"
         num_de = 5
-        method_selector = WeightedRandomMethodSelector(num_re:-1:1, 1:1)
-        alg = LNS(sol, [MHMethod("construct", construct!)],
+        method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
+        heuristic = LNS(sol, [MHMethod("construct", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-            [MHMethod("re", repair!, nothing)];
-            method_selector)
-    elseif settings[:alg] === "alns"
+            [MHMethod("re", repair!, nothing)]; consider_initial_sol=true,
+            method_selector, kwargs_dict...)
+    elseif alg === "alns"
         num_de = 5
-        alg = ALNS(sol, [MHMethod("construct", construct!)],
+        heuristic = ALNS(sol, [MHMethod("construct", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-            [MHMethod("re", repair!)])
-    elseif settings[:alg] === "gvns"
-        alg = GVNS(sol, [MHMethod("con", construct!)],
+            [MHMethod("re", repair!)]; kwargs_dict...)
+    elseif alg === "gvns"
+        heuristic = GVNS(sol, [MHMethod("con", construct!)],
             [MHMethod("li1", local_improve!, 1)],
-            [MHMethod("sh$i", shaking!, i) for i in 1:5])
+            [MHMethod("sh$i", shaking!, i) for i in 1:5]; kwargs_dict...)
     else
-        error("Invalid parameter alg: $(settings[:alg])")
+        error("Invalid parameter alg: $alg")
     end
-    run!(alg)
-    method_statistics(alg.scheduler)
-    main_results(alg.scheduler)
+    run!(heuristic)
+    method_statistics(heuristic.scheduler)
+    main_results(heuristic.scheduler)
     check(sol)
     return sol
 end
 
-# To run from REPL, use MHLibDemos and call `solve_maxsat(<args>)` where `<args>` is 
-# a single string or list of strings being passed as arguments for setting global 
-# parameters, e.g. `solve_maxsat("--seed=1 --mh_titer=120")`.
-# `@<filename>` may be used to read arguments from a configuration file <filename>
+# To run from REPL, activate `MHLibDemos` environment, use `MHLibDemos`,
+# and call e.g. `solve_maxsat("alns", titer=200, seed=1)`.
+
 # Run with profiler:
-# @profview solve_maxsat(args)
+# @profview solve_maxsat()

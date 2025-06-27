@@ -71,18 +71,19 @@ Any keyword arguments of GVNS can be passed also here as `kwargs`, e.g. `titer`,
 """
 function solve_onemax(n::Int=100; seed=nothing, kwargs...)
     kwargs_dict = Dict{Symbol,Any}(kwargs)
-    isnothing(seed) && (seed = rand(Int32))
+    isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
-    println("OneMax Demo version $(git_version())\nARGS: n=$n, seed=$seed ", kwargs_dict)
+    println("OneMax Demo version $(git_version())")
+    println("n=$n, seed=$seed, ", NamedTuple(kwargs_dict))
 
-    # We set some new default values for parameters to GVNS that are not explicitly passed
+    # Set some new default value(s) for parameters to GVNS that are not given in kwargs
     haskey(kwargs_dict, :titer) || push!(kwargs_dict, :titer => 100)
              
     sol = OneMaxSolution(n)
     initialize!(sol)
     println(sol)
 
-    # We apply here a variable neighborhood search, making use of a simple construction
+    # Apply a variable neighborhood search, making use of a simple construction
     # heuristic, a local improvement method, and a shaking method.
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], true;

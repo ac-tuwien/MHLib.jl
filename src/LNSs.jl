@@ -84,7 +84,7 @@ function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMetho
         method_selector::MethodSelector=UniformRandomMethodSelector(),
         init_temp_factor::Float64=0.0, temp_dec_factor::Float64=0.99, kwargs...)
     temperature = obj(sol) * init_temp_factor
-    scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re], consider_initial_sol; kwargs...)
+    scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re]; consider_initial_sol, kwargs...)
     lns = LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), scheduler, 
         meths_ch, meths_de, meths_re, meths_compat, temperature, method_selector, 
         init_temp_factor, temp_dec_factor)

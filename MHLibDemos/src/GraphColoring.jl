@@ -134,7 +134,7 @@ Following a first improvement strategy.
 The neighborhood used is defined by all solutions that can be created by changing the color
 of a vertex involved in a conflict.
 """
-function MHLib.local_improve!(s::GraphColoringSolution, ::Nothing, result::Result)
+function MHLib.local_improve!(s::GraphColoringSolution, ::Any, result::Result)
     n = length(s.x)
     order = sample(1:n, n, replace = false)
     for p in order
@@ -210,24 +210,33 @@ end
 
 # -------------------------------------------------------------------------------
 
-function solve_graph_coloring(args=ARGS)
-    println("Graph Coloring Demo version $(git_version())\nARGS: ", args)
-    args isa AbstractString && (args = split(args))
+"""
+    solve_graph_coloring(name::"data/fpsol2.i.1.col", n_colors=3; seed=nothing, kwargs...)
+
+Solve the graph coloring problem for the given graph and number of colurs using a GVNS.
+
+Any keyword arguments of GVNS can be passed also here as `kwargs`, e.g. `titer`, etc.
+"""
+function solve_graph_coloring(
+        name::AbstractString=joinpath(@__DIR__(), "..", "data/fpsol2.i.1.col"),
+        n_colors::Int=3; seed=nothing, kwargs... )
+    kwargs_dict = Dict{Symbol,Any}(kwargs)
+    isnothing(seed) && (seed = rand(0:typemax(Int32)))
+    Random.seed!(seed)
+    println("Graph Coloring Demo version $(git_version())")
+    println("name=$name, n_colors=$n_colors, seed=$seed, ", NamedTuple(kwargs_dict))
 
     # We set some new default values for parameters and parse all relevant arguments
-    settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 1000)
-    settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/fpsol2.i.1.col")
-    parse_settings!([MHLib.schedulers_settings_cfg, graph_coloring_settings_cfg], args)
-    println(get_settings_as_string())
-        
-    inst = GraphColoringInstance(settings[:ifile])
+    haskey(kwargs_dict, :titer) || push!(kwargs_dict, :titer => 1000)
+    
+    inst = GraphColoringInstance(name)
     sol = GraphColoringSolution(inst)
     initialize!(sol)
     println(sol)
 
     alg = GVNS(sol, [MHMethod("con", construct!)],
-        [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], 
-        consider_initial_sol = true)
+        [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
+        consider_initial_sol=true, kwargs_dict...)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
@@ -235,10 +244,8 @@ function solve_graph_coloring(args=ARGS)
     return sol
 end
 
-# To run from REPL, use `MHLibDemos` and call `solve_graph_coloring(<args>)` where `<args>`
-# is a single string or list of strings being passed as arguments for setting global 
-# parameters, e.g. `solve_graph_coloring("--seed=1 --mh_titer=120")`.
-# `@<filename>` may be used to read arguments from a configuration file <filename>
+# To run from REPL, activate `MHLibDemos` environment, use `MHLibDemos`,
+# and call e.g. `solve_graph_coloring(titer=200, seed=1)`.
 
 # Run with profiler:
-# @profview solve_graph_coloring(args)
+# @profview solve_graph_coloring()

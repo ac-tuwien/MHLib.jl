@@ -28,8 +28,8 @@ mutable struct GVNS{TSolution <: Solution}
 end
 
 """
-    GVNS{TSolution <: Solution(solution, meths_ch, meths_li, meths_sh, 
-        consider_initial_sol=false; kwargs...)
+    GVNS{TSolution <: Solution(solution, meths_ch, meths_li, meths_sh; 
+        consider_initial_sol=false, kwargs...)
 
 Create a GVNS.
 
@@ -42,9 +42,10 @@ The `kwargs` are passed to the `SchedulerParameters` constructor`and therefore c
 contain any element of `SchedulerParameters` as keyword argument, e.g., `titer`, etc.
 """
 function GVNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_li::Vector{MHMethod},
-        meths_sh::Vector{MHMethod}, consider_initial_sol::Bool=false; kwargs...)
-    GVNS{typeof(sol)}(Scheduler(sol, [meths_ch; meths_li; meths_sh], consider_initial_sol; 
-        kwargs...), meths_ch, meths_li, meths_sh)
+        meths_sh::Vector{MHMethod}; consider_initial_sol::Bool=false, kwargs...)
+    GVNS{typeof(sol)}(
+        Scheduler(sol, [meths_ch; meths_li; meths_sh]; consider_initial_sol, kwargs...), 
+        meths_ch, meths_li, meths_sh)
 end
 
 

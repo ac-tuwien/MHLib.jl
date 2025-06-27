@@ -6,22 +6,22 @@ using TestItems
 
 # This initialization is executed before each test item
 @testsnippet MHLibTestInit begin
-    cd(@__DIR__)
     using Random
     using MHLib
     using MHLibDemos
-    parse_settings!(mhlib_settings_cfgs, ["--seed=1", "--mh_titer=10"])
+    Random.seed!(1)
+    datapath = joinpath(@__DIR__, "..", "data")
 end
 
 
 @testitem "GVNS-MAXSAT" setup=[MHLibTestInit] begin
-    inst = MAXSATInstance("data/maxsat-simple.cnf")
+    inst = MAXSATInstance(joinpath(datapath, "maxsat-simple.cnf"))
     sol = MAXSATSolution(inst)
     println(sol)
     gvns = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!, 1)],
         [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
-            MHMethod("sh3", shaking!, 3)],)
+            MHMethod("sh3", shaking!, 3)]; titer=10)
     run!(gvns)
     method_statistics(gvns.scheduler)
     main_results(gvns.scheduler)
@@ -29,7 +29,7 @@ end
 end
 
 @testitem "MAXSAT-kflip" setup=[MHLibTestInit] begin
-    inst = MAXSATInstance("data/maxsat-adv1.cnf")
+    inst = MAXSATInstance(joinpath(datapath, "maxsat-adv1.cnf"))
     sol = MAXSATSolution(inst)
 
     k = 30
@@ -43,15 +43,14 @@ end
 end
 
 @testitem "LNS-MAXSAT" setup=[MHLibTestInit] begin
-    settings[:mh_titer] = 120
-    inst = MAXSATInstance("data/maxsat-adv1.cnf")
+    inst = MAXSATInstance(joinpath(datapath, "maxsat-adv1.cnf"))
     sol = MAXSATSolution(inst)
     println(sol)
     num_de = 5
     method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
     alg = LNS(sol, [MHMethod("construct", construct!)],
         [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-        [MHMethod("re", repair!)]; method_selector)
+        [MHMethod("re", repair!)]; method_selector, titer=120)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
@@ -59,7 +58,6 @@ end
 end
 
 @testitem "LNS-MAXSAT" setup=[MHLibTestInit] begin
-    settings[:mh_titer] = 120
     inst = TSPInstance(50)
     sol = TSPSolution(inst)
     println(sol)
@@ -67,7 +65,7 @@ end
     method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
     alg = LNS(sol, [MHMethod("construct", construct!)],
         [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-        [MHMethod("re", repair!)]; method_selector)
+        [MHMethod("re", repair!)]; method_selector, titer=120)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
@@ -75,14 +73,13 @@ end
 end
 
 @testitem "ALNS-MAXSAT" setup=[MHLibTestInit] begin
-    settings[:mh_titer] = 120
-    inst = MAXSATInstance("data/maxsat-adv1.cnf")
+    inst = MAXSATInstance(joinpath(datapath, "maxsat-adv1.cnf"))
     sol = MAXSATSolution(inst)
     println(sol)
     num_de = 5
     alg = ALNS(sol, [MHMethod("construct", construct!)],
         [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-        [MHMethod("re", repair!)])
+        [MHMethod("re", repair!)], titer=120)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
@@ -90,14 +87,13 @@ end
 end
 
 @testitem "GVNS-MKP" setup=[MHLibTestInit] begin
-    settings[:mh_titer] = 25
-    inst = MKPInstance("data/mknapcb5-01.txt")
+    inst = MKPInstance(joinpath(datapath, "mknapcb5-01.txt"))
     sol = MKPSolution(inst)
     println(sol)
     gvns = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
         [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
-            MHMethod("sh3", shaking!, 3)],)
+            MHMethod("sh3", shaking!, 3)], titer=25)
     run!(gvns)
     method_statistics(gvns.scheduler)
     main_results(gvns.scheduler)
@@ -105,14 +101,13 @@ end
 end
 
 @testitem "GVNS-MISP" setup=[MHLibTestInit] begin
-    settings[:mh_titer] = 25
-    inst = MISPInstance("data/frb40-19-1.mis")
+    inst = MISPInstance(joinpath(datapath, "frb40-19-1.mis"))
     sol = MISPSolution(inst)
     println(sol)
     gvns = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
         [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
-            MHMethod("sh3", shaking!, 3)],)
+            MHMethod("sh3", shaking!, 3)], titer=25)
     run!(gvns)
     method_statistics(gvns.scheduler)
     main_results(gvns.scheduler)
@@ -121,7 +116,7 @@ end
 
 @testitem "Random-Init-TSP" setup=[MHLibTestInit] begin
     rand_inst = TSPInstance()
-    inst = TSPInstance("data/xqf131.tsp")
+    inst = TSPInstance(joinpath(datapath, "xqf131.tsp"))
     sol = TSPSolution(inst)
     println(sol)
     println(obj(sol))
@@ -135,8 +130,7 @@ end
 end
 
 @testitem "GVNS-TSP" setup=[MHLibTestInit] begin
-    settings[:mh_titer] = 300
-    inst = TSPInstance("data/xqf131.tsp")
+    inst = TSPInstance(joinpath(datapath, "xqf131.tsp"))
     sol = TSPSolution(inst)
     initialize!(sol)
     println(sol)
@@ -147,16 +141,14 @@ end
     search = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
         [MHMethod("sh1", shaking!, 1)],
-        consider_initial_sol=true)
+        consider_initial_sol=true, titer=300)
     run!(search)
     main_results(search.scheduler)
     @test obj(sol) >= 0
 end
 
 @testitem "GVNS-GraphColoring1" setup=[MHLibTestInit] begin
-    parse_settings!([scheduler_settings_cfg, graph_coloring_settings_cfg], 
-        ["--ifile=data/fpsol2.i.1.col", "--mh_titer=1000", "--gcp_colors=2"])
-    inst = GraphColoringInstance(settings[:ifile])
+    inst = GraphColoringInstance(joinpath(datapath, "fpsol2.i.1.col"), 2)
     sol = GraphColoringSolution(inst)
     println(sol)
 
@@ -166,7 +158,8 @@ end
 
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
-        [MHMethod("sh$i", shaking!, i) for i in 1:5])
+        [MHMethod("sh$i", shaking!, i) for i in 1:5],
+        titer=1000)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
@@ -175,9 +168,7 @@ end
 end
 
 @testitem "GVNS-GraphColoring2" setup=[MHLibTestInit] begin
-    parse_settings!([scheduler_settings_cfg, graph_coloring_settings_cfg], 
-        ["--ifile=data/test.col", "--mh_titer=50", "--gcp_colors=3"])
-    inst = GraphColoringInstance(settings[:ifile])
+    inst = GraphColoringInstance(joinpath(datapath, "test.col"), 3)
     sol = GraphColoringSolution(inst)
     println(sol)
     @test obj(sol) >= 0
@@ -185,7 +176,8 @@ end
     @test !to_maximize(sol)
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
-        [MHMethod("sh$i", shaking!, i) for i in 1:5])
+        [MHMethod("sh$i", shaking!, i) for i in 1:5],
+        titer=50)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
