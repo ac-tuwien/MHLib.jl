@@ -6,13 +6,13 @@ using ArgParse
 using Random
 
 export ArgParseSettings, @add_arg_table!, settings, parse_settings!, add_arg_table!,
-    get_settings_as_string, seed_random_generator, settings_new_default_value!
+    get_settings_as_string, settings_new_default_value!
 
 
-"""
-Standard ArgParseSettings always used.
-"""
-const settings_cfg = ArgParseSettings()
+# """
+# Standard ArgParseSettings always used.
+# """
+# const settings_cfg = ArgParseSettings()
 
 
 """
@@ -31,20 +31,20 @@ The type-cast is optional but may frequently help to achieve type-stability.
 """
 const settings = Dict{Symbol, Any}()
 
-@add_arg_table! settings_cfg begin
-    "--seed"
-        help = "random seed, 0: initialize randomly"
-        arg_type = Int
-        default = 0
-    "--ifile"
-        help = "problem instance file"
-        arg_type = String
-        default = ""
-    "--ofile"
-        help = "file to log outputs"
-        arg_type = String
-        default = ""
-end
+# @add_arg_table! settings_cfg begin
+#     "--seed"
+#         help = "random seed, 0: initialize randomly"
+#         arg_type = Int
+#         default = 0
+#     "--ifile"
+#         help = "problem instance file"
+#         arg_type = String
+#         default = ""
+#     "--ofile"
+#         help = "file to log outputs"
+#         arg_type = String
+#         default = ""
+# end
 
 
 """
@@ -65,7 +65,6 @@ end
 
 Parses the arguments and initializesn the global `settings` correspondingly,
 
-Also initializes the random number generator, if `settings[:seed] != 0` randomly.
 In `settings_cfgs` a list of the ArgParseSettings of individual modules
 to be used in addition to the basic `settings_cfg` of this module has to be provided.
 `MHLib.mhlib_settings_cfgs` can be used to include all settings of all modules.
@@ -80,7 +79,6 @@ function parse_settings!(settings_cfgs::Vector{ArgParseSettings} = mhlib_setting
     end
     parsed_settings = parse_args(args, s, as_symbols=true)
     merge!(settings, parsed_settings)
-    seed_random_generator()
     settings
 end
 
@@ -96,23 +94,4 @@ function get_settings_as_string()
         s *= "--$par=$value\n"
     end
     s
-end
-
-
-"""
-    seed_random_generator!(seed=-1)
-
-Initialize random number generators with settings.seed.
-
-If zero, a random seed is generated, if -1 `settings[:seed]` is used.
-"""
-function seed_random_generator(seed::Int=-1)
-    if seed == -1
-        seed = settings[:seed]
-    end
-    if seed == 0
-        seed = rand(1:typemax(Int32))
-        settings[:seed] = seed
-    end
-    Random.seed!(seed)
 end

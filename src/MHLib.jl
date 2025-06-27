@@ -1,7 +1,7 @@
 """
     MHLib
 
-`MHLib` - A Toolbox for Metaheuristics and Hybrid Optimization Methods.
+`MHLib` - A Toolbox for Metaheuristics and Hybrid Combinatorial Optimization Methods.
 """
 module MHLib
 
@@ -11,7 +11,7 @@ using StatsBase
 export Solution, to_maximize, obj, initialize!, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
     run!, git_version, get_number_to_destroy,
-    settings, mhlib_settings_cfgs
+    settings
 
 # ----------------------------- Solution ------------------------------
 
@@ -342,9 +342,16 @@ end
     git_version()
 
 Return git version information of current directory.
+
+Return the empty string if the git-call fails.
 """
 function git_version() :: String
-    chomp(read(`git describe --abbrev=4 --dirty --always --tags`, String))
+    try
+        chomp(read(pipeline(`git describe --abbrev=4 --dirty --always --tags`, 
+            stderr=devnull), String))
+    catch
+        return ""
+    end
 end
 
 # -----------------------------------------------------------
@@ -359,20 +366,6 @@ include("PermutationSolutions.jl")
 include("Log.jl")
 include("OneMax.jl")
 
-"""
-    mhlib_settings_cfgs
-
-List of all settings configurations of the MHLib modules.
-
-This list can be used to parse all settings of all modules and is the default in
-`parse_settings!`
-"""
-const mhlib_settings_cfgs = [
-        scheduler_settings_cfg,
-        lns_settings_cfg,
-        alns_settings_cfg,
-        onemax_settings_cfg,
-    ]
 
 include("../test/tests.jl")
 

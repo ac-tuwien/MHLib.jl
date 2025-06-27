@@ -3,6 +3,9 @@
 
 Major changes in releases:
 
+## Version 0.3.0
+- 
+
 ## Version 0.2.1
 - Added templates for tuning with irace, which is now the preferred tuning tool
 - `clear!` renamed to `Base.empty!`

@@ -29,7 +29,7 @@ end
 
 """
     GVNS{TSolution <: Solution(solution, meths_ch, meths_li, meths_sh, 
-        consider_initial_sol=false)
+        consider_initial_sol=false; kwargs...)
 
 Create a GVNS.
 
@@ -37,11 +37,14 @@ Create a GVNS for the given solution with the given construction,
 local improvement, and shaking methods provides as `Vector{MHMethod}`.
 If `consider_initial_sol` is true, consider the given solution as valid initial solution;
 otherwise it is assumed to be uninitialized.
+
+The `kwargs` are passed to the `SchedulerParameters` constructor`and therefore can
+contain any element of `SchedulerParameters` as keyword argument, e.g., `titer`, etc.
 """
 function GVNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_li::Vector{MHMethod},
-        meths_sh::Vector{MHMethod}; consider_initial_sol::Bool=false)
-    GVNS{typeof(sol)}(Scheduler(sol, [meths_ch; meths_li; meths_sh], consider_initial_sol),
-        meths_ch, meths_li, meths_sh)
+        meths_sh::Vector{MHMethod}, consider_initial_sol::Bool=false; kwargs...)
+    GVNS{typeof(sol)}(Scheduler(sol, [meths_ch; meths_li; meths_sh], consider_initial_sol; 
+        kwargs...), meths_ch, meths_li, meths_sh)
 end
 
 
