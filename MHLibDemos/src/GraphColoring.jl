@@ -220,14 +220,15 @@ Any keyword arguments of GVNS can be passed also here as `kwargs`, e.g. `titer`,
 function solve_graph_coloring(
         name::AbstractString=joinpath(@__DIR__(), "..", "data/fpsol2.i.1.col"),
         n_colors::Int=3; seed=nothing, kwargs... )
-    kwargs_dict = Dict{Symbol,Any}(kwargs)
+    # Make results reproducibly by either setting a given seed or picking one randomly
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
-    println("Graph Coloring Demo version $(git_version())")
-    println("name=$name, n_colors=$n_colors, seed=$seed, ", NamedTuple(kwargs_dict))
 
-    # We set some new default values for parameters and parse all relevant arguments
-    haskey(kwargs_dict, :titer) || push!(kwargs_dict, :titer => 1000)
+    println("Graph Coloring Demo $(git_version())")
+    println("name=$name, n_colors=$n_colors, seed=$seed, ", NamedTuple(kwargs))
+
+    # Set some default value(s) for parameters to GVNS that are not given in kwargs
+    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 1000,))))
     
     inst = GraphColoringInstance(name)
     sol = GraphColoringSolution(inst)
@@ -236,7 +237,7 @@ function solve_graph_coloring(
 
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
-        consider_initial_sol=true, kwargs_dict...)
+        consider_initial_sol=true, kwargs...)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)

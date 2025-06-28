@@ -213,15 +213,16 @@ Solve a given MKP instance with a variable neighborhood search.
 function solve_mkp(
         filename::AbstractString=joinpath(@__DIR__, "..", "data", "mknapcb5-01.txt");
         seed=nothing, kwargs...)
-    kwargs_dict = Dict{Symbol,Any}(kwargs)
+    # Make results reproducibly by either setting a given seed or picking one randomly
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
+    
     println("MKP Demo version $(git_version())")
-    println("filename=$filename, seed=$seed, ", NamedTuple(kwargs_dict))
+    println("filename=$filename, seed=$seed, ", NamedTuple(kwargs))
 
-    # set some new default values for parameters and parse all relevant arguments
-    haskey(kwargs_dict, :titer) || push!(kwargs_dict, :titer => 3000)
-
+    # Set some default value(s) for parameters to GVNS that are not given in kwargs
+    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 3000,))))
+    
     inst = MKPInstance(filename)
     sol = MKPSolution(inst)
     # initialize!(sol)
@@ -232,7 +233,7 @@ function solve_mkp(
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
         [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2), MHMethod("sh3", shaking!, 3)], 
-        consider_initial_sol=true; kwargs_dict...)
+        consider_initial_sol=true; kwargs...)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)

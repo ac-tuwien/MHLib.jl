@@ -347,8 +347,9 @@ Return the empty string if the git-call fails.
 """
 function git_version() :: String
     try
-        chomp(read(pipeline(`git describe --abbrev=4 --dirty --always --tags`, 
+        version = chomp(read(pipeline(`git describe --abbrev=4 --dirty --always --tags`, 
             stderr=devnull), String))
+        return "version $version"
     catch
         return ""
     end

@@ -252,14 +252,15 @@ Solve a given TSP instance with the algorithm `alg`.
 function solve_tsp(alg::AbstractString="lns",
         filename::AbstractString=joinpath(@__DIR__, "..", "data", "xqf131.tsp");
         seed=nothing, kwargs...)
-    kwargs_dict = Dict{Symbol,Any}(kwargs)
+    # Make results reproducibly by either setting a given seed or picking one randomly
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
-    println("TSP Demo version $(git_version())")
-    println("alg=$alg, filename=$filename, seed=$seed, ", NamedTuple(kwargs_dict))
 
-    # set some new default values for parameters and parse all relevant arguments
-    haskey(kwargs_dict, :titer) || push!(kwargs_dict, :titer => 1000)
+    println("TSP Demo version $(git_version())")
+    println("alg=$alg, filename=$filename, seed=$seed, ", NamedTuple(kwargs))
+
+    # Set some default value(s) for parameters to GVNS that are not given in kwargs
+    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 1000,))))
 
     inst = TSPInstance(filename)
     sol = TSPSolution(inst)
@@ -270,11 +271,11 @@ function solve_tsp(alg::AbstractString="lns",
         heuristic = LNS(sol, MHMethod[MHMethod("con", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:3],
             [MHMethod("re", repair!)]; 
-            consider_initial_sol=true, kwargs_dict...)
+            consider_initial_sol=true, kwargs...)
     elseif alg === "gvns"
         heuristic = GVNS(sol, [MHMethod("con", construct!)],
             [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
-            consider_initial_sol=true, kwargs_dict...)
+            consider_initial_sol=true, kwargs...)
     else
         error("Invalid parameter alg: $alg")
     end

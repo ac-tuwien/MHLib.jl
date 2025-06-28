@@ -70,14 +70,15 @@ Solve the OneMax problem with `n` bits, using a variable neighborhood search.
 Any keyword arguments of GVNS can be passed also here as `kwargs`, e.g. `titer`, etc.
 """
 function solve_onemax(n::Int=100; seed=nothing, kwargs...)
-    kwargs_dict = Dict{Symbol,Any}(kwargs)
+    # Make results reproducibly by either setting a given seed or picking one randomly
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
-    println("OneMax Demo version $(git_version())")
-    println("n=$n, seed=$seed, ", NamedTuple(kwargs_dict))
 
-    # Set some new default value(s) for parameters to GVNS that are not given in kwargs
-    haskey(kwargs_dict, :titer) || push!(kwargs_dict, :titer => 100)
+    println("OneMax Demo $(git_version())")
+    println("n=$n, seed=$seed, ", NamedTuple(kwargs))
+
+    # Set some default value(s) for parameters to GVNS that are not given in kwargs
+    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 100,))))
              
     sol = OneMaxSolution(n)
     initialize!(sol)
@@ -88,7 +89,7 @@ function solve_onemax(n::Int=100; seed=nothing, kwargs...)
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
         consider_initial_sol=true,
-        kwargs_dict...)
+        kwargs...)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)

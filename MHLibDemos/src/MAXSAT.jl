@@ -199,14 +199,15 @@ Solve a given MAXSAT problem instance with the algorithm `alg`.
 function solve_maxsat(alg::AbstractString="alns",
         filename::AbstractString=joinpath(@__DIR__, "..", "data", "maxsat-adv1.cnf");
         seed=nothing, kwargs...)
-    kwargs_dict = Dict{Symbol,Any}(kwargs)
+    # Make results reproducibly by either setting a given seed or picking one randomly
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
-    println("MAXSAT Demo version $(git_version())")
-    println("alg=$alg, filename=$filename, seed=$seed, ", NamedTuple(kwargs_dict))
 
-    # set some new default values for parameters and parse all relevant arguments
-    haskey(kwargs_dict, :titer) || push!(kwargs_dict, :titer => 1000)
+    println("MAXSAT Demo version $(git_version())")
+    println("alg=$alg, filename=$filename, seed=$seed, ", NamedTuple(kwargs))
+
+    # Set some default value(s) for parameters to GVNS that are not given in kwargs
+    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 1000,))))
     
     inst = MAXSATInstance(filename)
     sol = MAXSATSolution(inst)
@@ -217,23 +218,23 @@ function solve_maxsat(alg::AbstractString="alns",
         heuristic = LNS(sol, [MHMethod("construct", construct!)],
             [MHMethod("de", destroy!, 1)],
             [MHMethod("re", repair!)];
-            meths_compat = [true;;], kwargs_dict...)
+            meths_compat = [true;;], kwargs...)
     elseif alg === "weighted-lns"
         num_de = 5
         method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
         heuristic = LNS(sol, [MHMethod("construct", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:num_de],
             [MHMethod("re", repair!, nothing)]; consider_initial_sol=true,
-            method_selector, kwargs_dict...)
+            method_selector, kwargs...)
     elseif alg === "alns"
         num_de = 5
         heuristic = ALNS(sol, [MHMethod("construct", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-            [MHMethod("re", repair!)]; kwargs_dict...)
+            [MHMethod("re", repair!)]; kwargs...)
     elseif alg === "gvns"
         heuristic = GVNS(sol, [MHMethod("con", construct!)],
             [MHMethod("li1", local_improve!, 1)],
-            [MHMethod("sh$i", shaking!, i) for i in 1:5]; kwargs_dict...)
+            [MHMethod("sh$i", shaking!, i) for i in 1:5]; kwargs...)
     else
         error("Invalid parameter alg: $alg")
     end
