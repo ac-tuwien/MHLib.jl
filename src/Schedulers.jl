@@ -13,54 +13,13 @@ export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerParameters,
     perform_method!, next_method, update_incumbent!, check_termination, 
     perform_sequentially!, main_results, method_statistics, delayed_success_update!, 
     log_iteration, log_iteration_header, construct!, local_improve!, shaking!, 
-    perform_method_pair!, reinitialize!, scheduler_settings_cfg
+    perform_method_pair!, reinitialize!
 
-const scheduler_settings_cfg = ArgParseSettings()
-
-@add_arg_table! scheduler_settings_cfg begin
-    "--mh_titer"
-        help = "maximum number of iterations (<0: turned off)"
-        arg_type = Int
-        default = 100
-    "--mh_log"
-        help = "write log information"
-        arg_type = Bool
-        default = true
-    "--mh_lnewinc"
-        help = "always write iteration log if new incumbent solution"
-        arg_type = Bool
-        default = true
-    "--mh_lfreq"
-        help = "frequency of writing iteration logs (0: none, >0: number of iterations, " *
-               "-1: iteration 1,2,5,10,20,..."
-        arg_type = Int
-        default = 0
-    "--mh_tciter"
-        help = "maximum number of iterations without improvement (<0: turned off)"
-        arg_type = Int
-        default = -1
-    "--mh_ttime"
-        help = "time limit [s] (<0: turned off)"
-        arg_type = Float64
-        default = -1.0
-    "--mh_tctime"
-        help = "maximum time [s] without improvement (<0: turned off)"
-        arg_type = Float64
-        default = -1.0
-    "--mh_tobj"
-        help = "objective value at which should be terminated when reached (<0: turned off)"
-        arg_type = Float64
-        default = -1.0
-    "--mh_checkit"
-        help = "call `check` for each solution after each method application"
-        arg_type = Bool
-        default = false
-end
 
 """
     SchedulerParameters
 
-Parameters for the scheduler adopted from settings by default.
+Parameters for the scheduler.
 
 # Elements
 - `titer`: maximum number of iterations (<0: turned off)
@@ -75,15 +34,15 @@ Parameters for the scheduler adopted from settings by default.
 - `log`: if true write all log information, else none
 """
 Base.@kwdef struct SchedulerParameters
-    titer::Int = settings[:mh_titer]
-    lnewinc::Bool = settings[:mh_lnewinc]
-    lfreq::Int = settings[:mh_lfreq]
-    tciter::Int = settings[:mh_tciter]
-    ttime::Float64 = settings[:mh_ttime]
-    tctime::Float64 = settings[:mh_tctime]
-    tobj::Float64 = settings[:mh_tobj]
-    checkit::Bool = settings[:mh_checkit]
-    log::Bool = settings[:mh_log]
+    titer::Int = 100
+    lnewinc::Bool = true
+    lfreq::Int = 0
+    tciter::Int = -1
+    ttime::Float64 = -1.0
+    tctime::Float64 = -1.0
+    tobj::Float64 = -1.0
+    checkit::Bool = false
+    log::Bool = true
 end
 
 
@@ -161,6 +120,7 @@ MHMethodStatistics() = MHMethodStatistics(0, 0.0, 0, 0.0, 0.0)
 Type for metaheuristics that work by iteratively applying certain methods/operations.
 
 # Elements
+- `params`: parameters for the scheduler, see `SchedulerParameters`
 - `incumbent`: incumbent solution, i.e., initial solution and always best solution so far
     encountered
 - `incumbent_valid`: `true` if incumbent is a valid solution to be considered
@@ -171,24 +131,23 @@ Type for metaheuristics that work by iteratively applying certain methods/operat
 - `iteration`: overall number of method applications
 - `time_start`: starting time of algorithm
 - `run_time`: overall runtime (set when terminating)
-- `params`: parameters adopted from settings by default
 """
 mutable struct Scheduler{TSolution <: Solution}
+    params::SchedulerParameters
     incumbent::TSolution
     incumbent_valid::Bool
     incumbent_iteration::Int
     incumbent_time::Float64
     methods::Vector{MHMethod}
-    method_stats::SortedDict{String,MHMethodStatistics}
+    method_stats::SortedDict{String, MHMethodStatistics}
     iteration::Int
     time_start::Float64
     run_time::Union{Float64, Missing}
     logger::AbstractLogger
-    params::SchedulerParameters
 end
 
 """
-    Scheduler(solution, methods, consider_initial_sol)
+    Scheduler(solution, methods; consider_initial_sol=false, kwargs...)
 
 Create a `MHMethod` scheduler.
 
@@ -196,13 +155,16 @@ Create a Scheduler for the given solution with the given methods provides as
 `Vector{MHMethod}`. If `consider_initial_sol` is `true`, consider the given solution as
 valid initial solution; otherwise it is assumed to be uninitialized.
 
+The `kwargs` are used to initialize a `SchedulerParameters` structure, and consequently
+the elements of the `SchedulerParameters` structure can be set as keyword arguments.
 """
-function Scheduler(sol::Solution, methods::Vector{MHMethod},
-        consider_initial_sol::Bool=false; params::SchedulerParameters=SchedulerParameters())
+function Scheduler(sol::Solution, methods::Vector{MHMethod};
+        consider_initial_sol::Bool=false, kwargs...)
+    params = SchedulerParameters(; kwargs...)
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
     logger = get_logger(sol)
-    sched = Scheduler{typeof(sol)}(sol, consider_initial_sol, 0, 0.0, methods, 
-        method_stats, 0, time(), missing, logger, params)
+    sched = Scheduler{typeof(sol)}(params, sol, consider_initial_sol, 0, 0.0, methods, 
+        method_stats, 0, time(), missing, logger)
     log_iteration_header(sched)
     if sched.incumbent_valid
         log_iteration(sched, "-", NaN, sol, true, true, "")

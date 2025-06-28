@@ -1,7 +1,7 @@
 name = "MHLibDemos"
 uuid = "684acab6-7f56-4bd3-8ecb-3989322bafbb"
 authors = ["Guenther Raidl <raidl@ac.tuwien.ac.at> et al."]
-version = "0.2.1"
+version = "0.3.0pre1"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
@@ -16,7 +16,7 @@ TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 [compat]
 ArgParse = "1"
 Graphs = "1.8"
-MHLib = "0.2"
+MHLib = "0.3"
 StatsBase = "0.33, 0.34"
 Test = "1.11"
 TestItemRunner = "1.0"

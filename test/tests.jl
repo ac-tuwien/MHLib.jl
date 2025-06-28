@@ -7,11 +7,10 @@ using TestItems
 @testsnippet TestInit begin
     using Random
     using MHLib
-    parse_settings!(mhlib_settings_cfgs, ["--seed=1", "--mh_titer=10"])
+    Random.seed!(1)
 end
 
 @testitem "OneMaxSolution" setup=[TestInit] begin
-    println(get_settings_as_string())
     s1 = OneMaxSolution(5)
     initialize!(s1)
     s2 = OneMaxSolution(5)
@@ -45,7 +44,7 @@ end
     gvns = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!, 1)],
         [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
-            MHMethod("sh3", shaking!, 3)],)
+            MHMethod("sh3", shaking!, 3)], titer=10)
     run!(gvns)
     method_statistics(gvns.scheduler)
     main_results(gvns.scheduler)
@@ -54,13 +53,12 @@ end
 
 @testitem "LNS-OneMax" setup=[TestInit] begin
     sol = OneMaxSolution(100)
-    settings[:mh_titer] = 120
     println(sol)
     num_de = 5
     method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
     alg = LNS(sol, [MHMethod("construct", construct!)],
         [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-        [MHMethod("re", repair!)]; method_selector)
+        [MHMethod("re", repair!)]; method_selector, titer=120)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
@@ -69,12 +67,11 @@ end
 
 @testitem "ALNS-OneMax" setup=[TestInit] begin
     sol = OneMaxSolution(100)
-    settings[:mh_titer] = 120
     println(sol)
     num_de = 5
     alg = ALNS(sol, [MHMethod("construct", construct!)],
         [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-        [MHMethod("re", repair!)])
+        [MHMethod("re", repair!)]; titer=120)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)

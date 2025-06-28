@@ -6,33 +6,9 @@
 # heuristics, destroy methods and repair methods.
 
 
-export LNS, LNSParameters, lns_settings_cfg,
-    MethodSelector, UniformRandomMethodSelector, WeightedRandomMethodSelector,
-    destroy!, repair!, ResultCase, reinitialize!
+export LNS, LNSParameters, MethodSelector, UniformRandomMethodSelector, 
+    WeightedRandomMethodSelector, destroy!, repair!, ResultCase, reinitialize!
 
-
-const lns_settings_cfg = ArgParseSettings()
-
-@add_arg_table! settings_cfg begin
-    "--lns_init_temp_factor"
-        help = "LNS factor for determining initial temperature"
-        arg_type = Float64
-        default = 0.0
-    "--lns_temp_dec_factor"
-        help = "LNS factor for decreasing the temperature"
-        arg_type = Float64
-        default = 0.99
-end
-
-"""
-    LNSParameters
-
-Parameters for LNS adopted from settings by default.
-"""
-Base.@kwdef struct LNSParameters
-    init_temp_factor::Float64 = settings[:lns_init_temp_factor]
-    temp_dec_factor::Float64 = settings[:lns_temp_dec_factor]
-end
 
 """
     MethodSelector
@@ -47,6 +23,8 @@ abstract type MethodSelector end
 A basic large neighborhood search.
 
 Attributes
+- `init_temp_factor`: factor for determining the initial temperature factor
+- `temp_dec_factor`: factor for determining the temperature decay factor
 - `solution`: current solution
 - `scheduler`: `Scheduler`
 - `meths_ch`: list of construction heuristic methods
@@ -56,7 +34,9 @@ Attributes
     in conjunction with which repair method, i.e., `meths_compat[i,j]==true` indicates
     that the i-th destroy method can be applied with the j-th repair method
 - `temperature`: temperature for Metropolis criterion
-- `params`: LNSParameters, by default adopted from global settings
+- `method_selector`: method selector for selecting destroy and repair methods
+- `init_temp_factor`: factor for determining the initial temperature
+- `temp_dec_factor`: factor for determining the temperature decay factor
 """
 mutable struct LNS{TMethodSelector <: MethodSelector, TSolution <: Solution}
     solution::TSolution
@@ -68,7 +48,8 @@ mutable struct LNS{TMethodSelector <: MethodSelector, TSolution <: Solution}
     meths_compat::Union{Nothing, Matrix{Bool}}
     temperature::Float64
     method_selector::TMethodSelector
-    params::LNSParameters
+    init_temp_factor::Float64
+    temp_dec_factor::Float64
 end
 
 """
@@ -81,26 +62,32 @@ Enumeration type for type of result of method application.
 
 """
     LNS(sol::Solution, meths_ch, meths_de, meths_re;
-        meths_compat, consider_initial_sol, scheduler_params, 
-        method_selector, params)
+        meths_compat=nothing, consider_initial_sol=false, 
+        method_selector=UniformRandomMethodSelector(),
+        init_temp_factor=0.0, temp_dec_factor=0.99, kwargs...)
 
-Create a LNS.
+Create a Large Neighborhood Search (LNS).
 
-Create a LNS for the given solution with the given construction,
+Create an LNS for the given solution with the given construction,
 and repair methods provided as `Vector{MHMethod}`.
 If `consider_initial_sol`, consider the given solution as valid initial solution;
 otherwise it is assumed to be uninitialized.
+Parameter `meths_compat` is either `nothing` or a Boolean matrix indicating which destroy 
+method can be applied in conjunction with which repair method.
+Parameter `method_selector` is the technique used for selecting the destroy and repair methods.
+The `kwargs` are passed to the `SchedulerParameters` constructor and therefore can
+contain any element of `SchedulerParameters` as keyword argument, e.g., `titer`, etc.
 """
 function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMethod},
         meths_re::Vector{MHMethod}; meths_compat::Union{Nothing, Matrix{Bool}}=nothing,
         consider_initial_sol::Bool=false, 
         method_selector::MethodSelector=UniformRandomMethodSelector(),
-        scheduler_params=SchedulerParameters(), params=LNSParameters())
-    temperature = obj(sol) * params.init_temp_factor
-    scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re], consider_initial_sol, 
-        params=scheduler_params)
+        init_temp_factor::Float64=0.0, temp_dec_factor::Float64=0.99, kwargs...)
+    temperature = obj(sol) * init_temp_factor
+    scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re]; consider_initial_sol, kwargs...)
     lns = LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), scheduler, 
-        meths_ch, meths_de, meths_re, meths_compat, temperature, method_selector, params)
+        meths_ch, meths_de, meths_re, meths_compat, temperature, method_selector, 
+        init_temp_factor, temp_dec_factor)
     init_method_selector!(lns)
     return lns
 end
@@ -115,7 +102,7 @@ function reinitialize!(lns::LNS{<:MethodSelector, TSolution},
     copy!(lns.solution, sol)
     copy!(lns.new_solution, sol)
     reinitialize!(lns.scheduler, sol)
-    lns.temperature = obj(sol) * lns.params.init_temp_factor
+    lns.temperature = obj(sol) * lns.init_temp_factor
     init_method_selector!(lns)
 end
 
@@ -164,7 +151,7 @@ end
 Apply geometric cooling.
 """
 function cool_down!(lns::LNS)
-    lns.temperature *= lns.params.temp_dec_factor
+    lns.temperature *= lns.temp_dec_factor
 end
 
 

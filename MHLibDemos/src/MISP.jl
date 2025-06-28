@@ -203,29 +203,41 @@ end
 
 # -------------------------------------------------------------------------------
 
-function solve_misp(args=ARGS)
-    println("MISP Demo version $(git_version())\nARGS: ", args)
-    args isa AbstractString && (args = split(args))
+"""
+    solve_misp(filename::AbstractString; seed=nothing, kwargs...)
 
-    # set some new default values for parameters and parse all relevant arguments
-    settings_new_default_value!(MHLib.settings_cfg, "ifile", 
-        "MHLibDemos/data/frb40-19-1.mis")
-    settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 1000)
-    parse_settings!([MHLib.scheduler_settings_cfg], args)
-    println(get_settings_as_string())
+Solve a given MISP instance with a variable neighborhood search.
 
-    inst = MISPInstance(settings[:ifile])
+# Parameters
+- `filename`: File name of the MISP instance
+- `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
+- `kwargs`: Additional keyword arguments for the algorithm, e.g., `timter`, etc.
+"""
+function solve_misp(
+        filename::AbstractString=joinpath(@__DIR__, "..", "data", "frb40-19-1.mis");
+        seed=nothing, kwargs...)
+    # Make results reproducibly by either setting a given seed or picking one randomly
+    isnothing(seed) && (seed = rand(0:typemax(Int32)))
+    Random.seed!(seed)
+    
+    println("MISP Demo version $(git_version())")
+    println("filename=$filename, seed=$seed, ", NamedTuple(kwargs))
+
+    # Set some default value(s) for parameters to GVNS that are not given in kwargs
+    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 1000,))))
+    
+    inst = MISPInstance(filename)
     sol = MISPSolution(inst)
     # initialize!(sol)
     # check(sol)
     # println(sol)
 
-    # we apply a variable neighborhod search:
+    # we apply a variable neighborhod search
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
         [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
             MHMethod("sh3", shaking!, 3)], 
-        consider_initial_sol = true)
+        consider_initial_sol=true; kwargs...)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
@@ -233,10 +245,8 @@ function solve_misp(args=ARGS)
     return sol
 end
 
-# To run from REPL, use MHLibDemos and call `solve_misp(<args>)` where `<args>`
-# is a single string or list of strings being passed as arguments for setting global 
-# parameters, e.g. `solve_misp("--seed=1 --mh_titer=120")`.
-# `@<filename>` may be used to read arguments from a configuration file <filename>
+# To run from REPL, activate `MHLibDemos` environment, use `MHLibDemos`,
+# and call e.g. `solve_misp(titer=200, seed=1)`.
 
 # Run with profiler:
-# @profview solve_misp(args)
+# @profview solve_misp()

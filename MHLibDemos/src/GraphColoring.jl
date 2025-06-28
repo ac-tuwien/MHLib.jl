@@ -12,17 +12,7 @@ using StatsBase
 using Graphs
 using MHLib
 
-export GraphColoringInstance, GraphColoringSolution, solve_graph_coloring,
-    graph_coloring_settings_cfg
-
-# We define a problem-specific parameter:
-const graph_coloring_settings_cfg = ArgParseSettings()
-@add_arg_table! graph_coloring_settings_cfg begin
-    "--gcp_colors"
-        help = "number of colors for the graph coloring problem"
-        arg_type = Int
-        default = 3
-end
+export GraphColoringInstance, GraphColoringSolution, solve_graph_coloring
 
 
 """
@@ -37,26 +27,25 @@ Attributes
 - `graph`: undirected graph we want to color
 - `n`: number of nodes
 - `m` number of edges
-- `colors`: number of colors
+- `n_colors`: number of colors
 """
 struct GraphColoringInstance
     graph::SimpleGraph{Int}
     n::Int
     m::Int
-    colors::Int
+    n_colors::Int
 end
 
 """
-    GraphColoringInstance(name)
+    GraphColoringInstance(name, n_colors::Int=3)
 
 Create or read graph with given name.
 """
-function GraphColoringInstance(name::AbstractString)
+function GraphColoringInstance(name::AbstractString, n_colors::Int=3)
     graph = create_or_read_simple_graph(name)
     n = nv(graph)
     m = ne(graph)
-    colors = settings[:gcp_colors]::Int
-    GraphColoringInstance(graph, n, m, colors)
+    GraphColoringInstance(graph, n, m, n_colors)
 end
 
 function Base.show(io::IO, inst::GraphColoringInstance)
@@ -121,7 +110,7 @@ function MHLib.check(s::GraphColoringSolution; kwargs...)
     if length(s.x) != s.inst.n
         error("Invalid length of solution")
     end
-    if sum(s.x .> s.inst.colors) >= 1
+    if sum(s.x .> s.inst.n_colors) >= 1
         error("Too many colors used")
     end
     invoke(MHLib.check, Tuple{supertype(typeof(s))}, s; kwargs...)
@@ -145,19 +134,19 @@ Following a first improvement strategy.
 The neighborhood used is defined by all solutions that can be created by changing the color
 of a vertex involved in a conflict.
 """
-function MHLib.local_improve!(s::GraphColoringSolution, ::Nothing, result::Result)
+function MHLib.local_improve!(s::GraphColoringSolution, ::Any, result::Result)
     n = length(s.x)
     order = sample(1:n, n, replace = false)
     for p in order
         # Count colors in the neighborhood
-        nbh_col = fill(0, s.inst.colors)
+        nbh_col = fill(0, s.inst.n_colors)
         for v in neighbors(s.inst.graph, p)
             nbh_col[s.x[v]] += 1
         end
         old_col = s.x[p]
         if nbh_col[old_col] > 0
             # violation found
-            for new_col in sample(1:s.inst.colors, s.inst.colors, replace = false)
+            for new_col in sample(1:s.inst.n_colors, s.inst.n_colors, replace = false)
                 if nbh_col[new_col] < nbh_col[old_col]
                     # Possible improvement found
                     s.x[p] = new_col
@@ -200,7 +189,7 @@ function MHLib.shaking!(s::GraphColoringSolution, par::Int, result::Result)
         u = under_conflict[index]
 
         # Pick random color (different from current)
-        col_candits = sample(1:s.inst.colors, 2, replace = false)
+        col_candits = sample(1:s.inst.n_colors, 2, replace = false)
         rand_col = s.x[u] == col_candits[1] ? col_candits[2] : col_candits[1]
         s.x[u] = rand_col
 
@@ -214,31 +203,41 @@ end
 
 
 function MHLib.initialize!(s::GraphColoringSolution)
-    s.x = sample(1:s.inst.colors, s.inst.n, replace = true)
+    s.x = sample(1:s.inst.n_colors, s.inst.n, replace = true)
     invalidate!(s)
 end
 
 
 # -------------------------------------------------------------------------------
 
-function solve_graph_coloring(args=ARGS)
-    println("Graph Coloring Demo version $(git_version())\nARGS: ", args)
-    args isa AbstractString && (args = split(args))
+"""
+    solve_graph_coloring(name::"data/fpsol2.i.1.col", n_colors=3; seed=nothing, kwargs...)
 
-    # We set some new default values for parameters and parse all relevant arguments
-    settings_new_default_value!(MHLib.scheduler_settings_cfg, "mh_titer", 1000)
-    settings_new_default_value!(MHLib.settings_cfg, "ifile", "data/fpsol2.i.1.col")
-    parse_settings!([MHLib.schedulers_settings_cfg, graph_coloring_settings_cfg], args)
-    println(get_settings_as_string())
-        
-    inst = GraphColoringInstance(settings[:ifile])
+Solve the graph coloring problem for the given graph and number of colurs using a GVNS.
+
+Any keyword arguments of GVNS can be passed also here as `kwargs`, e.g. `titer`, etc.
+"""
+function solve_graph_coloring(
+        name::AbstractString=joinpath(@__DIR__(), "..", "data/fpsol2.i.1.col"),
+        n_colors::Int=3; seed=nothing, kwargs... )
+    # Make results reproducibly by either setting a given seed or picking one randomly
+    isnothing(seed) && (seed = rand(0:typemax(Int32)))
+    Random.seed!(seed)
+
+    println("Graph Coloring Demo $(git_version())")
+    println("name=$name, n_colors=$n_colors, seed=$seed, ", NamedTuple(kwargs))
+
+    # Set some default value(s) for parameters to GVNS that are not given in kwargs
+    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 1000,))))
+    
+    inst = GraphColoringInstance(name)
     sol = GraphColoringSolution(inst)
     initialize!(sol)
     println(sol)
 
     alg = GVNS(sol, [MHMethod("con", construct!)],
-        [MHMethod("li1", local_improve!, 1)],[MHMethod("sh1", shaking!, 1)], 
-        consider_initial_sol = true)
+        [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
+        consider_initial_sol=true, kwargs...)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
@@ -246,10 +245,8 @@ function solve_graph_coloring(args=ARGS)
     return sol
 end
 
-# To run from REPL, use `MHLibDemos` and call `solve_graph_coloring(<args>)` where `<args>`
-# is a single string or list of strings being passed as arguments for setting global 
-# parameters, e.g. `solve_graph_coloring("--seed=1 --mh_titer=120")`.
-# `@<filename>` may be used to read arguments from a configuration file <filename>
+# To run from REPL, activate `MHLibDemos` environment, use `MHLibDemos`,
+# and call e.g. `solve_graph_coloring(titer=200, seed=1)`.
 
 # Run with profiler:
-# @profview solve_graph_coloring(args)
+# @profview solve_graph_coloring()

@@ -95,18 +95,10 @@ end
 
 Returns `logger <: AbstractLogger` to log output to.  
 
-If the argument `--ofile` is set output will be saved to the file specified 
-as well as to `stdout`.  Additionally users can overload the `get_logger` 
-method with their own deffinition to customize the logging output. 
+By default, this is a `NullLogger`, but the function can be oberoaded
+for custom logging behavior in respect to the solution type.
 """
-function get_logger(::Solution)
-    if settings[:ofile] == ""
-        logger = NullLogger()
-    else
-        logger = MHLogger(settings[:ofile])
-    end
-    return logger
-end
+get_logger(::Solution) = NullLogger()
 
 
 # --------------------- Output logging methods ---------------------
