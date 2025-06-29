@@ -1,7 +1,7 @@
 name = "MHLibDemos"
 uuid = "684acab6-7f56-4bd3-8ecb-3989322bafbb"
 authors = ["Guenther Raidl <raidl@ac.tuwien.ac.at> et al."]
-version = "0.3.0pre1"
+version = "0.3.0-pre2"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"

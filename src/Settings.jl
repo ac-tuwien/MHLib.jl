@@ -1,5 +1,10 @@
 #=
+Settings.jl
+
 Managing global parameters/settings via decentralized specifications.
+
+Use with care as it is often better in Julia to keep program parameters within the Julia 
+code.
 =#
 
 using ArgParse

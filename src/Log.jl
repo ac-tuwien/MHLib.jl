@@ -1,14 +1,14 @@
-#     Log.jl
-
+# Log.jl
+#
 # Custom logging functionallity for MHLib.  
-    
+#    
 # Implements a basic logger type and required methods.  
 # Provides a method to return a simple logger and allows users to overload this method to 
 # incoperate custom user defined loggers. Additionally exports differnt methods to 
 # output optimization results and interation data.
-
+#
 # The logging process works as follows.
-
+#
 # - If the user does not set the `--ofile` argument than no log file is created. 
 #     Print statements are still sent to stdout as is normal
 # - If the user does set the `--ofile` argument then by default a simple logger is 

@@ -1,11 +1,9 @@
-"""
-    MISP
-
-Demo problem: maximum (weighted) independent set problem (MISP).
-
-Give an undirected (weighted) graph, find a maximum cardinality subset of nodes where
-no pair of nodes is adjacent in the graph.
-"""
+# MISP.jl
+#
+# Demo problem: maximum (weighted) independent set problem (MISP).
+#
+# Give an undirected (weighted) graph, find a maximum cardinality subset of nodes where
+# no pair of nodes is adjacent in the graph.
 
 using Graphs
 using Random
@@ -204,28 +202,26 @@ end
 # -------------------------------------------------------------------------------
 
 """
-    solve_misp(filename::AbstractString; seed=nothing, kwargs...)
+    solve_misp(filename::AbstractString; seed=nothing, titer=1000, kwargs...)
 
 Solve a given MISP instance with a variable neighborhood search.
 
 # Parameters
 - `filename`: File name of the MISP instance
 - `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
-- `kwargs`: Additional keyword arguments for the algorithm, e.g., `timter`, etc.
+- `titer`: Number of iterations for the solving algorithm, gets a new default value
+- `kwargs`: Additional keyword arguments for the algorithm, e.g., `ttime`
 """
 function solve_misp(
         filename::AbstractString=joinpath(@__DIR__, "..", "data", "frb40-19-1.mis");
-        seed=nothing, kwargs...)
+        seed=nothing, titer=1000, kwargs...)
     # Make results reproducibly by either setting a given seed or picking one randomly
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
     
     println("MISP Demo version $(git_version())")
     println("filename=$filename, seed=$seed, ", NamedTuple(kwargs))
-
-    # Set some default value(s) for parameters to GVNS that are not given in kwargs
-    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 1000,))))
-    
+   
     inst = MISPInstance(filename)
     sol = MISPSolution(inst)
     # initialize!(sol)
@@ -236,8 +232,8 @@ function solve_misp(
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
         [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
-            MHMethod("sh3", shaking!, 3)], 
-        consider_initial_sol=true; kwargs...)
+            MHMethod("sh3", shaking!, 3)]; 
+        consider_initial_sol=true, titer, kwargs...)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)

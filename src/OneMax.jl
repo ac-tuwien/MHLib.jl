@@ -1,10 +1,9 @@
-"""
-    OneMax
+# OneMax.jl
+#
+# OneMax demo problem: Maximize the number of set bits in a binary string.
+#
+# This trivial problem is just for very simple demonstration/testing purposes.
 
-OneMax demo problem: Maximize the number of set bits in a binary string.
-
-This trivial problem is just for very simple demonstration/testing purposes.
-"""
 
 export OneMaxSolution, solve_onemax
 
@@ -63,23 +62,24 @@ repair!(sol::OneMaxSolution, ::Nothing, result::Result) = shaking!(sol, 1, resul
 # -------------------------------------------------------------------------------
 
 """
-    solve_onemax(n::Int=100; kwargs...)
+    solve_onemax(n::Int=100; seed=nothing, titer::Int==100, kwargs...)
 
 Solve the OneMax problem with `n` bits, using a variable neighborhood search.
 
-Any keyword arguments of GVNS can be passed also here as `kwargs`, e.g. `titer`, etc.
+# Parameters
+- `n::Int`: number of bits in the OneMax problem
+- `seed::Int`: random seed to use for reproducibility, or `nothing` to pick one randomly
+- `titer::Int`: number of iterations for the variable neighborhood search, gets new default value
+- `kwargs...`: keyword arguments to pass to the GVNS algorithm, e.g. `ttime`, etc.
 """
-function solve_onemax(n::Int=100; seed=nothing, kwargs...)
+function solve_onemax(n::Int=100; seed=nothing, titer=100, kwargs...)
     # Make results reproducibly by either setting a given seed or picking one randomly
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
 
     println("OneMax Demo $(git_version())")
     println("n=$n, seed=$seed, ", NamedTuple(kwargs))
-
-    # Set some default value(s) for parameters to GVNS that are not given in kwargs
-    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 100,))))
-             
+        
     sol = OneMaxSolution(n)
     initialize!(sol)
     println(sol)
@@ -88,7 +88,7 @@ function solve_onemax(n::Int=100; seed=nothing, kwargs...)
     # heuristic, a local improvement method, and a shaking method.
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
-        consider_initial_sol=true,
+        consider_initial_sol=true, titer,
         kwargs...)
     run!(alg)
     method_statistics(alg.scheduler)

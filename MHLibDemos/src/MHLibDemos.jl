@@ -1,3 +1,10 @@
+"""
+    module MHLibDemos
+
+A package demonstrating the use of MHLib for various optimization problems.
+
+Can also be used as templates for new projects using MHLib.
+"""
 module MHLibDemos
 
 using Graphs
@@ -53,4 +60,4 @@ include("TSP.jl")
 
 include("../test/tests.jl")
 
-end  # module MHLibDemos
+end  # module

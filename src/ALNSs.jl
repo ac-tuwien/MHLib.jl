@@ -1,7 +1,7 @@
 #     ALNSs.jl
-
+#
 # A adaptive large neighborhood search.
-
+#
 # It extends the more general scheduler module/class by distinguishing between construction
 # heuristics, destroy methods and repair methods. Moreover it contain score_data which
 # tracks the success of methods and a next_segment attribute.

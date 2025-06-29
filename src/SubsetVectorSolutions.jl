@@ -1,5 +1,5 @@
-#     SubsetVectorSolutions
-
+# SubsetVectorSolutions.jl
+#
 # A module for solutions that are arbitrary cardinality subsets of a given set
 # represented in vector form. The front part represents the selected
 # elements, the back part optionally the unselected ones.

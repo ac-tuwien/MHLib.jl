@@ -1,10 +1,9 @@
-#     LNSs.jl
-
+# LNSs.jl
+#
 # A basic large neighborhood search.
-
+#
 # It extends the more general scheduler module/class by distinguishing between construction
 # heuristics, destroy methods and repair methods.
-
 
 export LNS, LNSParameters, MethodSelector, UniformRandomMethodSelector, 
     WeightedRandomMethodSelector, destroy!, repair!, ResultCase, reinitialize!

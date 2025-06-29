@@ -1,13 +1,11 @@
-"""
-    MKP
-
-Demo problem: multi-dimensional knapsack problem (MKP).
-
-Given are a set of n items, m resources, and a capacity for each resource.
-Each item has a price and requires from each resource a certain amount.
-Find a subset of the items with maximum total price that does not exceed the resources'
-capacities.
-"""
+# MKP.jl
+#
+# Demo problem: multi-dimensional knapsack problem (MKP).
+#
+# Given are a set of n items, m resources, and a capacity for each resource.
+# Each item has a price and requires from each resource a certain amount.
+# Find a subset of the items with maximum total price that does not exceed the resources'
+# capacities.
 
 using MHLib
 
@@ -20,7 +18,7 @@ Instance oof a multidimensional knapsack problem.
 
 - `n`: number of elements
 - `m`: number of resources
-- `p: vector of prizes of elements
+- `p`: vector of prizes of elements
 - `r`: resource consumption values of each each element
 - `b`: capacities of resources
 - `r_min`: minimum resource consumption value of any element
@@ -201,18 +199,19 @@ end
 # -------------------------------------------------------------------------------
 
 """
-    solve_misp(filename::AbstractString; seed=nothing, kwargs...)
+    solve_misp(filename::AbstractString; seed=nothing, titer=3000, kwargs...)
 
 Solve a given MKP instance with a variable neighborhood search.
 
 # Parameters
 - `filename`: File name of the MKP instance
 - `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
-- `kwargs`: Additional keyword arguments for the algorithm, e.g., `timter`, etc.
+- `titer`: Number of iterations to run the solving algorithm, gets a new default value
+- `kwargs`: Additional keyword arguments for the algorithm, e.g., `ttime`
 """
 function solve_mkp(
         filename::AbstractString=joinpath(@__DIR__, "..", "data", "mknapcb5-01.txt");
-        seed=nothing, kwargs...)
+        seed=nothing, titer=3000, kwargs...)
     # Make results reproducibly by either setting a given seed or picking one randomly
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
@@ -220,9 +219,6 @@ function solve_mkp(
     println("MKP Demo version $(git_version())")
     println("filename=$filename, seed=$seed, ", NamedTuple(kwargs))
 
-    # Set some default value(s) for parameters to GVNS that are not given in kwargs
-    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 3000,))))
-    
     inst = MKPInstance(filename)
     sol = MKPSolution(inst)
     # initialize!(sol)
@@ -232,8 +228,8 @@ function solve_mkp(
     # we apply a variable neighborhood search
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
-        [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2), MHMethod("sh3", shaking!, 3)], 
-        consider_initial_sol=true; kwargs...)
+        [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2), MHMethod("sh3", shaking!, 3)];
+        consider_initial_sol=true, titer, kwargs...)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)

@@ -1,7 +1,7 @@
-#     Schedulers.jl
-
+# Schedulers.jl
+#
 # General scheduler for realizing (G)VNS, GRASP, IG and similar metaheuristics.
-
+#
 # The module is intended for metaheuristics in which a set of methods
 # (or several of them) are in some way repeatedly applied to candidate solutions.
 
