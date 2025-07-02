@@ -6,15 +6,16 @@ Major changes in releases:
 ## Version 0.3.0
 - Usage of `settings` completely removed in MHLib and replaced by normal function parameters; although settings.jl remains, its usage is mostly discouraged, as this mechanism corresponds to global variables and comes with respective problems; see also the new [remark in README.md](README.md) concerning the recommendation of using `Revise.jl` for development and testing instead of frequently restarting Julia to execute an optimization run.
 - Automated seeding of random number generation when parsing `settings` also removed.
-- `MHLibDemos` adapted accordingly; new main functions `solve_*()` at bottom of problem-specific files, independent scripts removed.
-- Package dependency updated.
+- `MHLibDemos` adapted accordingly; new main functions `solve_*()` at bottom of problem-specific files, independent scripts removed
+- Package dependencies updated
+- Tuning: SMAC3 example removed, irace examples simplified
 
 ## Version 0.2.1
 - Added templates for tuning with irace, which is now the preferred tuning tool
 - `clear!` renamed to `Base.empty!`
 - Unit tests use now `TestItems.jl`, which has support integrated in VSCode
 - All submodules within MHLib removed
-- MaxSat demo added directly i to be able to perform basic tests of all algorithms.
+- MaxSat demo added directly i to be able to perform basic tests of all algorithms
 - Other tests for different problems moved to `MHLibDemos`
 - Docstrings improved
 - New setting `mh_log` for turning of logging completely
@@ -29,7 +30,7 @@ Major changes in releases:
 
 ## Version 0.1.13
 - The logging possibilities were extended by the new `Logging` 
-- In the Python code of `Tuning`, package `julia` is replaced by the newer `juliacall`.
+- In the Python code of `Tuning`, package `julia` is replaced by the newer `juliacall`
 
 ## Version 0.1.12
 - Fix in `GVNS` and `LNS`: The termination condition has not been considered directly after

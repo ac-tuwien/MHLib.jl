@@ -31,11 +31,12 @@ function handle_client(client::TCPSocket)
             try
                 expr = Meta.parse(request_str)
                 result = eval(expr)
-                println("result $result")
+                println("Result $result")
                 println(client, result)
                 flush(client)
             catch e
                 result = "Error evaluating expression: $(e)"
+                println("Error: ", result)
             end
             break  # We just execute one function call here
         end

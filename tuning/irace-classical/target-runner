@@ -34,9 +34,9 @@ CONFIG_PARAMS=$*
 # BINDIR=$(dirname "$(readlink -f "$(type -P $0 || echo $0)")")
 
 # EDIT THIS: Path to your executable
-EXE="main.jl" 
+EXE="julia" 
 # EDIT THIS: Specify how parameters are given to your executable
-EXE_PARAMS="--inst $INSTANCE --new_seed ${SEED} ${CONFIG_PARAMS}"
+EXE_PARAMS="main.jl $INSTANCE ${SEED} ${CONFIG_PARAMS}"
 
 if [ ! -x "$(command -v ${EXE})" ]; then
     error "${EXE}: not found or not executable (pwd: $(pwd))"
