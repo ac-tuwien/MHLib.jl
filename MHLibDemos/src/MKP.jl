@@ -207,7 +207,7 @@ Solve a given MKP instance with a variable neighborhood search.
 - `filename`: File name of the MKP instance
 - `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
 - `titer`: Number of iterations to run the solving algorithm, gets a new default value
-- `kwargs`: Additional keyword arguments for the algorithm, e.g., `ttime`
+- `kwargs`: Additional configuration parameters passed to the algorithm, e.g., `ttime`
 """
 function solve_mkp(
         filename::AbstractString=joinpath(@__DIR__, "..", "data", "mknapcb5-01.txt");

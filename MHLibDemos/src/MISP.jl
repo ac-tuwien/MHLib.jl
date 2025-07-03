@@ -21,7 +21,7 @@ Maximum (weighted) independent set problem (MISP) instance.
 Give an undirected (weighted) graph, find a maximum cardinality subset of nodes where
 no pair of nodes is adjacent in the graph.
 
-Attributes
+# Elements
 - `graph`: undirected unweighted graph to consider
 - `n`: number of nodes
 - `m` number of edges

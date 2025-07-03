@@ -21,9 +21,7 @@ abstract type MethodSelector end
 
 A basic large neighborhood search.
 
-Attributes
-- `init_temp_factor`: factor for determining the initial temperature factor
-- `temp_dec_factor`: factor for determining the temperature decay factor
+# Elements
 - `solution`: current solution
 - `scheduler`: `Scheduler`
 - `meths_ch`: list of construction heuristic methods
@@ -34,21 +32,23 @@ Attributes
     that the i-th destroy method can be applied with the j-th repair method
 - `temperature`: temperature for Metropolis criterion
 - `method_selector`: method selector for selecting destroy and repair methods
+
+# Configuration Parameters
 - `init_temp_factor`: factor for determining the initial temperature
 - `temp_dec_factor`: factor for determining the temperature decay factor
 """
 mutable struct LNS{TMethodSelector <: MethodSelector, TSolution <: Solution}
     solution::TSolution
     new_solution::TSolution
-    scheduler::Scheduler{TSolution}
-    meths_ch::Vector{MHMethod}
-    meths_de::Vector{MHMethod}
-    meths_re::Vector{MHMethod}
-    meths_compat::Union{Nothing, Matrix{Bool}}
     temperature::Float64
-    method_selector::TMethodSelector
-    init_temp_factor::Float64
-    temp_dec_factor::Float64
+    const scheduler::Scheduler{TSolution}
+    const meths_ch::Vector{MHMethod}
+    const meths_de::Vector{MHMethod}
+    const meths_re::Vector{MHMethod}
+    const meths_compat::Union{Nothing, Matrix{Bool}}
+    const method_selector::TMethodSelector
+    const init_temp_factor::Float64
+    const temp_dec_factor::Float64
 end
 
 """
@@ -61,32 +61,36 @@ Enumeration type for type of result of method application.
 
 """
     LNS(sol::Solution, meths_ch, meths_de, meths_re;
-        meths_compat=nothing, consider_initial_sol=false, 
-        method_selector=UniformRandomMethodSelector(),
+        consider_initial_sol=false, 
+        meths_compat=nothing, method_selector=UniformRandomMethodSelector(),
         init_temp_factor=0.0, temp_dec_factor=0.99, kwargs...)
 
 Create a Large Neighborhood Search (LNS).
 
 Create an LNS for the given solution with the given construction,
 and repair methods provided as `Vector{MHMethod}`.
-If `consider_initial_sol`, consider the given solution as valid initial solution;
-otherwise it is assumed to be uninitialized.
-Parameter `meths_compat` is either `nothing` or a Boolean matrix indicating which destroy 
-method can be applied in conjunction with which repair method.
-Parameter `method_selector` is the technique used for selecting the destroy and repair methods.
-The `kwargs` are passed to the `SchedulerParameters` constructor and therefore can
-contain any element of `SchedulerParameters` as keyword argument, e.g., `titer`, etc.
+
+# Configuration Parameters
+- `consider_initial_sol`: If set, consider the given solution as valid initial solution;
+    otherwise it is assumed to be uninitialized.
+- `meths_compat`:  either `nothing` or a Boolean matrix indicating which destroy 
+    method can be applied in conjunction with which repair method.
+- `method_selector` is the technique used for selecting the destroy and repair methods,
+    by default `UniformRandomMethodSelector`.
+- `kwargs`: configuration parameters  passed to `Scheduler` and `SchedulerConfig`, 
+    respectively, e.g., `titer`.
 """
 function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMethod},
-        meths_re::Vector{MHMethod}; meths_compat::Union{Nothing, Matrix{Bool}}=nothing,
+        meths_re::Vector{MHMethod}; 
+        meths_compat::Union{Nothing, Matrix{Bool}}=nothing,
         consider_initial_sol::Bool=false, 
         method_selector::MethodSelector=UniformRandomMethodSelector(),
         init_temp_factor::Float64=0.0, temp_dec_factor::Float64=0.99, kwargs...)
     temperature = obj(sol) * init_temp_factor
     scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re]; consider_initial_sol, kwargs...)
-    lns = LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), scheduler, 
-        meths_ch, meths_de, meths_re, meths_compat, temperature, method_selector, 
-        init_temp_factor, temp_dec_factor)
+    lns = LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), temperature, scheduler, 
+        meths_ch, meths_de, meths_re,
+        meths_compat, method_selector, init_temp_factor, temp_dec_factor)
     init_method_selector!(lns)
     return lns
 end

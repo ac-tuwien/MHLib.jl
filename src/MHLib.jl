@@ -10,8 +10,8 @@ using StatsBase
 
 export Solution, to_maximize, obj, initialize!, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
-    run!, git_version, get_number_to_destroy,
-    settings
+    run!, git_version, get_number_to_destroy
+
 
 # ----------------------------- Solution ------------------------------
 
@@ -357,7 +357,6 @@ end
 
 # -----------------------------------------------------------
 
-include("Settings.jl")
 include("Schedulers.jl")
 include("GVNSs.jl")
 include("LNSs.jl")

@@ -194,7 +194,7 @@ Solve a given MAXSAT problem instance with the algorithm `alg`.
 - `filename`: File name of the MAXSAT instance in CNF format
 - `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
 - `titer`: Number of iterations for the solving algorithm, gets a new default value
-- `kwargs`: Additional keyword arguments for the solving algorithm, e.g., `ttime`
+- `kwargs`: Configuration parameters to pass to the the solving algorithm, e.g., `ttime`
 """
 function solve_maxsat(alg::AbstractString="alns",
         filename::AbstractString=joinpath(@__DIR__, "..", "data", "maxsat-adv1.cnf");

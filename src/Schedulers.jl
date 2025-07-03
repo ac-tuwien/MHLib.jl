@@ -9,7 +9,7 @@ using DataStructures  # SortedDict for method_stats
 
 import Logging: AbstractLogger
 
-export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerParameters, 
+export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerConfig, 
     perform_method!, next_method, update_incumbent!, check_termination, 
     perform_sequentially!, main_results, method_statistics, delayed_success_update!, 
     log_iteration, log_iteration_header, construct!, local_improve!, shaking!, 
@@ -17,9 +17,9 @@ export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerParameters,
 
 
 """
-    SchedulerParameters
+    SchedulerConfig
 
-Parameters for the scheduler.
+Configuration parameters for `Scheduler`.
 
 # Elements
 - `titer`: maximum number of iterations (<0: turned off)
@@ -33,7 +33,7 @@ Parameters for the scheduler.
 - `checkit`: call `check` for each solution after each method application
 - `log`: if true write all log information, else none
 """
-Base.@kwdef struct SchedulerParameters
+Base.@kwdef struct SchedulerConfig
     titer::Int = 100
     lnewinc::Bool = true
     lfreq::Int = 0
@@ -120,7 +120,7 @@ MHMethodStatistics() = MHMethodStatistics(0, 0.0, 0, 0.0, 0.0)
 Type for metaheuristics that work by iteratively applying certain methods/operations.
 
 # Elements
-- `params`: parameters for the scheduler, see `SchedulerParameters`
+- `config`: configuration parameters for the scheduler, see `SchedulerConfig`
 - `incumbent`: incumbent solution, i.e., initial solution and always best solution so far
     encountered
 - `incumbent_valid`: `true` if incumbent is a valid solution to be considered
@@ -133,17 +133,17 @@ Type for metaheuristics that work by iteratively applying certain methods/operat
 - `run_time`: overall runtime (set when terminating)
 """
 mutable struct Scheduler{TSolution <: Solution}
-    params::SchedulerParameters
+    const config::SchedulerConfig
     incumbent::TSolution
     incumbent_valid::Bool
     incumbent_iteration::Int
     incumbent_time::Float64
-    methods::Vector{MHMethod}
-    method_stats::SortedDict{String, MHMethodStatistics}
+    const methods::Vector{MHMethod}
+    const method_stats::SortedDict{String, MHMethodStatistics}
     iteration::Int
     time_start::Float64
     run_time::Union{Float64, Missing}
-    logger::AbstractLogger
+    const logger::AbstractLogger
 end
 
 """
@@ -155,15 +155,16 @@ Create a Scheduler for the given solution with the given methods provides as
 `Vector{MHMethod}`. If `consider_initial_sol` is `true`, consider the given solution as
 valid initial solution; otherwise it is assumed to be uninitialized.
 
-The `kwargs` are used to initialize a `SchedulerParameters` structure, and consequently
-the elements of the `SchedulerParameters` structure can be set as keyword arguments.
+The `kwargs` provide various configuration parameters and are used to initialize a 
+`SchedulerConfig` structure; thus see `SchedulerConfig` for the available keyword arguments
+and their meaning.
 """
 function Scheduler(sol::Solution, methods::Vector{MHMethod};
         consider_initial_sol::Bool=false, kwargs...)
-    params = SchedulerParameters(; kwargs...)
+    config = SchedulerConfig(; kwargs...)
     method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
     logger = get_logger(sol)
-    sched = Scheduler{typeof(sol)}(params, sol, consider_initial_sol, 0, 0.0, methods, 
+    sched = Scheduler{typeof(sol)}(config, sol, consider_initial_sol, 0, 0.0, methods, 
         method_stats, 0, time(), missing, logger)
     log_iteration_header(sched)
     if sched.incumbent_valid
@@ -261,7 +262,7 @@ function perform_method!(sched::Scheduler, method::MHMethod, sol::Solution;
     t_start = time()
     method.method(sol, method.par, res)
     t_end = time()
-    if sched.params.checkit
+    if sched.config.checkit
         check(sol)
     end
     ms = sched.method_stats[method.name]
@@ -294,12 +295,13 @@ Check termination conditions and return `true` when to terminate.
 """
 function check_termination(sched::Scheduler)::Bool
     t = time()
-    if 0 <= sched.params.titer <= sched.iteration ||
-        0 <= sched.params.tciter <= sched.iteration - sched.incumbent_iteration ||
-        0 <= sched.params.ttime <= t - sched.time_start ||
-        0 <= sched.params.tctime::Float64 <= t - sched.incumbent_time ||
-        0 <= sched.params.tobj && !is_worse_obj(sched.incumbent, obj(sched.incumbent), 
-            sched.params.tobj)
+    config = sched.config
+    if 0 <= config.titer <= sched.iteration ||
+        0 <= config.tciter <= sched.iteration - sched.incumbent_iteration ||
+        0 <= config.ttime <= t - sched.time_start ||
+        0 <= config.tctime::Float64 <= t - sched.incumbent_time ||
+        0 <= config.tobj && !is_worse_obj(sched.incumbent, obj(sched.incumbent), 
+            config.tobj)
         return true
     end
     false
@@ -363,7 +365,7 @@ function perform_method_pair!(sched::Scheduler, destroy::MHMethod, repair::MHMet
     t_destroyed = time()
     repair.method(sol, repair.par, res)
     t_end = time()
-    if sched.params.checkit
+    if sched.config.checkit
         check(sol)
     end                                      
     update_stats_for_method_pair!(sched, destroy, repair, sol, res, obj_old,

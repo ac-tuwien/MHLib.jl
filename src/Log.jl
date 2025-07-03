@@ -109,7 +109,7 @@ get_logger(::Solution) = NullLogger()
 Write iteration log header.
 """
 function log_iteration_header(sched::Scheduler)
-    !sched.params.log && return
+    !sched.config.log && return
     s = "I       iter             best          obj_old          obj_new" *
         "        time              method info"
     with_logger(sched.logger) do 
@@ -134,20 +134,21 @@ end
 Writes iteration log info.
 
 A line is written if in_any_case is set or in dependence of
-`params.lfreq` and `params.lnewinc`.
+`config.lfreq` and `config.lnewinc`.
 `method_name`: name of applied method or "-" (if initially given solution);
 `obj_old`: objective value before applying last operator;
-`param new_sol`: newly created solution;
+`new_sol`: newly created solution;
 `new_incumbent`: true if the method yielded a new incumbent solution;
 `in_any_case`: turns filtering of iteration logs off;
 `log_info`: customize log info optionally added if not ""
 """
 function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::Solution,
         new_incumbent::Bool, in_any_case::Bool, log_info::String="")
-    !sched.params.log && return
-    log = in_any_case || new_incumbent && sched.params.lnewinc
+    config = sched.config
+    !config.log && return
+    log = in_any_case || new_incumbent && config.lnewinc
     if !log
-        lfreq = sched.params.lfreq
+        lfreq = config.lfreq
         if lfreq > 0 && sched.iteration % lfreq == 0
             log = true
         elseif lfreq < 0 && is_logarithmic_number(sched.iteration)
@@ -179,7 +180,7 @@ Write overall statistics.
 """
 function method_statistics(sched::Scheduler)
 
-    !sched.params.log && return
+    !sched.config.log && return
 
     if sched.run_time === missing
         sched.run_time = time() - sched.time_start
@@ -237,7 +238,7 @@ end
 Print main results.
 """
 function main_results(sched::Scheduler)
-    !sched.params.log && return
+    !sched.config.log && return
     str = "T best solution: $(sched.incumbent)\nT best obj: $(obj(sched.incumbent))\n" *
         "T best iteration: $(sched.incumbent_iteration)\n" *
         "T total iterations: $(sched.iteration)\n" *

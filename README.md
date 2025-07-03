@@ -69,14 +69,17 @@ The main file `src/MHLib.jl` provides the following types to represent candidate
 Moreover, the main file provides:
 - `git_version()`:
     Function returning the abbreviated git version string of the current project. It is good practice to write this information also to a file wit log-information of an optimization run in order to be able to later possibly reproduce results with the same program version.
-- `settings`:
-    Global dictionary with settings that can be defined independently per Julia-file (module) in a distributed way. 
-    Values for these parameters can be provided as program arguments when calling Julia or in
-    configuration files. 
 
-    **Important remark/recommendation**: While earlier MHLib versions relied heavily on this mechanism, it is not recommended to make (much) use of `settings` anymore, as typically in Julia development, one better does not restart/call the whole Julia framework independently for each optimization run. During the development, it is much more efficient to use [Revise](https://github.com/timholy/Revise.jl) to automatically update the code in a continuously running Julia REPL session and to call individual optimization runs/tests from therein. Also when performing larger tests over many optimization runs in a batched fashion on a cluster, better aggregate multiple runs - in particular when each run is relatively short - into fewer Julia processes to avoid/reduce Julia startup overhead.
+# Configuration/Parametrization
 
-Further files (modules):
+*Remark:* Earlier MHLib versions relied heavily on an extensible `settings` mechanism for various configuration parameters that corresponded to a global dictionary that is compiled from command line arguments provided when starting Julia. With version 0.3.0, `MHLib` replaced this mechanism by classical keyword arguments with default values in functions or constructors of structs. Partly, they are stored in separate `...Config` structs, partly directly in the respective structs representing certain metaheuristics.
+In applications using `MHLib`, we also do not recommended to make use of such a global variable-based configuration parameter dictionary approach and/or the heavy use of Julia command line arguments (`ARGS`) anymore. 
+Typically in Julia development, one better does not restart/call the whole Julia framework independently for each optimization/test run. It is usually much more efficient to use [Revise](https://github.com/timholy/Revise.jl) to automatically update the code in a continuously running Julia REPL session and to call individual optimization runs/tests from therein - directly with the keyword arguments to be used. 
+Also when performing larger tests over many optimization runs in a batched fashion, it is often much simpler to do this directly in Julia instead of using a shell script that calls Julia many times. This partly also holds when using a compute cluster: better aggregate multiple runs - in particular when each run is relatively short - into fewer Julia processes to avoid/reduce Julia startup overhead.
+
+Thus, for the various configuration parameters of the divers metaheuristics realized in `MHLib`, see the respective functions and structs doc-strings.
+
+# Files (Modules):
 
 - `Schedulers`, type `Scheduler`:
     A an abstract framework for single trajectory metaheuristics that rely on iteratively

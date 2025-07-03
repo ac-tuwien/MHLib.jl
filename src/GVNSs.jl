@@ -14,13 +14,13 @@ export GVNS, vnd!, gvns!
 
 A general variable neighborhood search (GVNS).
 
-Attributes
+# Elements
 - `scheduler`: Scheduler object
 - `meths_ch`: list of construction heuristic methods
 - `meths_li`: list of local improvement methods
 - `meths_sh`: list of shaking methods
 """
-mutable struct GVNS{TSolution <: Solution}
+struct GVNS{TSolution <: Solution}
     scheduler::Scheduler{TSolution}
     meths_ch::Vector{MHMethod}
     meths_li::Vector{MHMethod}
@@ -38,8 +38,8 @@ local improvement, and shaking methods provides as `Vector{MHMethod}`.
 If `consider_initial_sol` is true, consider the given solution as valid initial solution;
 otherwise it is assumed to be uninitialized.
 
-The `kwargs` are passed to the `SchedulerParameters` constructor`and therefore can
-contain any element of `SchedulerParameters` as keyword argument, e.g., `titer`, etc.
+The `kwargs` are any configuration parameters passed to the `Scheduler` respectively
+`SchedulerConfig`, e.g., `titer`, etc.
 """
 function GVNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_li::Vector{MHMethod},
         meths_sh::Vector{MHMethod}; consider_initial_sol::Bool=false, kwargs...)

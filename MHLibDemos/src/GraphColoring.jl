@@ -221,7 +221,7 @@ Solve the graph coloring problem for the given graph and number of colurs using 
 - `n_colors::Int`: Number of colors to use for coloring the graph
 - `seed::Int`: Random seed to use for reproducibility, or `nothing` to pick one randomly
 - `titer::Int`: Number of iterations for the solving algorithm, gets a new default value
-- `kwargs...`: Keyword arguments to pass to the solving algorithm, e.g. `ttime`
+- `kwargs...`: Configuration parameters to pass to the solving algorithm, e.g., `ttime`
 """
 function solve_graph_coloring(
         name::AbstractString=joinpath(@__DIR__(), "..", "data/fpsol2.i.1.col"),

@@ -4,8 +4,7 @@
 Major changes in releases:
 
 ## Version 0.3.0
-- Usage of `settings` completely removed in MHLib and replaced by normal function parameters; although settings.jl remains, its usage is mostly discouraged, as this mechanism corresponds to global variables and comes with respective problems; see also the new [remark in README.md](README.md) concerning the recommendation of using `Revise.jl` for development and testing instead of frequently restarting Julia to execute an optimization run.
-- Automated seeding of random number generation when parsing `settings` also removed.
+- Usage and support of `settings` completely removed and replaced by classical keyword arguments in functions and constructors; we now also discourage the usage using Julia command line arguments (`ARGS`) and a global dictionary for configuration settings; see also the new [remark in README.md](README.md#configurationparametrization) including the recommendation of mostly working in a long-running REPL session and using `Revise.jl` for development and testing instead of frequently restarting Julia to execute individual optimization runs.
 - `MHLibDemos` adapted accordingly; new main functions `solve_*()` at bottom of problem-specific files, independent scripts removed
 - Package dependencies updated
 - Tuning: SMAC3 example removed, irace examples simplified

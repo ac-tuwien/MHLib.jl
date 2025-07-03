@@ -29,12 +29,14 @@ ALNSScoreData() = ALNSScoreData(1.0, 0, 0)
 
 
 """
-An adaptive large neighborhood search (ALNS).
+An Adaptive Large Neighborhood Search (ALNS).
 
-Attributes
+# Elements
 - `score_data_de`: dictionary which stores a ScoreData struct for each destroy method
 - `score_data_re`: dictionary which stores a ScoreData struct for each repair method
 - `next_segment`: iteration number of next segment for updating operator weights
+
+# Configuration Parameters
 - `segment_size`: size of segments for updating method weights
 - `gamma`: reaction factor for updating the method weights
 - `sigma1`: score for new global best solution
@@ -42,14 +44,14 @@ Attributes
 - `sigma3`: score for worse accepted solution
 """
 mutable struct ALNSMethodSelector <: MethodSelector
-    score_data_de::Vector{ALNSScoreData}
-    score_data_re::Vector{ALNSScoreData}
+    const score_data_de::Vector{ALNSScoreData}
+    const score_data_re::Vector{ALNSScoreData}
     next_segment::Int
-    segment_size::Int
-    gamma::Float64
-    sigma1::Int
-    sigma2::Int
-    sigma3::Int
+    const segment_size::Int
+    const gamma::Float64
+    const sigma1::Int
+    const sigma2::Int
+    const sigma3::Int
 end
 
 ALNSMethodSelector(meths_de::Vector{MHMethod}, meths_re::Vector{MHMethod}, args...) =
@@ -59,25 +61,27 @@ ALNSMethodSelector(meths_de::Vector{MHMethod}, meths_re::Vector{MHMethod}, args.
 
 """
     ALNS(sol::Solution, meths_ch, meths_de, meths_re; 
-        segment_size::Int=100, gamma::Float64=0.025, sigma1::Int=10, sigma2::Int=9, sigma3::Int=3,
+        segment_size::Int=100, gamma::Float64=0.025, 
+        sigma1::Int=10, sigma2::Int=9, sigma3::Int=3,
         kwargs...)
 
 Create an Adaptive Large Neighborhood Search (ALNS).
 
-Create an ALNS, i.e., LNS with `ALNSMethodSelector`` for the given solution `sol` with 
+Create an ALNS, i.e., LNS with `ALNSMethodSelector` for the given solution `sol` with 
 the given construction, destroy, and repair methods provided as `Vector{MHMethod}`.
 
-# Further Parameters
+# Configuration Parameters
 - `segment_size`: size of segments for updating method weights
 - `gamma`: reaction factor for updating the method weights
 - `sigma1`: score for new global best solution
 - `sigma2`: score for better than current solution
 - `sigma3`: score for worse accepted solution
-- `kwargs`: keyword arguments passed to `LNS` constructor
+- `kwargs`: further configuration parameters from `LNS` and `SchedulerConfig` passed to them
 """
 function ALNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMethod},
         meths_re::Vector{MHMethod}; 
-        segment_size::Int=100, gamma::Float64=0.025, sigma1::Int=10, sigma2::Int=9, sigma3::Int=3,
+        segment_size::Int=100, gamma::Float64=0.025, 
+        sigma1::Int=10, sigma2::Int=9, sigma3::Int=3,
         kwargs...)
     method_selector = ALNSMethodSelector(meths_de, meths_re, 
         segment_size, gamma, sigma1, sigma2, sigma3)
