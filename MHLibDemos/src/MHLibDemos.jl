@@ -19,9 +19,11 @@ Read a simple unweighted graph from the specified file or create random G_n,m gr
 with n nodes and m edges if name is `gnm-n-m`.
 
 File format:
-- ``c <comments>    #`` ignored
-- ``p <name> <number of nodes> <number of edges>``
-- ``e <node_1> <node_2>    #`` for each edge, nodes are labeled in 1...number of nodes
+``` 
+c <comments>    # ignored
+p <name> <number of nodes> <number of edges>
+e <node_1> <node_2>    # for each edge, nodes are labeled in 1...number of nodes
+```
 """
 function create_or_read_simple_graph(name::AbstractString) :: SimpleGraph{Int}
     if startswith(name, "gnm-")

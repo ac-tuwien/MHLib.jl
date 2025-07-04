@@ -8,6 +8,7 @@ Major changes in releases:
 - `MHLibDemos` adapted accordingly; new main functions `solve_*()` at bottom of problem-specific files, independent scripts removed
 - Package dependencies updated
 - Tuning: SMAC3 example removed, irace examples simplified
+- Rudimentary `Documenter.jl` documentation added, see [docs/](docs/)
 
 ## Version 0.2.1
 - Added templates for tuning with irace, which is now the preferred tuning tool

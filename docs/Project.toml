@@ -1,0 +1,4 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+MHLib = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
+MHLibDemos = "684acab6-7f56-4bd3-8ecb-3989322bafbb"
