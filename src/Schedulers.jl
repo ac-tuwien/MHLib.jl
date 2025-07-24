@@ -22,27 +22,30 @@ export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerConfig,
 Configuration parameters for `Scheduler`.
 
 # Elements
-- `titer`: maximum number of iterations (<0: turned off)
+- `checkit`: call `check` for each solution after each method application
+- `consider_initial_sol`: if set, consider the given solution as valid initial solution,
+    otherwise it is assumed to be uninitialized
+- `log`: if true write all log information, else none
 - `lnewinc`: always write iteration log if new incumbent solution
-- `lfreq`: frequency of writing iteration logs (0: none, >0: number of iterations, 
-    -1: iteration 1,2,5,10,20,...)
-- `tciter`: maximum number of iterations without improvement (<0: turned off)
+- `lfreq`: frequency of writing iteration logs (0: none, >0: number of iterations, -1: 
+    iteration 1,2,5,10,20,...)
+- `titer`: maximum number of iterations (<0: turned off)
 - `ttime`: time limit in seconds (<0: turned off)
+- `tciter`: maximum number of iterations without improvement (<0: turned off)
 - `tctime`: maximum time in seconds without improvement (<0: turned off)
 - `tobj`: objective value at which should be terminated when reached (<0: turned off)
-- `checkit`: call `check` for each solution after each method application
-- `log`: if true write all log information, else none
 """
 Base.@kwdef struct SchedulerConfig
-    titer::Int = 100
+    checkit::Bool = false
+    consider_initial_sol::Bool = false
+    log::Bool = true
     lnewinc::Bool = true
     lfreq::Int = 0
-    tciter::Int = -1
+    titer::Int = 100
     ttime::Float64 = -1.0
+    tciter::Int = -1
     tctime::Float64 = -1.0
     tobj::Float64 = -1.0
-    checkit::Bool = false
-    log::Bool = true
 end
 
 
@@ -139,7 +142,7 @@ mutable struct Scheduler{TSolution <: Solution}
     incumbent_iteration::Int
     incumbent_time::Float64
     const methods::Vector{MHMethod}
-    const method_stats::SortedDict{String, MHMethodStatistics}
+    const method_stats::Dict{String, MHMethodStatistics}
     iteration::Int
     time_start::Float64
     run_time::Union{Float64, Missing}
@@ -147,24 +150,22 @@ mutable struct Scheduler{TSolution <: Solution}
 end
 
 """
-    Scheduler(solution, methods; consider_initial_sol=false, kwargs...)
+    Scheduler(solution, methods; kwargs...)
 
 Create a `MHMethod` scheduler.
 
 Create a Scheduler for the given solution with the given methods provides as
-`Vector{MHMethod}`. If `consider_initial_sol` is `true`, consider the given solution as
-valid initial solution; otherwise it is assumed to be uninitialized.
+`Vector{MHMethod}`.
 
 The `kwargs` provide various configuration parameters and are used to initialize a 
 `SchedulerConfig` structure; thus see `SchedulerConfig` for the available keyword arguments
 and their meaning.
 """
-function Scheduler(sol::Solution, methods::Vector{MHMethod};
-        consider_initial_sol::Bool=false, kwargs...)
+function Scheduler(sol::Solution, methods::Vector{MHMethod}; kwargs...)
     config = SchedulerConfig(; kwargs...)
-    method_stats = Dict([(m.name, MHMethodStatistics()) for m in methods])
+    method_stats = Dict([(m.name, MHMethodStatistics()) for m ∈ methods])
     logger = get_logger(sol)
-    sched = Scheduler{typeof(sol)}(config, sol, consider_initial_sol, 0, 0.0, methods, 
+    sched = Scheduler(config, sol, config.consider_initial_sol, 0, 0.0, methods, 
         method_stats, 0, time(), missing, logger)
     log_iteration_header(sched)
     if sched.incumbent_valid

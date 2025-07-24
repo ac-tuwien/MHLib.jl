@@ -61,7 +61,6 @@ Enumeration type for type of result of method application.
 
 """
     LNS(sol::Solution, meths_ch, meths_de, meths_re;
-        consider_initial_sol=false, 
         meths_compat=nothing, method_selector=UniformRandomMethodSelector(),
         init_temp_factor=0.0, temp_dec_factor=0.99, kwargs...)
 
@@ -71,23 +70,23 @@ Create an LNS for the given solution with the given construction,
 and repair methods provided as `Vector{MHMethod}`.
 
 # Configuration Parameters
-- `consider_initial_sol`: If set, consider the given solution as valid initial solution;
-    otherwise it is assumed to be uninitialized.
 - `meths_compat`:  either `nothing` or a Boolean matrix indicating which destroy 
-    method can be applied in conjunction with which repair method.
+    method can be applied in conjunction with which repair method
 - `method_selector` is the technique used for selecting the destroy and repair methods,
-    by default `UniformRandomMethodSelector`.
+    by default `UniformRandomMethodSelector`
+- `init_temp_factor`: factor for determining the initial temperature, i.e., the objective value
+    of the initial solution multiplied by this factor is the initial temperature
+- `temp_dec_factor`: factor by wich the temperature is decreased each iteration
 - `kwargs`: configuration parameters  passed to `Scheduler` and `SchedulerConfig`, 
-    respectively, e.g., `titer`.
+    respectively, e.g., `titer`
 """
 function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMethod},
         meths_re::Vector{MHMethod}; 
         meths_compat::Union{Nothing, Matrix{Bool}}=nothing,
-        consider_initial_sol::Bool=false, 
         method_selector::MethodSelector=UniformRandomMethodSelector(),
         init_temp_factor::Float64=0.0, temp_dec_factor::Float64=0.99, kwargs...)
     temperature = obj(sol) * init_temp_factor
-    scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re]; consider_initial_sol, kwargs...)
+    scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re]; kwargs...)
     lns = LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), temperature, scheduler, 
         meths_ch, meths_de, meths_re,
         meths_compat, method_selector, init_temp_factor, temp_dec_factor)
@@ -116,7 +115,7 @@ Scheduler method that performs destroy.
 Will usually be specialized for a specific problem.
 This abstract implementation just throws an exception.
 """
-destroy!(s::Solution, par::Int, result::Result) =
+destroy!(s::Solution, par, result::Result) =
     error("Abstract method destroy! called")
 
 """
@@ -126,7 +125,7 @@ Scheduler method that performs repair.
 Will usually be specialized for a specific problem.
 This abstract implementation just throws an exception.
 """
-repair!(s::Solution, par::Int, result::Result) =
+repair!(s::Solution, par, result::Result) =
     error("Abstract method repair! called")
 
 
@@ -153,9 +152,7 @@ end
 
 Apply geometric cooling.
 """
-function cool_down!(lns::LNS)
-    lns.temperature *= lns.temp_dec_factor
-end
+cool_down!(lns::LNS) = (lns.temperature *= lns.temp_dec_factor)
 
 
 """

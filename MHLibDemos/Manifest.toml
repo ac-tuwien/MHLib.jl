@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.5"
+julia_version = "1.11.6"
 manifest_format = "2.0"
 project_hash = "3f0da523949f8ab9aa3610d0306953188aae8605"
 
@@ -157,7 +157,7 @@ version = "1.11.0"
 deps = ["DataStructures", "Logging", "Printf", "Random", "StatsBase", "Test", "TestItemRunner", "TestItems"]
 path = ".."
 uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
-version = "0.3.0-pre4"
+version = "0.3.0-pre5"
 
 [[deps.MacroTools]]
 git-tree-sha1 = "1e0228a030642014fe5cfe68c2c0a818f9e3f522"
@@ -276,9 +276,9 @@ version = "1.11.0"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "PrecompileTools", "Random", "StaticArraysCore"]
-git-tree-sha1 = "0feb6b9031bd5c51f9072393eb5ab3efd31bf9e4"
+git-tree-sha1 = "cbea8a6bd7bed51b1619658dec70035e07b8502f"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.9.13"
+version = "1.9.14"
 
     [deps.StaticArrays.extensions]
     StaticArraysChainRulesCoreExt = "ChainRulesCore"
