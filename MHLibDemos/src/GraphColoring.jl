@@ -1,11 +1,11 @@
-"""
-    GraphColoring
+#=
+GraphColoring.jl
 
 Demo application solving the graph coloring problem.
 
 Given a graph and an number of colors, color each node with one color so that
 the number of adjacent nodes having the same color is minimized.
-"""
+=#
 
 using Random
 using StatsBase
@@ -211,25 +211,28 @@ end
 # -------------------------------------------------------------------------------
 
 """
-    solve_graph_coloring(name::"data/fpsol2.i.1.col", n_colors=3; seed=nothing, kwargs...)
+    solve_graph_coloring(name::"data/fpsol2.i.1.col", n_colors=3; seed=nothing, 
+        titer=1000, kwargs...)
 
 Solve the graph coloring problem for the given graph and number of colurs using a GVNS.
 
-Any keyword arguments of GVNS can be passed also here as `kwargs`, e.g. `titer`, etc.
+# Parameters
+- `name::AbstractString`: Name of the graph file to read or to generate
+- `n_colors::Int`: Number of colors to use for coloring the graph
+- `seed::Int`: Random seed to use for reproducibility, or `nothing` to pick one randomly
+- `titer::Int`: Number of iterations for the solving algorithm, gets a new default value
+- `kwargs...`: Configuration parameters to pass to the solving algorithm, e.g., `ttime`
 """
 function solve_graph_coloring(
         name::AbstractString=joinpath(@__DIR__(), "..", "data/fpsol2.i.1.col"),
-        n_colors::Int=3; seed=nothing, kwargs... )
+        n_colors::Int=3; seed=nothing, titer=1000, kwargs...)
     # Make results reproducibly by either setting a given seed or picking one randomly
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
 
     println("Graph Coloring Demo $(git_version())")
     println("name=$name, n_colors=$n_colors, seed=$seed, ", NamedTuple(kwargs))
-
-    # Set some default value(s) for parameters to GVNS that are not given in kwargs
-    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 1000,))))
-    
+   
     inst = GraphColoringInstance(name)
     sol = GraphColoringSolution(inst)
     initialize!(sol)
@@ -237,7 +240,7 @@ function solve_graph_coloring(
 
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
-        consider_initial_sol=true, kwargs...)
+        consider_initial_sol=true, titer, kwargs...)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)

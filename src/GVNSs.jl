@@ -1,8 +1,8 @@
-#     GVNSs
-
+# GVNSs.jl
+#
 # A general variable neighborhood search class which can also be used for plain local search,
 # VND, GRASP, IG etc.
-
+#
 # It extends the more general scheduler module/class by distinguishing between construction
 # heuristics, local improvement methods and shaking methods.
 
@@ -14,13 +14,13 @@ export GVNS, vnd!, gvns!
 
 A general variable neighborhood search (GVNS).
 
-Attributes
+# Elements
 - `scheduler`: Scheduler object
 - `meths_ch`: list of construction heuristic methods
 - `meths_li`: list of local improvement methods
 - `meths_sh`: list of shaking methods
 """
-mutable struct GVNS{TSolution <: Solution}
+struct GVNS{TSolution <: Solution}
     scheduler::Scheduler{TSolution}
     meths_ch::Vector{MHMethod}
     meths_li::Vector{MHMethod}
@@ -28,23 +28,20 @@ mutable struct GVNS{TSolution <: Solution}
 end
 
 """
-    GVNS{TSolution <: Solution(solution, meths_ch, meths_li, meths_sh; 
-        consider_initial_sol=false, kwargs...)
+    GVNS{TSolution <: Solution(solution, meths_ch, meths_li, meths_sh; kwargs...)
 
 Create a GVNS.
 
 Create a GVNS for the given solution with the given construction,
 local improvement, and shaking methods provides as `Vector{MHMethod}`.
-If `consider_initial_sol` is true, consider the given solution as valid initial solution;
-otherwise it is assumed to be uninitialized.
 
-The `kwargs` are passed to the `SchedulerParameters` constructor`and therefore can
-contain any element of `SchedulerParameters` as keyword argument, e.g., `titer`, etc.
+The `kwargs` are any configuration parameters passed to the `Scheduler` respectively
+`SchedulerConfig`, e.g., `titer`, etc.
 """
 function GVNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_li::Vector{MHMethod},
-        meths_sh::Vector{MHMethod}; consider_initial_sol::Bool=false, kwargs...)
+        meths_sh::Vector{MHMethod}; kwargs...)
     GVNS{typeof(sol)}(
-        Scheduler(sol, [meths_ch; meths_li; meths_sh]; consider_initial_sol, kwargs...), 
+        Scheduler(sol, [meths_ch; meths_li; meths_sh]; kwargs...), 
         meths_ch, meths_li, meths_sh)
 end
 

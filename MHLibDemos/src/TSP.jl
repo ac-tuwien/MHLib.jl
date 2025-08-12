@@ -1,10 +1,10 @@
-"""
-    TSP
+#=
+TSP.jl
 
 Demo problem: Symmetric euclidean traveling salesperson problem.
 
 Given points in the euclidean plane, find a Hamiltonian cycle with minimum length.
-"""
+=#
 
 using Random
 using StatsBase
@@ -20,7 +20,7 @@ Traveling Salesperson Problem (TSP) instance.
 
 Given an undirected, weighted, complete graph, find a Hamiltonian cycle with minimum length.
 
-Attributes
+# Attributes
 - `n`: number of nodes
 - `d`: distance matrix
 - `coords`:Euclidean coordinates of nodes or `nothing` if not available
@@ -239,7 +239,8 @@ end
 # -------------------------------------------------------------------------------
 
 """
-    solve_tsp(alg::AbstractString, filename::AbstractString; seed=nothing, kwargs...)
+    solve_tsp(alg::AbstractString, filename::AbstractString; seed=nothing, titer=1000, 
+        kwargs...)
 
 Solve a given TSP instance with the algorithm `alg`.
 
@@ -247,20 +248,18 @@ Solve a given TSP instance with the algorithm `alg`.
 - `filename`: File name of the MAXSAT instance in CNF format
 - `alg`: Algorithm to apply ("gvns" or "lns")
 - `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
-- `kwargs`: Additional keyword arguments for the algorithm, e.g., `timter`, etc.
+- `titer`: Number of iterations for the solving algorithm, gets a new default value
+- `kwargs`: Additional configuration parameters passed to the algorithm, e.g., `ttime`
 """
 function solve_tsp(alg::AbstractString="lns",
         filename::AbstractString=joinpath(@__DIR__, "..", "data", "xqf131.tsp");
-        seed=nothing, kwargs...)
+        seed=nothing, titer=1000, kwargs...)
     # Make results reproducibly by either setting a given seed or picking one randomly
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
 
     println("TSP Demo version $(git_version())")
     println("alg=$alg, filename=$filename, seed=$seed, ", NamedTuple(kwargs))
-
-    # Set some default value(s) for parameters to GVNS that are not given in kwargs
-    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 1000,))))
 
     inst = TSPInstance(filename)
     sol = TSPSolution(inst)
@@ -271,11 +270,11 @@ function solve_tsp(alg::AbstractString="lns",
         heuristic = LNS(sol, MHMethod[MHMethod("con", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:3],
             [MHMethod("re", repair!)]; 
-            consider_initial_sol=true, kwargs...)
+            consider_initial_sol=true, titer, kwargs...)
     elseif alg === "gvns"
         heuristic = GVNS(sol, [MHMethod("con", construct!)],
             [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
-            consider_initial_sol=true, kwargs...)
+            consider_initial_sol=true, titer, kwargs...)
     else
         error("Invalid parameter alg: $alg")
     end

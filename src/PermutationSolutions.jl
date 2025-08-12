@@ -1,4 +1,4 @@
-#     PermutationSolutions
+# PermutationSolutions.jl
 #
 # A module for solutions that are represented by a permutation of distinct elements.
 

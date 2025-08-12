@@ -1,11 +1,10 @@
-"""
-    MAXSAT
+# MAXSAT.jl
+#
+# MAXSAT demo problem.
+#
+# The goal is to maximize the number of clauses satisfied in a boolean function given in
+# conjunctive normal form.
 
-MAXSAT demo problem.
-
-The goal is to maximize the number of clauses satisfied in a boolean function given in
-conjunctive normal form.
-"""
 
 using Random
 using StatsBase
@@ -194,11 +193,12 @@ Solve a given MAXSAT problem instance with the algorithm `alg`.
 - `alg`: Algorithm to apply ("gvns", "lns", "weighted-lns", "alns")
 - `filename`: File name of the MAXSAT instance in CNF format
 - `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
-- `kwargs`: Additional keyword arguments for the algorithm, e.g., `timter`, etc.
+- `titer`: Number of iterations for the solving algorithm, gets a new default value
+- `kwargs`: Configuration parameters to pass to the the solving algorithm, e.g., `ttime`
 """
 function solve_maxsat(alg::AbstractString="alns",
         filename::AbstractString=joinpath(@__DIR__, "..", "data", "maxsat-adv1.cnf");
-        seed=nothing, kwargs...)
+        seed=nothing, titer=1000, kwargs...)
     # Make results reproducibly by either setting a given seed or picking one randomly
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
@@ -206,9 +206,6 @@ function solve_maxsat(alg::AbstractString="alns",
     println("MAXSAT Demo version $(git_version())")
     println("alg=$alg, filename=$filename, seed=$seed, ", NamedTuple(kwargs))
 
-    # Set some default value(s) for parameters to GVNS that are not given in kwargs
-    :titer ∈ keys(kwargs) || (kwargs = merge(kwargs, pairs((titer = 1000,))))
-    
     inst = MAXSATInstance(filename)
     sol = MAXSATSolution(inst)
     println(sol)
@@ -218,23 +215,27 @@ function solve_maxsat(alg::AbstractString="alns",
         heuristic = LNS(sol, [MHMethod("construct", construct!)],
             [MHMethod("de", destroy!, 1)],
             [MHMethod("re", repair!)];
-            meths_compat = [true;;], kwargs...)
+            meths_compat = [true;;],
+            titer, kwargs...)
     elseif alg === "weighted-lns"
         num_de = 5
         method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
         heuristic = LNS(sol, [MHMethod("construct", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:num_de],
             [MHMethod("re", repair!, nothing)]; consider_initial_sol=true,
-            method_selector, kwargs...)
+            method_selector, 
+            titer, kwargs...)
     elseif alg === "alns"
         num_de = 5
         heuristic = ALNS(sol, [MHMethod("construct", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-            [MHMethod("re", repair!)]; kwargs...)
+            [MHMethod("re", repair!)]; 
+            titer, kwargs...)
     elseif alg === "gvns"
         heuristic = GVNS(sol, [MHMethod("con", construct!)],
             [MHMethod("li1", local_improve!, 1)],
-            [MHMethod("sh$i", shaking!, i) for i in 1:5]; kwargs...)
+            [MHMethod("sh$i", shaking!, i) for i in 1:5]; 
+            titer, kwargs...)
     else
         error("Invalid parameter alg: $alg")
     end

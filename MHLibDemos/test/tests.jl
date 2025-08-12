@@ -1,5 +1,7 @@
-# Unit tests for MHLibDemos
-
+# tests.jl
+#
+# Unit tests for MHLibDemos.
+#
 # Always performed in the test directory within the test environment.
 
 using TestItems

@@ -1,7 +1,10 @@
 .DS_Store
 JuliaSysimage*
 /dev/
-smac3_output
 args.txt
 __pycache__/
 *.Rdata
+irace.Rdata
+*.stderr
+*.stdout
+build/

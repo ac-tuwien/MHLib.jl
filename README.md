@@ -69,31 +69,81 @@ The main file `src/MHLib.jl` provides the following types to represent candidate
 Moreover, the main file provides:
 - `git_version()`:
     Function returning the abbreviated git version string of the current project. It is good practice to write this information also to a file wit log-information of an optimization run in order to be able to later possibly reproduce results with the same program version.
-- `settings`:
-    Global dictionary with settings that can be defined independently per Julia-file (module) in a distributed way. 
-    Values for these parameters can be provided as program arguments when calling Julia or in
-    configuration files. 
 
-    **Important remark/recommendation**: While earlier MHLib versions relied heavily on this mechanism, it is not recommended to make (much) use of `settings` anymore, as typically in Julia development, one better does not restart/call the whole Julia framework independently for each optimization run. During the development, it is much more efficient to use [Revise](https://github.com/timholy/Revise.jl) to automatically update the code in a continuously running Julia REPL session and to call individual optimization runs/tests from therein. Also when performing larger tests over many optimization runs in a batched fashion on a cluster, better aggregate multiple runs - in particular when each run is relatively short - into fewer Julia processes to avoid/reduce Julia startup overhead.
+# Configuration/Parametrization
 
-Further files (modules):
+*Remark:* Earlier MHLib versions relied heavily on an extensible `settings` mechanism for various configuration parameters that corresponded to a global dictionary that is compiled from command line arguments provided when starting Julia. With version 0.3.0, `MHLib` replaced this mechanism by classical keyword arguments with default values in functions or constructors of structs. Partly, they are stored in separate `...Config` structs, partly directly in the respective structs representing certain metaheuristics.
+In applications using `MHLib`, we also do not recommended to make use of such a global variable-based configuration parameter dictionary approach and/or the heavy use of Julia command line arguments (`ARGS`) anymore. 
+Typically in Julia development, one better does not restart/call the whole Julia framework independently for each optimization/test run. It is usually much more efficient to use [Revise](https://github.com/timholy/Revise.jl) to automatically update the code in a continuously running Julia REPL session and to call individual optimization runs/tests from therein - directly with the keyword arguments to be used. 
+Also when performing larger tests over many optimization runs in a batched fashion, it is often much simpler to do this directly in Julia instead of using a shell script that calls Julia many times. This partly also holds when using a compute cluster: better aggregate multiple runs - in particular when each run is relatively short - into fewer Julia processes to avoid/reduce Julia startup overhead.
 
-- `Schedulers`, type `Scheduler`:
-    A an abstract framework for single trajectory metaheuristics that rely on iteratively
-    applying certain methods to a current solution.
-    Modules like `GVNSs` and `LNSs` extend this type towards more specific metaheuristics.
-- `GVNSs`, type `GVNSs`:
-    A framework for local search, iterated local search, (general) variable neighborhood
-    search, GRASP, etc.
-- `LNSs`, type `LNS`:
-    A framework for different variants of large neighborhood search (LNS).
-    The selection of the destroy and repair methods is done in an extensible way by
-    means of the abstract type `MethodSelector` and derived types in order to realize 
-    different LNS variants.
-- `ALNSs`, type `ALNS`:
-    Adaptive large neighborhood search (ALNS). It is realized via `LNS` and `ALNSMethodSelector`.
-- `OneMax`:
-    A trivial test problem to which the above algorithms are applied in the unit tests in `test`.
+Thus, for the various configuration parameters of the divers metaheuristics realized in `MHLib`, see the respective functions and structs doc-strings.
+
+# Files
+
+## `Schedulers.jl`, provides type `Scheduler`
+A an abstract framework for single trajectory metaheuristics that rely on iteratively
+applying certain methods to a current solution.
+Modules like `GVNSs` and `LNSs` extend this type towards more specific metaheuristics.
+
+**Keyword-parameters** that can be passed to the `Scheduler`:
+- `checkit=false`: call `check` for each solution after each method application in order to test and ensure validity (often useful when debugging)
+- `consider_initial_sol=`: if set, consider the given solution as valid initial solution,
+otherwise it is assumed to be uninitialized
+- `log=true`: if true write all log information, else none
+- `lnewinc=true`: always write iteration log if new incumbent solution
+- `lfreq=-1`: frequency of writing iteration logs (0: none, >0: number of iterations, 
+    -1: iteration 1,2,5,10,20,...)
+- `titer=100`: maximum number of iterations (<0: turned off)
+- `ttime=-1`: time limit in seconds (<0: turned off)
+- `tciter-1`: maximum number of iterations without improvement (<0: turned off)
+- `tctime-1`: maximum time in seconds without improvement (<0: turned off)
+- `tobj=-1`: objective value at which should be terminated when reached (<0: turned off)
+
+## `GVNSs.jl`, provides type `GVNS`
+A framework for local search, iterated local search, (general) variable neighborhood
+search, GRASP, etc.
+
+A `GVNS` is provided an initial `Solution`, and lists of construction methods, 
+local improvement methods, and shaking methods.
+
+**Keyword-parameters** correspond to those of the `Scheduler` (see above).
+
+## `LNSs.jl`, provides type `LNS`
+A framework for different variants of large neighborhood search (LNS).
+The selection of the destroy and repair methods is done in an extensible way by
+means of the abstract type `MethodSelector` and derived types in order to realize 
+different LNS variants.
+
+An `LNS` is provided an initial `Solution`, and lists of construction methods,
+destroy methods, and repair methods.
+
+**Keyword-parameters** that can be passed to the `LNS`:
+- `meths_compat=nothing`:  either `nothing` or a Boolean matrix indicating which destroy 
+method can be applied in conjunction with which repair method.  
+- `method_selector=UniformRandomMethodSelector()` is the technique used for selecting the 
+  - destroy and repair methods
+- `init_temp_factor=0.0`: factor for determining the initial temperature, i.e., the objective value
+    of the initial solution multiplied by this factor is the initial temperature
+- `temp_dec_factor=0.99`: factor by which the temperature is decreased each iteration
+- all parameters of the `Scheduler` (see above)
+
+## `ALNSs.jl`, provides type `ALNS`
+Adaptive Large Neighborhood Search (ALNS). It is realized via `LNS` and `ALNSMethodSelector`.
+
+An `ALNS` is provided an initial `Solution`, and lists of construction methods,
+destroy methods, and repair methods. 
+
+**Keyword-parameters** that can be passed to the `ALNS`:
+- `segment_size=100`: size of segments for updating method weights
+- `gamma=0.025`: reaction factor for updating the method weights
+- `sigma1=10`: score for new global best solution
+- `sigma2=9`: score for better than current solution
+- `sigma3=3`: score for worse accepted solution
+- all keyword parameters of the `LNS` and the `Scheduler` (see above)
+  
+## `OneMax.jl` provides type `OneMaxSolution`
+A trivial test problem to which the above algorithms are applied in the unit tests in `test`.
 
 ## MHLibDemos
 
@@ -110,9 +160,9 @@ developing MHLib-based metaheuristics for your own problem. Remember to activate
 
 Further smaller usage examples can also be found in the test directory of the MHLibDemos package.
 
-## Parameter Tuning
+## Hyperparameter Tuning
 
-Subdirectory `Tuning` contains examples on how irace (or SMAC3) can specifically be used for tuning
+Subdirectory `Tuning` contains examples on how [`irace`](https://github.com/MLopez-Ibanez/irace) can specifically be used for tuning
 algorithms implemented in Julia. See [Tuning/README.md](Tuning/README.md) for details.
 
 ## News

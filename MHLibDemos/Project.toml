@@ -1,10 +1,9 @@
 name = "MHLibDemos"
 uuid = "684acab6-7f56-4bd3-8ecb-3989322bafbb"
 authors = ["Guenther Raidl <raidl@ac.tuwien.ac.at> et al."]
-version = "0.3.0pre1"
+version = "0.3.0-pre5"
 
 [deps]
-ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 MHLib = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -14,10 +13,9 @@ TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 
 [compat]
-ArgParse = "1"
 Graphs = "1.8"
-MHLib = "0.3, 0.2"
-StatsBase = "0.33, 0.34"
+MHLib = "0.3"
+StatsBase = "0.34"
 Test = "1.11"
 TestItemRunner = "1.0"
 TestItems = "1"

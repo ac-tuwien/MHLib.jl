@@ -1,6 +1,8 @@
-# Unit tests
-
-# always performed in the test directory within the test environment
+# runtests.jl
+#
+# Unit tests.
+#
+# Always performed in the test directory within the test environment
 
 using TestItemRunner
 

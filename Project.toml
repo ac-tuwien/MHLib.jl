@@ -1,10 +1,9 @@
 name = "MHLib"
 uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
 authors = ["Guenther Raidl <raidl@ac.tuwien.ac.at> et al."]
-version = "0.3.0pre1"
+version = "0.3.0-pre5"
 
 [deps]
-ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
@@ -15,12 +14,11 @@ TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 
 [compat]
-ArgParse = "1"
-DataStructures = "0.18"
+DataStructures = "0.18, 0.19"
 Logging = "1"
 Printf = "1"
 Random = "1"
-StatsBase = "0.33, 0.34"
+StatsBase = "0.34"
 Test = "1.11"
 TestItemRunner = "1.0"
 TestItems = "1"

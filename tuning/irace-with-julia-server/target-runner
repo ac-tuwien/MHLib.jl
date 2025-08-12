@@ -55,7 +55,7 @@ STDERR=c${CONFIG_ID}-${INSTANCE_ID}-${SEED}.stderr
 # FOR JULIA, CONSIDER ADAPTING THIS PART
 
 # For Julia, adapt the following line according to the actual parameters
-command="f(\"$INSTANCE\",$SEED,$1,$2,\"$3\")"
+command="f(\"$INSTANCE\", $SEED, $1, $2, \"$3\")"
 
 # When using julia-server.jl, we can use netcat to communicate with the server.
 echo -e "$command" | nc localhost 9375  1> ${STDOUT} 2> ${STDERR}

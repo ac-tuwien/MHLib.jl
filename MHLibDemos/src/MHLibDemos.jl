@@ -1,3 +1,10 @@
+"""
+    module MHLibDemos
+
+A package demonstrating the use of MHLib for various optimization problems.
+
+Can also be used as templates for new projects using MHLib.
+"""
 module MHLibDemos
 
 using Graphs
@@ -12,9 +19,11 @@ Read a simple unweighted graph from the specified file or create random G_n,m gr
 with n nodes and m edges if name is `gnm-n-m`.
 
 File format:
-- ``c <comments>    #`` ignored
-- ``p <name> <number of nodes> <number of edges>``
-- ``e <node_1> <node_2>    #`` for each edge, nodes are labeled in 1...number of nodes
+``` 
+c <comments>    # ignored
+p <name> <number of nodes> <number of edges>
+e <node_1> <node_2>    # for each edge, nodes are labeled in 1...number of nodes
+```
 """
 function create_or_read_simple_graph(name::AbstractString) :: SimpleGraph{Int}
     if startswith(name, "gnm-")
@@ -53,4 +62,4 @@ include("TSP.jl")
 
 include("../test/tests.jl")
 
-end  # module MHLibDemos
+end  # module

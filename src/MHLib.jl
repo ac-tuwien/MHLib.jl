@@ -10,8 +10,8 @@ using StatsBase
 
 export Solution, to_maximize, obj, initialize!, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,
-    run!, git_version, get_number_to_destroy,
-    settings
+    run!, git_version, get_number_to_destroy
+
 
 # ----------------------------- Solution ------------------------------
 
@@ -120,9 +120,10 @@ end
 Return `true` if `obj1` is a better objective value than `obj2` in
 the given solution type.
 """
-function is_better_obj(s::Solution, obj1, obj2)
-    to_maximize(s) ? obj1 > obj2 : obj1 < obj2
-end
+is_better_obj(s::Solution, obj1, obj2) = to_maximize(s) ? obj1 > obj2 : obj1 < obj2
+
+is_better_obj(TSolution::Type{<:Solution}, obj1, obj2) =
+    to_maximize(TSolution) ? obj1 > obj2 : obj1 < obj2
 
 
 """
@@ -131,9 +132,10 @@ end
 Return `true` if `obj1` is a worse objective value than `obj2` in
 the given solution type.
 """
-function is_worse_obj(s::Solution, obj1, obj2)
-    to_maximize(s) ? obj1 < obj2 : obj1 > obj2
-end
+is_worse_obj(s::Solution, obj1, obj2) = to_maximize(s) ? obj1 < obj2 : obj1 > obj2
+
+is_worse_obj(TSolution::Type{<:Solution}, obj1, obj2) =
+    to_maximize(TSolution) ? obj1 < obj2 : obj1 > obj2
 
 
 """
@@ -357,7 +359,6 @@ end
 
 # -----------------------------------------------------------
 
-include("Settings.jl")
 include("Schedulers.jl")
 include("GVNSs.jl")
 include("LNSs.jl")
