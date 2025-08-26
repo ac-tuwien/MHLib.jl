@@ -9,6 +9,7 @@ Major changes in releases:
 - Package dependencies updated
 - Tuning: SMAC3 example removed, irace examples simplified
 - Rudimentary `Documenter.jl` documentation added, see [docs/](docs/)
+- `SubsetVectorSolution`: Vector always contains all unselected elements after the selected ones; `MISP.jl` updated accordingly.
 
 ## Version 0.2.1
 - Added templates for tuning with irace, which is now the preferred tuning tool

@@ -2,12 +2,12 @@
 #
 # A module for solutions that are arbitrary cardinality subsets of a given set
 # represented in vector form. The front part represents the selected
-# elements, the back part optionally the unselected ones.
+# elements, the back part the unselected ones.
 
 
 export SubsetVectorSolution, empty!, remove_some!, fillup!,
     two_exchange_random_fill_neighborhood_search!, element_removed_delta_eval!,
-    element_added_delta_eval!, may_be_extendible, unselected_elems_in_x, all_elements
+    element_added_delta_eval!, may_be_extendible
 
 """
     SubsetVectorSolution{T}
@@ -15,37 +15,13 @@ export SubsetVectorSolution, empty!, remove_some!, fillup!,
 A type for solutions that are arbitrary cardinality subsets of a given set.
 
 Represented in vector form. The front part represents the selected
-elements, the back part optionally the unselected ones.
+elements, the back part the unselected ones.
 
 A concrete type must implement the following:
-- `x`: Vector of different elements, first the selected ones, then optionally the not
-    selected ones.
+- `x`: Vector of different elements, first the selected ones, then the unselected ones.
 - `sel`: Integer indicating the number of selected elements
-- `all_elements(solution)`: complete set of which a subset shall be selected;
-    only needed if unselected elements are not maintained behind the selected ones
 """
 abstract type SubsetVectorSolution{T} <: VectorSolution{T} end
-
-"""
-    unselected_elems_in_x(::SubsetVectorSolution)
-
-Indicator function for specifying if unselected elements are maintained in`x[sel+1:end]`.
-
-I.e., behind the selected ones.
-The default is that this is the case, otherwise override the function for your type.
-"""
-unselected_elems_in_x(::SubsetVectorSolution) = true
-
-"""
-    all_elements(::SubsetVectorSolution)
-
-Return a set with all elements.
-
-Needs to be defined in a concrete type if the unselected elements are not stored in `x`
-behind the selected ones, i.e., when `unselected_elems_in_x==true`.
-"""
-all_elements(::SubsetVectorSolution) =
-    error("Abstract all_elements(subset_vector_solution called")
 
 """
     empty!(::SubsetVectorSolution)
@@ -69,51 +45,40 @@ function sort_sel!(s::SubsetVectorSolution)
 end
 
 """
-    fillup!(::SubsetVectorSolution, pool, random_order)
+    fillup!(::SubsetVectorSolution, random_order=true)
 
-Scans elements from pool and selects those whose inclusion is feasible.
+Scans unselected elements and selects those whose inclusion is feasible.
 
-Elements in `pool` must not yet be selected.
-Parameter `pool` must either be nothing, in which case `x[sel+1:end]` is used as `pool`,
-or `x[sel+1:_]` for some `_ > sel`.
 If `random_order` is set, the elements in the pool are processed in random order.
 Uses `element_added_delta_eval()`.
-Reorders elements in `pool` so that the selected ones appear in `pool[begin:return-value]`.
+If new elements are selected, all selected elements are finally sorted.
+Returns the number of newly selected elements.
 """
-function fillup!(s::SubsetVectorSolution{T}, 
-        pool::AbstractVector{T}=get_extension_pool(s),
-        random_order::Bool=true) where {T}
-    if !may_be_extendible(s)
-        return 0
-    end
+function fillup!(s::SubsetVectorSolution, random_order::Bool=true)
+    !may_be_extendible(s) && return 0
     x = s.x
-    selected = 0
-    for i in 1:length(pool)
-        if random_order
-            ir = rand(i:length(pool))
-            if selected+1 != ir
-                pool[selected+1], pool[ir] = pool[ir], pool[selected+1]
-            end
-        end
+    newly_selected = 0
+    random_order && shuffle!(@view s.x[s.sel+1:end])  
+    for i in s.sel+1:length(s.x)
+        # add new element at the end of the selected range
         s.sel += 1
-        x[s.sel] = pool[selected+1]
+        x[s.sel], x[i] = x[i], x[s.sel]
+        # check if addition is feasible; if not, revert
         if element_added_delta_eval!(s)
-            selected += 1
-            if !may_be_extendible(s)
-                break
-            end
+            newly_selected += 1
+            !may_be_extendible(s) && break
         end
     end
-    if selected > 0
+    if newly_selected > 0
         sort_sel!(s)
     end
-    return selected
+    return newly_selected
 end
 
 """
     remove_some!(::SubsetVectorSolution, k)
 
-Removes `min(k,sel)` randomly selected elements from the solution.
+Removes `min(k, sel)` randomly selected elements from the solution.
 
 Uses `element_removed_delta_eval`, which should be overloaded and adapted to the problem.
 The elements are removed even when the solution becomes infeasible.
@@ -146,7 +111,7 @@ function initialize!(s::SubsetVectorSolution)
 end
 
 """
-    check(::SubsetVectorSolution; unsorted, ...)
+    check(::SubsetVectorSolution; unsorted=true, ...)
 
 Check correctness of solution; throw an exception if error detected.
 
@@ -156,15 +121,8 @@ function MHLib.check(s::SubsetVectorSolution; unsorted::Bool=true, kwargs...)
     if !(0 <= s.sel <= length(s.x))
         error("Invalid attribute sel in solution: $(s.sel)")
     end
-    if unselected_elems_in_x(s)
-        if !allunique(s.x)
-            error("Missing/equal elements in solution: $(s.x) (sorted: $(sort(s.x)))")
-        end
-    else
-        if !allunique(s.x[begin:s.sel])
-            error("Missing/equal elements in solution: $(s.x[begin:s.sel]) " * 
-                "(sorted: $(sort(s.x[begin:s.sel])))")
-        end
+    if !allunique(s.x)
+        error("Missing/equal elements in solution: $(s.x) (sorted: $(sort(s.x)))")
     end
     if !unsorted && !issorted(s.x[begin:s.sel])
         error("Solution not sorted: $(s.x[1:s.sel])")
@@ -210,7 +168,7 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
         s.sel -= 1
         element_removed_delta_eval!(s, update_obj_val=true, allow_infeasible=true)
         obj1 = obj(s)
-        pool = get_extension_pool(s)
+        pool = @view x[s.sel+1:end]
         shuffle!(pool[1:end])
 
         # search v (the deleted item) and place it at the front of the extension pool
@@ -274,30 +232,17 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
 end
 
 """
-    get_extension_pool(::SubsetVectorSolution)
-
-Return a list of yet unselected elements that may possibly be added.
-"""
-function get_extension_pool(s::SubsetVectorSolution)
-    if unselected_elems_in_x(s)
-        return @view s.x[s.sel+1:end]
-    end
-    return collect(setdiff(all_elements(s), Set(s.x[begin:s.sel])))
-end
-
-"""
-    may_be_extensible(::SubsetVectorSolution)
+    may_be_extendible(::SubsetVectorSolution)
 
 Quick check if the solution has chances to be extended by adding further elements.
 """
-function may_be_extendible(s::SubsetVectorSolution)
-    return s.sel < length(s.x)
-end
+may_be_extendible(s::SubsetVectorSolution) = s.sel < length(s.x)
 
 """
-    element_removed_delta_eval!(::SubsetVectorSolution)
+    element_removed_delta_eval!(::SubsetVectorSolution; update_obj_val=true, 
+        allow_infeasible=false)
 
-Element `x[sel]` has been removed in the solution, if feasible update other solution data,
+Element `x[sel+1]` was removed in the solution; if feasible update other solution data,
 else revert.
 
 This is a helper function for delta-evaluating solutions when searching a neighborhood that 
@@ -322,9 +267,10 @@ function element_removed_delta_eval!(s::SubsetVectorSolution; update_obj_val::Bo
 end
 
 """
-    element_added_delta_eval!(SubsetVectorSolution)
+    element_added_delta_eval!(::SubsetVectorSolution; update_obj_val=true, 
+        allow_infeasible=false)
 
-Element `x[sel-1]`` was added to a solution, if feasible update further solution data, 
+Element `x[sel]` was added to the solution; if feasible update further solution data, 
 else revert.
 
 This is a helper function for delta-evaluating solutions when searching a neighborhood 

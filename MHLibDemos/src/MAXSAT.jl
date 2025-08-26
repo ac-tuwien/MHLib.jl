@@ -212,7 +212,7 @@ function solve_maxsat(alg::AbstractString="alns",
 
     # Depending on parameter `alg`, we create the respective algorithm
     if alg === "lns"
-        heuristic = LNS(sol, [MHMethod("construct", construct!)],
+        heuristic = LNS(sol, [MHMethod("const", construct!)],
             [MHMethod("de", destroy!, 1)],
             [MHMethod("re", repair!)];
             meths_compat = [true;;],
@@ -220,14 +220,14 @@ function solve_maxsat(alg::AbstractString="alns",
     elseif alg === "weighted-lns"
         num_de = 5
         method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
-        heuristic = LNS(sol, [MHMethod("construct", construct!)],
+        heuristic = LNS(sol, [MHMethod("const", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:num_de],
             [MHMethod("re", repair!, nothing)]; consider_initial_sol=true,
             method_selector, 
             titer, kwargs...)
     elseif alg === "alns"
         num_de = 5
-        heuristic = ALNS(sol, [MHMethod("construct", construct!)],
+        heuristic = ALNS(sol, [MHMethod("const", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:num_de],
             [MHMethod("re", repair!)]; 
             titer, kwargs...)

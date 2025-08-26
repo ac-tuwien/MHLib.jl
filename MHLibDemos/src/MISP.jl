@@ -26,16 +26,13 @@ no pair of nodes is adjacent in the graph.
 - `n`: number of nodes
 - `m` number of edges
 - `p`: prices (weights) of items
-- `all_nodes`: set of all nodes
 """
 struct MISPInstance
     graph::SimpleGraph{Int}
     n::Int
     m::Int
     p::Vector{Int}
-    all_nodes::Set{Int}
 end
-
 
 """
     MISPInstance(name)
@@ -49,7 +46,7 @@ function MISPInstance(name::AbstractString)
     n = nv(graph)
     m = ne(graph)
     p = ones(Int, n)
-    MISPInstance(graph, n, m, p, Set(1:n))
+    MISPInstance(graph, n, m, p)
 end
 
 function Base.show(io::IO, inst::MISPInstance)
@@ -80,10 +77,6 @@ end
 
 MISPSolution(inst::MISPInstance) =
     MISPSolution(inst, -1, false, collect(1:inst.n), 0, zeros(Int, inst.n))
-
-unselected_elems_in_x(::MISPSolution) = false
-
-MHLib.all_elements(s::MISPSolution) = s.inst.all_nodes
 
 function Base.copy!(s1::MISPSolution, s2::MISPSolution)
     s1.inst = s2.inst
@@ -158,13 +151,7 @@ function MHLib.shaking!(s::MISPSolution, par::Int, ::Result)
     fillup!(s)
 end
 
-"""
-    may_be_extendible(misp_solution)
-
-Quick check if the solution may possibly be extended by adding further elements.
-"""
-MHLib.may_be_extendible(s::MISPSolution) =
-    any(s.covered .== 0)
+MHLib.may_be_extendible(s::MISPSolution) = s.sel < length(s.x) && any(s.covered .== 0)
 
 function MHLib.element_removed_delta_eval!(s::MISPSolution; 
         update_obj_val::Bool=true, allow_infeasible::Bool=false)

@@ -1,7 +1,7 @@
 name = "MHLib"
 uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
 authors = ["Guenther Raidl <raidl@ac.tuwien.ac.at> et al."]
-version = "0.3.0-pre5"
+version = "0.3.0-pre6"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"

@@ -160,11 +160,6 @@ function MHLib.shaking!(s::MKPSolution, par::Int, ::Result)
     fillup!(s)
 end
 
-"""
-    may_be_extendible(mkp_solution)
-
-Quick check if the solution may be extended by adding further elements.
-"""
 MHLib.may_be_extendible(s::MKPSolution) =
     all((s.y .+ s.inst.r_min) .<= s.inst.b) && s.sel < length(s.x)
 

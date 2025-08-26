@@ -58,7 +58,7 @@ end
     println(sol)
     num_de = 5
     method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
-    alg = LNS(sol, [MHMethod("construct", construct!)],
+    alg = LNS(sol, [MHMethod("const", construct!)],
         [MHMethod("de$i", destroy!, i) for i in 1:num_de],
         [MHMethod("re", repair!)]; method_selector, titer=120)
     run!(alg)
@@ -71,7 +71,7 @@ end
     sol = OneMaxSolution(100)
     println(sol)
     num_de = 5
-    alg = ALNS(sol, [MHMethod("construct", construct!)],
+    alg = ALNS(sol, [MHMethod("const", construct!)],
         [MHMethod("de$i", destroy!, i) for i in 1:num_de],
         [MHMethod("re", repair!)]; titer=120)
     run!(alg)
