@@ -5,7 +5,7 @@
 # elements, the back part the unselected ones.
 
 
-export SubsetVectorSolution, empty!, remove_some!, fillup!,
+export SubsetVectorSolution, empty!, remove_randomly_selected!, fillup!,
     two_exchange_random_fill_neighborhood_search!, element_removed_delta_eval!,
     element_added_delta_eval!, may_be_extendible
 
@@ -76,14 +76,14 @@ function fillup!(s::SubsetVectorSolution, random_order::Bool=true)
 end
 
 """
-    remove_some!(::SubsetVectorSolution, k)
+    remove_randomly_selected!(::SubsetVectorSolution, k)
 
 Removes `min(k, sel)` randomly selected elements from the solution.
 
 Uses `element_removed_delta_eval`, which should be overloaded and adapted to the problem.
 The elements are removed even when the solution becomes infeasible.
 """
-function remove_some!(s::SubsetVectorSolution, k::Int)
+function remove_randomly_selected!(s::SubsetVectorSolution, k::Int)
     x = s.x
     k = min(k, s.sel)
     if k > 0

@@ -156,7 +156,7 @@ end
 `MHMethod` that performs shaking by removing `par` randoml elements followed by random fill.
 """
 function MHLib.shaking!(s::MKPSolution, par::Int, ::Result)
-    remove_some!(s, par)
+    remove_randomly_selected!(s, par)
     fillup!(s)
 end
 
