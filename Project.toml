@@ -17,7 +17,7 @@ TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 
 [compat]
-DataStructures = "0.19"
+DataStructures = ["0.18", "0.19"]
 Logging = "1"
 Printf = "1"
 Random = "1"
