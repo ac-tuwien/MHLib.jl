@@ -2,7 +2,7 @@
 
 julia_version = "1.12.0"
 manifest_format = "2.0"
-project_hash = "aa1674ad8da03232f72541117269cd5fd20bd72b"
+project_hash = "32976e8bbcde839cb4b21f6f8d5f1e17308c9729"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -230,13 +230,13 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 version = "1.11.0"
 
 [[deps.MHLib]]
-deps = ["DataStructures", "Logging", "Printf", "Random", "StatsBase", "Test", "TestItemRunner", "TestItems"]
+deps = ["DataStructures", "Logging", "Printf", "Random", "StatsBase", "TestItems"]
 path = "."
 uuid = "0f3a0e6e-e0e7-4894-bd64-856f0ae3b635"
 version = "0.3.1-pre1"
 
 [[deps.MHLibDemos]]
-deps = ["Graphs", "MHLib", "Random", "StatsBase", "Test", "TestItemRunner", "TestItems"]
+deps = ["Graphs", "MHLib", "Random", "StatsBase", "TestItems"]
 path = "MHLibDemos"
 uuid = "684acab6-7f56-4bd3-8ecb-3989322bafbb"
 version = "0.3.1-pre1"
@@ -466,12 +466,6 @@ version = "1.10.0"
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 version = "1.11.0"
-
-[[deps.TestItemRunner]]
-deps = ["Pkg", "TOML", "Test", "TestItems", "UUIDs"]
-git-tree-sha1 = "068c8f3e8d2f3b5948a85f11412f047cbab4e6c0"
-uuid = "f8b46487-2199-4994-9208-9a1283c18c0a"
-version = "1.1.0"
 
 [[deps.TestItems]]
 git-tree-sha1 = "42fd9023fef18b9b78c8343a4e2f3813ffbcefcb"
