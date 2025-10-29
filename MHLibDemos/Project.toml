@@ -1,6 +1,6 @@
 name = "MHLibDemos"
 uuid = "684acab6-7f56-4bd3-8ecb-3989322bafbb"
-version = "0.3.1-pre1"
+version = "0.3.1"
 authors = ["Guenther Raidl <raidl@ac.tuwien.ac.at> et al."]
 
 [deps]

@@ -3,6 +3,9 @@
 
 Major changes in releases:
 
+## Version 0.3.1
+- Minor cleaning in MKP.jl: `all_elements` removed from `MKPSolution` as it is not needed
+  
 ## Version 0.3.0
 - Usage and support of `settings` completely removed and replaced by classical keyword arguments in functions and constructors; we now also discourage the usage using Julia command line arguments (`ARGS`) and a global dictionary for configuration settings; see also the new [remark in README.md](README.md#configurationparametrization) including the recommendation of mostly working in a long-running REPL session and using `Revise.jl` for development and testing instead of frequently restarting Julia to execute individual optimization runs.
 - `MHLibDemos` adapted accordingly; new main functions `solve_*()` at bottom of problem-specific files, independent scripts removed

@@ -75,12 +75,11 @@ mutable struct MKPSolution <: SubsetVectorSolution{Int}
     obj_val_valid::Bool
     x::Vector{Int}
     y::Vector{Int}
-    all_elements::Set{Int}
     sel::Int
 end
 
 MKPSolution(inst::MKPInstance) =
-    MKPSolution(inst, -1, false, collect(1:inst.n), zeros(inst.m), Set{Int}(1:inst.n), 0)
+    MKPSolution(inst, -1, false, collect(1:inst.n), zeros(inst.m), 0)
 
 function Base.copy!(s1::MKPSolution, s2::MKPSolution)
     s1.inst = s2.inst
@@ -88,13 +87,11 @@ function Base.copy!(s1::MKPSolution, s2::MKPSolution)
     s1.obj_val_valid = s2.obj_val_valid
     copy!(s1.x, s2.x)
     copy!(s1.y, s2.y)
-    s1.all_elements = Set(s2.all_elements)
     s1.sel = s2.sel
 end
 
 Base.copy(s::MKPSolution) =
-    MKPSolution(s.inst, s.obj_val, s.obj_val_valid, copy(s.x), copy(s.y),
-        copy(s.all_elements), s.sel)
+    MKPSolution(s.inst, s.obj_val, s.obj_val_valid, copy(s.x), copy(s.y), s.sel)
 
 Base.show(io::IO, s::MKPSolution) =
     println(io, s.x[1:s.sel])

@@ -59,8 +59,7 @@ end
 
 Solution to a MISP instance.
 
-It is a `SubsetVectorSolution` in which we do not store unselected elements in the
-solution vector behind the selected ones, but instead use the set `all_elements`.
+It is realized as a `SubsetVectorSolution`.
 
 Attributes in addition to those needed by `SubsetVectorSolution`:
 - `covered`: for each node the number of selected neighbor nodes plus one if the node
