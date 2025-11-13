@@ -204,7 +204,7 @@ function solve_maxsat(alg::AbstractString="alns",
     Random.seed!(seed)
 
     println("MAXSAT Demo version $(git_version())")
-    println("alg=$alg, filename=$filename, seed=$seed, ", NamedTuple(kwargs))
+    println("alg=$alg, filename=$filename, seed=$seed, ", (; kwargs...))
 
     inst = MAXSATInstance(filename)
     sol = MAXSATSolution(inst)

@@ -78,7 +78,7 @@ function solve_onemax(n::Int=100; seed=nothing, titer=100, kwargs...)
     Random.seed!(seed)
 
     println("OneMax Demo $(git_version())")
-    println("n=$n, seed=$seed, ", NamedTuple(kwargs))
+    println("n=$n, seed=$seed, ", (; kwargs...))
         
     sol = OneMaxSolution(n)
     initialize!(sol)

@@ -209,7 +209,7 @@ function solve_mkp(
     Random.seed!(seed)
     
     println("MKP Demo version $(git_version())")
-    println("filename=$filename, seed=$seed, ", NamedTuple(kwargs))
+    println("filename=$filename, seed=$seed, ", (; kwargs...))
 
     inst = MKPInstance(filename)
     sol = MKPSolution(inst)

@@ -259,7 +259,7 @@ function solve_tsp(alg::AbstractString="lns",
     Random.seed!(seed)
 
     println("TSP Demo version $(git_version())")
-    println("alg=$alg, filename=$filename, seed=$seed, ", NamedTuple(kwargs))
+    println("alg=$alg, filename=$filename, seed=$seed, ", (; kwargs...))
 
     inst = TSPInstance(filename)
     sol = TSPSolution(inst)

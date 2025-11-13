@@ -206,7 +206,7 @@ function solve_misp(
     Random.seed!(seed)
     
     println("MISP Demo version $(git_version())")
-    println("filename=$filename, seed=$seed, ", NamedTuple(kwargs))
+    println("filename=$filename, seed=$seed, ", (; kwargs...))
    
     inst = MISPInstance(filename)
     sol = MISPSolution(inst)

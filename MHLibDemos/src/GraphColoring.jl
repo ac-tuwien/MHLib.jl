@@ -231,7 +231,7 @@ function solve_graph_coloring(
     Random.seed!(seed)
 
     println("Graph Coloring Demo $(git_version())")
-    println("name=$name, n_colors=$n_colors, seed=$seed, ", NamedTuple(kwargs))
+    println("name=$name, n_colors=$n_colors, seed=$seed, ", (; kwargs...))
    
     inst = GraphColoringInstance(name)
     sol = GraphColoringSolution(inst)
