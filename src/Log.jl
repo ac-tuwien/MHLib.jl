@@ -19,9 +19,6 @@
 #     This allows for the user to create their own custom loggers that save the solution
 #     data in different ways.
 
-using Logging
-using Printf
-
 export  log_iteration_header, log_iteration, method_statistics, main_results
 
 

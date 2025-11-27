@@ -7,6 +7,8 @@ module MHLib
 
 using Random
 using StatsBase
+using Logging
+using Printf
 
 export Solution, to_maximize, obj, initialize!, calc_objective, invalidate!, is_equal,
     is_better, is_worse, is_better_obj, is_worse_obj, dist, check,

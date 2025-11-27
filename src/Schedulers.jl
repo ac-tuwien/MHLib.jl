@@ -7,8 +7,6 @@
 
 using DataStructures  # SortedDict for method_stats
 
-import Logging: AbstractLogger
-
 export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerConfig, 
     perform_method!, next_method, update_incumbent!, check_termination, 
     perform_sequentially!, main_results, method_statistics, delayed_success_update!, 
