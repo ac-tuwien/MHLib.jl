@@ -244,13 +244,14 @@ end
 """
     run!(lns)
 
-Perform the construction heuristics followed by a LNS.
+Perform the construction heuristics followed by an LNS.
 """
 function run!(lns::LNS)
     sol = copy(lns.scheduler.incumbent)
     @assert lns.scheduler.incumbent_valid || !isempty(lns.meths_ch)
     terminate = perform_sequentially!(lns.scheduler, sol, lns.meths_ch)
     terminate && return
+    sol = copy(lns.scheduler.incumbent)
     lns!(lns, sol)
 end
 

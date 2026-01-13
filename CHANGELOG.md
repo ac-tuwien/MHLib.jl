@@ -3,6 +3,10 @@
 
 Major changes in releases:
 
+## Version 0.3.2
+- Fix: Log header for iterations printed to stdout again
+- Fix: Incumbent solution correctly used in LNS after construction methods 
+
 ## Version 0.3.1
 - Minor cleaning in MKP.jl: `all_elements` removed from `MKPSolution` as it is not needed
   

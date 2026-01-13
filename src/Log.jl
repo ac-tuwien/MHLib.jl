@@ -45,14 +45,6 @@ LogLevel for optimization results summary.
 """
 const SummaryLevel = LogLevel(3)
 
-"""
-    HeaderLevel
-
-LogLevel for iteration header string.
-"""
-const HeaderLevel = LogLevel(4)
-
-
 # --------------------- Message Logger ---------------------
 
 """
@@ -92,7 +84,7 @@ end
 
 Returns `logger <: AbstractLogger` to log output to.  
 
-By default, this is a `NullLogger`, but the function can be oberoaded
+By default, this is a `NullLogger`, but the function can be specialized
 for custom logging behavior in respect to the solution type.
 """
 get_logger(::Solution) = NullLogger()
@@ -109,8 +101,9 @@ function log_iteration_header(sched::Scheduler)
     !sched.config.log && return
     s = "I       iter             best          obj_old          obj_new" *
         "        time              method info"
+    println(s)
     with_logger(sched.logger) do 
-        @logmsg HeaderLevel s
+        @logmsg(IterLevel, s)
     end 
 end
 
@@ -158,7 +151,9 @@ function log_iteration(sched::Scheduler, method_name::String, obj_old, new_sol::
             time()-sched.time_start, method_name, log_info)
         println(s)
         with_logger(sched.logger) do 
-            @logmsg IterLevel s iter=sched.iteration best_obj=obj(sched.incumbent) prev_obj=obj_old cur_obj=obj(new_sol) time=time()-sched.time_start method=method_name info=log_info cur_sol=new_sol
+            @logmsg(IterLevel, s, iter=sched.iteration, best_obj=obj(sched.incumbent),
+                prev_obj=obj_old, cur_obj=obj(new_sol), time=time()-sched.time_start,
+                method=method_name, info=log_info, cur_sol=new_sol)
         end
     end
 end
@@ -168,7 +163,7 @@ end
 
 Safe division: return x/y if y!=0 and nan otherwise.
 """
-sdiv(x::Real, y::Real) = (y == 0) ? NaN : x/y
+sdiv(x::Real, y::Real) = iszero(y) ? NaN : x/y
 
 """
     method_statistics(::Scheduler)

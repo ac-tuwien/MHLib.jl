@@ -55,7 +55,7 @@ end
 
 @testitem "LNS-OneMax" setup=[TestInit] begin
     sol = OneMaxSolution(100)
-    println(sol)
+    sol.x .= true; invalidate!(sol)  # this initial solution will be ignored
     num_de = 5
     method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
     alg = LNS(sol, [MHMethod("const", construct!)],
@@ -64,7 +64,14 @@ end
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
-    @test obj(sol) >= 0
+    @test 1 < obj(sol) < 100
+
+    sol.x .= true; invalidate!(sol)  # start with optimal solution that should be considered
+    alg = LNS(sol, [MHMethod("const", construct!)],
+        [MHMethod("de", destroy!, 1)],
+        [MHMethod("re", repair!)]; titer=3, lfreq=1, consider_initial_sol=true)
+    run!(alg)
+    @test obj(sol) == 100
 end
 
 @testitem "ALNS-OneMax" setup=[TestInit] begin
