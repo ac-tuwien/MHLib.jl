@@ -8,3 +8,4 @@ irace.Rdata
 *.stderr
 *.stdout
 build/
+Manifest.toml
