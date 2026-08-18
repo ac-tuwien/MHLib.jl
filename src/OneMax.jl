@@ -11,7 +11,7 @@ export OneMaxSolution, solve_onemax
 """
     OneMaxSolution
 
-A concrete solution type to solve the MAXSAT problem.
+A concrete solution type to solve the OneMax problem.
 
 As the problem is so simply defined, we do not need a separate instance structure
 but store problem size directly within the solutions.
@@ -22,7 +22,7 @@ mutable struct OneMaxSolution <: BoolVectorSolution
     x::Vector{Bool}
 end
 
-OneMaxSolution(n) = OneMaxSolution(-1, false, Vector{Bool}(undef, n))
+OneMaxSolution(n) = OneMaxSolution(-1, false, [false for _ in 1:n])
 
 OneMaxSolution(s::OneMaxSolution) = OneMaxSolution(s.obj_val, s.obj_val_valid, copy(s.x))
 

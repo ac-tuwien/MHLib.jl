@@ -5,7 +5,7 @@
 # elements, the back part the unselected ones.
 
 
-export SubsetVectorSolution, empty!, remove_randomly_selected!, fillup!,
+export SubsetVectorSolution, remove_randomly_selected!, fillup!,
     two_exchange_random_fill_neighborhood_search!, element_removed_delta_eval!,
     element_added_delta_eval!, may_be_extendible
 
@@ -39,8 +39,9 @@ end
 Sort selected elements in `x`.
 """
 function sort_sel!(s::SubsetVectorSolution)
-     if s.sel > 0
-        sort!(view(s.x, 1:s.sel))
+    if s.sel > 1
+        # we use Quicksort here because it is a little faster for small arrays
+        sort!(view(s.x, 1:s.sel), alg=Base.Sort.QuickSort)
     end
 end
 
@@ -58,7 +59,7 @@ function fillup!(s::SubsetVectorSolution, random_order::Bool=true)
     !may_be_extendible(s) && return 0
     x = s.x
     newly_selected = 0
-    random_order && shuffle!(@view s.x[s.sel+1:end])  
+    random_order && shuffle!(@view s.x[s.sel+1:end])
     for i in s.sel+1:length(s.x)
         # add new element at the end of the selected range
         s.sel += 1
@@ -102,7 +103,7 @@ end
 """
     initialize!(::SubsetVectorSolution)
 
-Randomly construct a new solution by emptying itnand applying `fillup!`.
+Randomly construct a new solution by emptying it and applying `fillup!`.
 """
 function initialize!(s::SubsetVectorSolution)
     empty!(s)
@@ -154,9 +155,8 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
     sel = s.sel
     x = s.x
     orig_obj = obj(s)
-    self_backup = nothing
     x_sel_orig = copy(x[begin:sel])
-    shuffle!(x[begin:sel])
+    shuffle!(view(x, 1:sel))
     best = copy(s)
     num_neighbors = 0
     for (i, v) in enumerate(x[begin:sel])
@@ -169,10 +169,10 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
         element_removed_delta_eval!(s, update_obj_val=true, allow_infeasible=true)
         obj1 = obj(s)
         pool = @view x[s.sel+1:end]
-        shuffle!(pool[1:end])
+        shuffle!(pool)
 
         # search v (the deleted item) and place it at the front of the extension pool
-        v_pos = findall(pool.==v)
+        v_pos = findfirst(==(v), pool)
         if length(v_pos) > 0 && v_pos[1] != 1
             pool[1], pool[v_pos[1]] = pool[v_pos[1]], pool[1]
         end
@@ -190,23 +190,23 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
                 # neighbor is feasible
                 random_fill_applied = false
                 if may_be_extendible(s)
-                    self_backup = copy(s)
+                    pre_fillup_backup = copy(s)
                     fillup!(s)
                     random_fill_applied = true
                 end
-                if is_better(s,best)
+                if is_better(s, best)
                     # new best solution found
                     if !best_improvement
                         sort_sel!(s)
                         return true
                     end
-                    copy!(s, best)
+                    copy!(best, s)
                 end
                 if random_fill_applied
                     if i != s.sel
                         x[i], x[sel] = x[sel], x[i]
                     end
-                    copy!(s, self_backup)
+                    copy!(s, pre_fillup_backup)
                 end
                 s.sel -= 1
                 element_removed_delta_eval!(s, update_obj_val=false, allow_infeasible=true)

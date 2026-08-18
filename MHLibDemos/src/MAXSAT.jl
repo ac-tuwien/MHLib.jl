@@ -93,7 +93,7 @@ end
 Create a solution object for the given `MAXSATInstance`.
 """
 MAXSATSolution(inst::MAXSATInstance) =
-    MAXSATSolution(inst, -1, false, Vector{Bool}(undef, inst.n), [])
+    MAXSATSolution(inst, -1, false, [false for _ in 1:inst.n], [])
 
 function Base.copy!(s1::MAXSATSolution, s2::MAXSATSolution)
     s1.inst = s2.inst
@@ -190,13 +190,13 @@ end
 Solve a given MAXSAT problem instance with the algorithm `alg`.
 
 # Parameters
-- `alg`: Algorithm to apply ("gvns", "lns", "weighted-lns", "alns")
+- `alg`: Algorithm to apply (:gvns, :lns, :weighted-lns, :alns)
 - `filename`: File name of the MAXSAT instance in CNF format
 - `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
 - `titer`: Number of iterations for the solving algorithm, gets a new default value
 - `kwargs`: Configuration parameters to pass to the the solving algorithm, e.g., `ttime`
 """
-function solve_maxsat(alg::AbstractString="alns",
+function solve_maxsat(alg::Symbol=:alns,
         filename::AbstractString=joinpath(@__DIR__, "..", "data", "maxsat-adv1.cnf");
         seed=nothing, titer=1000, kwargs...)
     # Make results reproducibly by either setting a given seed or picking one randomly
@@ -211,13 +211,13 @@ function solve_maxsat(alg::AbstractString="alns",
     println(sol)
 
     # Depending on parameter `alg`, we create the respective algorithm
-    if alg === "lns"
+    if alg === :lns
         heuristic = LNS(sol, [MHMethod("const", construct!)],
             [MHMethod("de", destroy!, 1)],
             [MHMethod("re", repair!)];
             meths_compat = [true;;],
             titer, kwargs...)
-    elseif alg === "weighted-lns"
+    elseif alg === :weighted-lns
         num_de = 5
         method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
         heuristic = LNS(sol, [MHMethod("const", construct!)],
@@ -225,13 +225,13 @@ function solve_maxsat(alg::AbstractString="alns",
             [MHMethod("re", repair!, nothing)]; consider_initial_sol=true,
             method_selector, 
             titer, kwargs...)
-    elseif alg === "alns"
+    elseif alg === :alns
         num_de = 5
         heuristic = ALNS(sol, [MHMethod("const", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:num_de],
             [MHMethod("re", repair!)]; 
             titer, kwargs...)
-    elseif alg === "gvns"
+    elseif alg === :gvns
         heuristic = GVNS(sol, [MHMethod("con", construct!)],
             [MHMethod("li1", local_improve!, 1)],
             [MHMethod("sh$i", shaking!, i) for i in 1:5]; 
@@ -247,7 +247,7 @@ function solve_maxsat(alg::AbstractString="alns",
 end
 
 # To run from REPL, activate `MHLibDemos` environment, use `MHLibDemos`,
-# and call e.g. `solve_maxsat("alns", titer=200, seed=1)`.
+# and call e.g. `solve_maxsat(:alns, titer=200, seed=1)`.
 
 # Run with profiler:
 # @profview solve_maxsat()

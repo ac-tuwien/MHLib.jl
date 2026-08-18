@@ -35,6 +35,7 @@ function create_or_read_simple_graph(name::AbstractString) :: SimpleGraph{Int}
     else  # read from file
         graph =  SimpleGraph()
         for line in eachline(name)
+            isempty(line) && continue
             flag = line[1]
             if flag == 'p'
                 split_line = split(line)

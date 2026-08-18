@@ -5,7 +5,7 @@
 # It extends the more general scheduler module/class by distinguishing between construction
 # heuristics, destroy methods and repair methods.
 
-export LNS, LNSParameters, MethodSelector, UniformRandomMethodSelector, 
+export LNS, MethodSelector, UniformRandomMethodSelector, 
     WeightedRandomMethodSelector, destroy!, repair!, ResultCase, reinitialize!
 
 
@@ -23,6 +23,8 @@ A basic large neighborhood search.
 
 # Elements
 - `solution`: current solution
+- `new_solution`: working solution to which destroy+repair is applied each iteration,
+    before being accepted into, or rejected against, `solution`
 - `scheduler`: `Scheduler`
 - `meths_ch`: list of construction heuristic methods
 - `meths_de`: list of destroy methods
@@ -112,6 +114,7 @@ end
     destroy!(solution, par, result)
 
 Scheduler method that performs destroy.
+
 Will usually be specialized for a specific problem.
 This abstract implementation just throws an exception.
 """
@@ -122,6 +125,7 @@ destroy!(s::Solution, par, result::Result) =
     repair!(solution, par, result)
 
 Scheduler method that performs repair.
+
 Will usually be specialized for a specific problem.
 This abstract implementation just throws an exception.
 """
@@ -133,10 +137,11 @@ repair!(s::Solution, par, result::Result) =
     metropolis_criterion(lns, sol_new, sol_current)
 
 Apply Metropolis criterion, return true when `sol_new` should be accepted.
+
 When the new solution has equal objective value, we also accept it.
 """
 function metropolis_criterion(lns::LNS, sol_new::Solution, sol_current::Solution)
-    if !is_worse(sol_new, sol_current) :: Bool
+    if !is_worse(sol_new, sol_current)
         return true
     end
     if iszero(lns.temperature)
@@ -156,29 +161,31 @@ cool_down!(lns::LNS) = (lns.temperature *= lns.temp_dec_factor)
 
 
 """
-    update_solution!(lns, sol_new, sol)
+    update_solution!(lns, sol_new, sol, new_incumbent) :: ResultCase
 
 Update current solution and incumbent according to the result of performing a
-destroy and repair method pair. Returns the case of the update.
+destroy and repair method pair.
+
+`new_incumbent` indicates whether `sol_new` has already been made the scheduler's
+new incumbent (as reported by `perform_method_pair!`'s `Result`).
+
+Returns the `ResultCase` of the update.
 """
-function update_solution!(lns::LNS, sol_new::Solution, sol::Solution)
-    if lns.scheduler.iteration == lns.scheduler.incumbent_iteration
-        # print("better than incumbent")
+function update_solution!(lns::LNS, sol_new::Solution, sol::Solution,
+        new_incumbent::Bool) :: ResultCase
+    if new_incumbent
         copy!(sol, sol_new)
-        case = betterThanIncumbent
+        return betterThanIncumbent
     elseif !is_worse(sol_new, sol)
-        # print("not worse than current")
         copy!(sol, sol_new)
-        case = notWorseThanCurrent
+        return notWorseThanCurrent
     elseif is_better(sol, sol_new) && metropolis_criterion(lns, sol_new, sol)
-        # print("accepted although worse")
         copy!(sol, sol_new)
-        case = acceptedAlthoughWorse
-    elseif sol_new != sol
+        return acceptedAlthoughWorse
+    else
         copy!(sol_new, sol)
-        case = rejected
+        return rejected
     end
-    return case
 end
 
 """
@@ -191,13 +198,13 @@ Default implementation does nothing.
 init_method_selector!(::LNS) = nothing
 
 """
-    update_method_selector!(lns, destroy, repair, case, Δ, Δ_inc)
+    update_method_selector!(lns, destroy, repair, result_case, Δ, Δ_inc)
 
 Update the method selector according to the result of last performed method pair.
 
 Default implementation does nothing.
 """
-update_method_selector!(::LNS, destroy::Int, repair::Int, case::ResultCase, Δ, Δ_inc) = 
+update_method_selector!(::LNS, destroy::Int, repair::Int, result_case::ResultCase, Δ, Δ_inc) = 
     nothing
 
 """
@@ -215,7 +222,7 @@ function lns_iteration!(lns::LNS, destroy_idx::Union{Nothing,Int}=nothing,
     obj_new_solution = obj(lns.new_solution)
     Δ = obj_new_solution - obj(lns.solution)
     Δ_inc = obj_new_solution - obj(lns.scheduler.incumbent)
-    case = update_solution!(lns, lns.new_solution, lns.solution) 
+    case = update_solution!(lns, lns.new_solution, lns.solution, res.new_incumbent)
     update_method_selector!(lns, destroy, repair, case, Δ, Δ_inc)
     cool_down!(lns)
     res
@@ -305,10 +312,10 @@ end
 
 Select a method proportionally to the weights at random.
 """
-function select_method(lns::LNS{WeightedRandomMethodSelector}, candidates, 
+function select_method(lns::LNS{WeightedRandomMethodSelector}, candidates,
         is_destroy::Bool) :: Int
     sel = lns.method_selector
     weights = is_destroy ? sel.weights_de : sel.weights_re
-    return sample(candidates, Weights(weights))
+    return sample(candidates, Weights(weights[candidates]))
 end
 

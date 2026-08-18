@@ -28,7 +28,7 @@ struct GVNS{TSolution <: Solution}
 end
 
 """
-    GVNS{TSolution <: Solution(solution, meths_ch, meths_li, meths_sh; kwargs...)
+    GVNS(solution, meths_ch, meths_li, meths_sh; kwargs...)
 
 Create a GVNS.
 
@@ -47,9 +47,10 @@ end
 
 
 """
-    vnd(scheduler, solution)
+    vnd!(::GVNS, solution)
 
 Perform variable neighborhood descent (VND) on given solution.
+
 Return true if a global termination condition is fulfilled, else false.
 """
 function vnd!(gvns::GVNS, sol::Solution)::Bool
@@ -57,8 +58,8 @@ function vnd!(gvns::GVNS, sol::Solution)::Bool
     improvement_found = true
     is_local_optimum = false
     while improvement_found && !is_local_optimum
+        improvement_found = false
         for m in next_method(gvns.meths_li)
-            is_local_optimum = false
             res = perform_method!(gvns.scheduler, m, sol2)
             if is_better(sol2, sol)
                 copy!(sol, sol2)
@@ -67,6 +68,7 @@ function vnd!(gvns::GVNS, sol::Solution)::Bool
                 if res.is_local_optimum
                     is_local_optimum = true
                 else
+                    is_local_optimum = false
                     break
                 end
             else
@@ -74,7 +76,6 @@ function vnd!(gvns::GVNS, sol::Solution)::Bool
                 if res.changed
                     copy!(sol2, sol)
                 end
-                improvement_found = false
             end
         end
     end
@@ -83,18 +84,23 @@ end
 
 
 """
-    gvns(gvns, solution)
+    gvns!(gvns, solution)
 
 Perform general variable neighborhood search (GVNS) to given solution.
 """
 function gvns!(gvns::GVNS, sol::Solution)
     sol2 = copy(sol)
     use_vnd = !isempty(gvns.meths_li)
-    if use_vnd && vnd!(gvns, sol2) || isempty(gvns.meths_sh)
+    if use_vnd 
+        terminate = vnd!(gvns, sol2)
+        copy!(sol, sol2)
+        if terminate || isempty(gvns.meths_sh)
+            return
+        end
+    elseif isempty(gvns.meths_sh)
         return
     end
-    improvement_found = true
-    while improvement_found
+    while true
         for m in next_method(gvns.meths_sh, repeat=true)
             t_start = time()
             res = perform_method!(gvns.scheduler, m, sol2, delayed_success=use_vnd)
@@ -102,19 +108,19 @@ function gvns!(gvns::GVNS, sol::Solution)
             if !terminate && use_vnd
                 terminate = vnd!(gvns, sol2)
             end
-            delayed_success_update!(gvns.scheduler, m, obj(sol), t_start, sol2)
+            if use_vnd
+                delayed_success_update!(gvns.scheduler, m, obj(sol), t_start, sol2)
+            end
             if is_better(sol2, sol)
                 copy!(sol, sol2)
                 if terminate || res.terminate
                     return
                 end
-                improvement_found = true
                 break
             else
                 if terminate || res.terminate
                     return
                 end
-                improvement_found = false
                 copy!(sol2, sol)
             end
         end

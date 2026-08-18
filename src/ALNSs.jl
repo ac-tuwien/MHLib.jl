@@ -7,7 +7,7 @@
 # tracks the success of methods and a next_segment attribute.
 
 
-export ALNS, ALNSParameters, ALNSMethodSelector
+export ALNS, ALNSMethodSelector
 
 """
     ALNSScoreData
@@ -54,9 +54,10 @@ mutable struct ALNSMethodSelector <: MethodSelector
     const sigma3::Int
 end
 
-ALNSMethodSelector(meths_de::Vector{MHMethod}, meths_re::Vector{MHMethod}, args...) =
+ALNSMethodSelector(meths_de::Vector{MHMethod}, meths_re::Vector{MHMethod}, 
+    segment_size::Int, gamma::Float64, sigma1::Int, sigma2::Int, sigma3::Int) =
     ALNSMethodSelector([ALNSScoreData() for _ in 1:length(meths_de)], 
-        [ALNSScoreData() for _ in 1:length(meths_re)], 0, args...) 
+        [ALNSScoreData() for _ in 1:length(meths_re)], 0, segment_size, gamma, sigma1, sigma2, sigma3)
 
 
 """
@@ -109,7 +110,7 @@ Update operator weights at segment ends and re-initialize scores.
 function update_operator_weights!(lns::LNS{ALNSMethodSelector})
     sel = lns.method_selector
     iteration = lns.scheduler.iteration
-    if iteration == sel.next_segment
+    if iteration >= sel.next_segment
         # update operator weights
         sel.next_segment = lns.scheduler.iteration + sel.segment_size
         gamma = sel.gamma
@@ -120,7 +121,6 @@ function update_operator_weights!(lns::LNS{ALNSMethodSelector})
                 data.applied = 0
             end
         end
-        # @show sel.score_data_de sel.score_data_re
     end
 end
 
@@ -135,24 +135,24 @@ function init_method_selector!(lns::LNS{ALNSMethodSelector})
 end
 
 """
-    update_after_destroy_and_repair_performed!(::LNS{ALNSMethodSelector}, 
-        destroy, repair, case)
+    update_method_selector!(::LNS{ALNSMethodSelector}, 
+        destroy, repair, result_case, Δ, Δ_inc)
 
 Update score data according to performed destroy+repair and case of result.
 """
 function update_method_selector!(lns::LNS{ALNSMethodSelector}, 
-        destroy::Int, repair::Int, case::Symbol,  Δ, Δ_inc)
+        destroy::Int, repair::Int, result_case::ResultCase, Δ, Δ_inc)
     sel = lns.method_selector
     destroy_data = sel.score_data_de[destroy]
     repair_data = sel.score_data_re[repair]
     destroy_data.applied += 1
     repair_data.applied += 1
     score = 0
-    if case == :betterThanIncumbent
+    if result_case == betterThanIncumbent
         score = sel.sigma1
-    elseif case == :notWorseThanCurrent
+    elseif result_case == notWorseThanCurrent
         score = sel.sigma2
-    elseif case == :acceptedAlthoughWorse
+    elseif result_case == acceptedAlthoughWorse
         score = sel.sigma3
     end
     destroy_data.score += score

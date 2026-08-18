@@ -111,7 +111,7 @@ function MHLib.check(s::MISPSolution; kwargs...)
         end
     end
     if s.covered != new_covered
-        error("Invalid covered values in solution: $(self.covered)")
+        error("Invalid covered values in solution: $(s.covered)")
     end
 end
 

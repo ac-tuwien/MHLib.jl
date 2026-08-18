@@ -18,7 +18,7 @@ abstract type PermutationSolution{T} <: VectorSolution{T} end
 """
     initialize!(::PermutationSolution)
 
-Random construction of a new solution by applying fill to an initially empty solution.
+Random construction of a new solution by applying shuffling existing elements.
 """
 function MHLib.initialize!(s::PermutationSolution)
     shuffle!(s.x)
@@ -51,6 +51,7 @@ function two_opt_neighborhood_search!(s::PermutationSolution, best_improvement::
     best_p1 = nothing
     best_p2 = nothing
 
+    obj(s)  # ensure objective value is valid
     for (idx, p1) in enumerate(order[1:end-1])
         for p2 in order[idx+1:end]
             pa, pb = p1 < p2 ? (p1, p2) : (p2, p1)
@@ -70,15 +71,14 @@ function two_opt_neighborhood_search!(s::PermutationSolution, best_improvement::
 
     if !isnothing(best_p1)
         apply_two_opt_move!(s, best_p1, best_p2)
-        s.obj_val += delta
+        s.obj_val += best_delta
         return true
     end
-
-    false
+    return false
 end
 
 """
-    apply_two_opt_move(::PermutationSolution, p1, p2)
+    apply_two_opt_move!(::PermutationSolution, p1, p2)
 
 Perform two-opt move on given solution defined as inversion of subsequence.
 
@@ -127,11 +127,13 @@ end
 
 Destroy solution by removing `num` elements at random positions.
 
-Store them in the `destroy`.
+Store them in the `destroyed` field.
 """
 function random_remove_elements!(s::PermutationSolution, num::Int)
+    @assert 0 < num <= length(s.x)
+    # create uninitialized vector for destroyed elements if not yet existing
     if isnothing(s.destroyed)
-        s.destroyed = destroyed = Vector{Int}(undef, num)
+        s.destroyed = destroyed = typeof(s.x)(undef, num)
     else
         destroyed = s.destroyed
         @assert length(destroyed) == 0
@@ -191,6 +193,8 @@ end
     greedy_reinsert_removed!(::PermutationSolution)
 
 Repair a solution by inserting the elements from `destroyed` in a best location.
+
+The order in which the elements are considered is randomized.
 """
 function greedy_reinsert_removed!(s::PermutationSolution)
     destroyed = s.destroyed

@@ -3,6 +3,9 @@
 
 Major changes in releases:
 
+## Version 0.3.4
+- CLAUDE.md added, various minor fixes as pointed out by Claude code review
+
 ## Version 0.3.3
 - Manifest.toml removed from repo
 

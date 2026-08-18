@@ -40,7 +40,9 @@ abstract type Solution end
 Return true if the optimization goal is to maximize the objective function
 in the given type of solutions.
 
-This default implementation returns `true`.
+This default implementation returns `true`, i.e., assumes maximization.
+
+Overwrite this method for concrete solution *types* that are to be minimized.
 """
 to_maximize(::Type) = true
 to_maximize(s::Solution) = to_maximize(typeof(s))
@@ -173,16 +175,18 @@ end
 
 """
     get_number_to_destroy(::Solution, num_elements;
-        dest_min_abs, dest_min_ratio, dest_max_abs, dest_max_ratio)
+        min_abs, max_abs=num_elements, min_ratio=0.0, max_ratio=1.0)
 
-Randomly sample the number of elements to destroy in a destroy operator, e.g., 
-for an LNS, based on minimum and maximum numbers and ratios.
+Randomly sample the number of elements to destroy in a destroy operator.
+
+E.g., for an LNS, based on minimum and maximum numbers and ratios.
 """
 function get_number_to_destroy(::Solution, num_elements::Int;
         min_abs=1, max_abs=num_elements, min_ratio=0.0, max_ratio=1.0)
     a = max(min_abs, floor(Int, min_ratio * num_elements))
     b = min(max_abs, floor(Int, max_ratio * num_elements))
-    return b >= a ? rand(a:b) : b+1
+    @assert a <= b
+    return rand(a:b)
 end
 
 
@@ -243,7 +247,7 @@ initialize!(s::BoolVectorSolution) = ( rand!(s.x); invalidate!(s) )
 
 Return Hamming distance.
 """
-dist(s1::BoolVectorSolution, s2::BoolVectorSolution) = sum(abs.(s1.x - s2.x))
+dist(s1::BoolVectorSolution, s2::BoolVectorSolution) = sum(xor.(s1.x, s2.x))
 
 
 """

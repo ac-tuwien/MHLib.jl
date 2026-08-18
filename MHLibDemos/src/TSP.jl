@@ -67,7 +67,7 @@ function TSPInstance(file_name::AbstractString)
                parse_coords = false
            end
            if parse_coords
-               id, x_str, y_str = split(line, ' ')
+               id, x_str, y_str = split(line)
                x = parse(Int, x_str)
                y = parse(Int, y_str)
                push!(coords, [x, y])
@@ -112,7 +112,7 @@ mutable struct TSPSolution <: PermutationSolution{Int}
     destroyed::Union{Nothing, Vector{Int}}  # for LNS destroy and repair operations
 end
 
-MHLib.to_maximize(::TSPSolution) = false
+MHLib.to_maximize(::Type{TSPSolution}) = false
 
 TSPSolution(inst::TSPInstance) =
     TSPSolution(inst, -1, false, collect(1:inst.n), nothing)
@@ -136,12 +136,14 @@ Base.show(io::IO, s::TSPSolution) =
     calc_objective(::TSPSolution)
 
 Determines TSP tour length from scratch.
-
-Can also be called for a partial solution, i.e., when `s.destroyed` is not `nothing`.
 """
 function MHLib.calc_objective(s::TSPSolution)
     n = length(s.x)
-    sum(map(i -> s.inst.d[s.x[i],s.x[(i%n)+1]], 1:n))
+    d = s.inst.d[s.x[end], s.x[1]]
+    for i in 2:n
+        d += s.inst.d[s.x[i-1], s.x[i]]
+    end
+    return d
 end
 
 """
@@ -184,9 +186,11 @@ function MHLib.destroy!(s::TSPSolution, par::Int, ::Result)
 end
 
 """
-    repair!(tsp_solution, ::Nothing, result)
+    repair!(tsp_solution, ::Nothing, ::Result)
     
-`MHMethod` that performs a repair by reinserting removed nodes randomly.
+`MHMethod` that performs a repair by reinserting removed nodes in best ways.
+
+The order in which the removed nodes are reinserted is randomized.
 """
 MHLib.repair!(s::TSPSolution, ::Nothing, ::Result) = greedy_reinsert_removed!(s)
 
@@ -246,12 +250,12 @@ Solve a given TSP instance with the algorithm `alg`.
 
 # Parameters
 - `filename`: File name of the MAXSAT instance in CNF format
-- `alg`: Algorithm to apply ("gvns" or "lns")
+- `alg`: Algorithm to apply (:gvns or :lns)
 - `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
 - `titer`: Number of iterations for the solving algorithm, gets a new default value
 - `kwargs`: Additional configuration parameters passed to the algorithm, e.g., `ttime`
 """
-function solve_tsp(alg::AbstractString="lns",
+function solve_tsp(alg::Symbol=:lns,
         filename::AbstractString=joinpath(@__DIR__, "..", "data", "xqf131.tsp");
         seed=nothing, titer=1000, kwargs...)
     # Make results reproducibly by either setting a given seed or picking one randomly
@@ -266,12 +270,12 @@ function solve_tsp(alg::AbstractString="lns",
     initialize!(sol)
     println(sol)
 
-    if alg === "lns"
+    if alg === :lns
         heuristic = LNS(sol, MHMethod[MHMethod("con", construct!)],
             [MHMethod("de$i", destroy!, i) for i in 1:3],
             [MHMethod("re", repair!)]; 
             consider_initial_sol=true, titer, kwargs...)
-    elseif alg === "gvns"
+    elseif alg === :gvns
         heuristic = GVNS(sol, [MHMethod("con", construct!)],
             [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
             consider_initial_sol=true, titer, kwargs...)
@@ -286,7 +290,7 @@ function solve_tsp(alg::AbstractString="lns",
 end
 
 # To run from REPL, activate `MHLibDemos` environment, use `MHLibDemos`,
-# and call e.g. `solve_tsp("lns", titer=200, seed=1)`.
+# and call e.g. `solve_tsp(:lns, titer=200, seed=1)`.
 
 # Run with profiler:
 # @profview solve_tsp(args)

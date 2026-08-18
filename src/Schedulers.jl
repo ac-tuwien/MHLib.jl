@@ -9,8 +9,7 @@ using DataStructures  # SortedDict for method_stats
 
 export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerConfig, 
     perform_method!, next_method, update_incumbent!, check_termination, 
-    perform_sequentially!, main_results, method_statistics, delayed_success_update!, 
-    log_iteration, log_iteration_header, construct!, local_improve!, shaking!, 
+    perform_sequentially!, delayed_success_update!, construct!, local_improve!, shaking!, 
     perform_method_pair!, reinitialize!
 
 
@@ -57,16 +56,18 @@ Data in conjunction with a method application's result.
 - `is_local_optimum`: if `true`, the solution is considered a local optimum in respect to
     the applied method
 - `terminate`: if `true`, a termination condition has been fulfilled
+- `new_incumbent`: if `true`, the resulting solution has become the new incumbent
 - `log_info`: customized log info
 """
 mutable struct Result
     changed::Bool
     is_local_optimum::Bool
     terminate::Bool
+    new_incumbent::Bool
     log_info::String
 end
 
-Result() = Result(true, false, false, "")
+Result() = Result(true, false, false, false, "")
 
 
 """
@@ -75,7 +76,7 @@ Result() = Result(true, false, false, "")
 (Wrapper for) a method (function) to be applied to a solution by the scheduler.
 
 # Elements
-- 'name`: name of the method; must be unique over all used methods
+- `name`: name of the method; must be unique over all used methods
 - `method`: a function called for a Solution object; 
     the function must have exactly three parameters, which are the solution,
         a general parameter of arbitrary type (or `nothing`), and a `Result` structure
@@ -225,7 +226,7 @@ It iterates through all methods.
 """
 function next_method(meths::Vector{MHMethod}; randomize::Bool=false, repeat::Bool=false)
     if randomize
-        meths = meths.copy()
+        meths = copy(meths)
     end
     function gen_methods(channel::Channel)
         while true
@@ -252,7 +253,7 @@ Perform method on given solution and return `Results` object.
 Also updates incumbent, iteration and the method's statistics in method_stats.
 Furthermore checks the termination condition and eventually sets terminate in the
 returned Results object. If `delayed_success`, the success is not immediately determined
-and the statistics updated accordingly but at some later call of `delayed_success_update`.
+and the statistics updated accordingly but at some later call of `delayed_success_update!`.
 """
 function perform_method!(sched::Scheduler, method::MHMethod, sol::Solution;
         delayed_success=false)::Result
@@ -272,11 +273,12 @@ function perform_method!(sched::Scheduler, method::MHMethod, sol::Solution;
         ms.brutto_time += t_end - t_start
         if is_better_obj(sol, obj(sol), obj_old)
             ms.successes += 1
-            ms.obj_gain += obj_new - obj_old
+            ms.obj_gain += abs(obj_new - obj_old)
         end
     end
     sched.iteration += 1
     new_incumbent = update_incumbent!(sched, sol, t_end - sched.time_start)
+    res.new_incumbent = new_incumbent
     terminate = check_termination(sched)
     log_iteration(sched, method.name, obj_old, sol, new_incumbent, terminate, res.log_info)
     if terminate
@@ -298,7 +300,7 @@ function check_termination(sched::Scheduler)::Bool
     if 0 <= config.titer <= sched.iteration ||
         0 <= config.tciter <= sched.iteration - sched.incumbent_iteration ||
         0 <= config.ttime <= t - sched.time_start ||
-        0 <= config.tctime::Float64 <= t - sched.incumbent_time ||
+        0 <= config.tctime <= t - sched.incumbent_time ||
         0 <= config.tobj && !is_worse_obj(sched.incumbent, obj(sched.incumbent), 
             config.tobj)
         return true
@@ -317,7 +319,6 @@ Returns true if the termination condition has been fulfilled, else false.
 function perform_sequentially!(sched::Scheduler, sol::Solution, meths::Vector{MHMethod})
     for m in next_method(meths)
         res = perform_method!(sched, m, sol)
-        update_incumbent!(sched, sol, time() - sched.time_start)
         res.terminate && return true
     end
     return false
@@ -330,7 +331,7 @@ end
 
 Update an earlier performed method's success information in method_stats.
 
-Uses the given solution, old objective value and the given thime when the application of the
+Uses the given solution, old objective value and the given time when the application of the
 method had started.
 """
 function delayed_success_update!(sched::Scheduler, method::MHMethod, obj_old, 
@@ -368,7 +369,7 @@ function perform_method_pair!(sched::Scheduler, destroy::MHMethod, repair::MHMet
         check(sol)
     end                                      
     update_stats_for_method_pair!(sched, destroy, repair, sol, res, obj_old,
-                                      t_destroyed - t_start, t_end - t_destroyed)
+        t_destroyed - t_start, t_end - t_destroyed)
     return res
 end
 
@@ -380,35 +381,36 @@ Update statistics, incumbent, and check termination condition.
 To be applied after having performed a destroy+repair.
 """
 function update_stats_for_method_pair!(sched::Scheduler, destroy::MHMethod,
-         repair::MHMethod, sol::Solution, res::Result, obj_old, t_destroy::Float64,
-         t_repair::Float64)
-     ms_destroy = sched.method_stats[destroy.name]
-     ms_destroy.applications += 1
-     ms_destroy.netto_time += t_destroy
-     ms_destroy.brutto_time += t_destroy
-     ms_repair = sched.method_stats[repair.name]
-     ms_repair.applications += 1
-     ms_repair.netto_time += t_repair
-     ms_repair.brutto_time += t_repair
-     obj_new = obj(sol)
-     if is_better_obj(sol, obj_new, obj_old)
-         ms_destroy.successes += 1
-         ms_destroy.obj_gain += obj_new - obj_old
-         ms_repair.successes += 1
-         ms_repair.obj_gain += obj_new - obj_old
-     end
-     sched.iteration += 1
-     new_incumbent = update_incumbent!(sched, sol, time() - sched.time_start)
-     terminate = check_termination(sched)
-     log_iteration(sched, destroy.name * "+" * repair.name, obj_old, sol, new_incumbent, terminate, res.log_info)
-     if terminate
-         sched.run_time = time() - sched.time_start
-         res.terminate = true
-     end
+        repair::MHMethod, sol::Solution, res::Result, obj_old, t_destroy::Float64,
+        t_repair::Float64)
+    ms_destroy = sched.method_stats[destroy.name]
+    ms_destroy.applications += 1
+    ms_destroy.netto_time += t_destroy
+    ms_destroy.brutto_time += t_destroy
+    ms_repair = sched.method_stats[repair.name]
+    ms_repair.applications += 1
+    ms_repair.netto_time += t_repair
+    ms_repair.brutto_time += t_repair
+    obj_new = obj(sol)
+    if is_better_obj(sol, obj_new, obj_old)
+        ms_destroy.successes += 1
+        ms_destroy.obj_gain += obj_new - obj_old
+        ms_repair.successes += 1
+        ms_repair.obj_gain += obj_new - obj_old
+    end
+    sched.iteration += 1
+    new_incumbent = update_incumbent!(sched, sol, time() - sched.time_start)
+    res.new_incumbent = new_incumbent
+    terminate = check_termination(sched)
+    log_iteration(sched, destroy.name * "+" * repair.name, obj_old, sol, new_incumbent, terminate, res.log_info)
+    if terminate
+        sched.run_time = time() - sched.time_start
+        res.terminate = true
+    end
 end
 
 
-# ------------- Diverse generic scheduler methods (MHMethod functions)m--------------------
+# ------------- Diverse generic scheduler methods (MHMethod functions) --------------------
 
 """
     construct!(::Solution, par, result)
@@ -450,7 +452,7 @@ local_improve!(s::BoolVectorSolution, par::Int, ::Result) =
 """
     shaking!(::BoolVectorSolution, k, result)
 
-`MHethod` that performs shaking by flipping `k` random bits.
+`MHMethod` that performs shaking by flipping `k` random bits.
 """
 shaking!(s::BoolVectorSolution, k::Int, ::Result) = k_random_flips!(s, k)
 

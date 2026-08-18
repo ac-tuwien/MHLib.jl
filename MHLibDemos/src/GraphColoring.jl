@@ -71,7 +71,7 @@ mutable struct GraphColoringSolution <: VectorSolution{Int}
     x::Vector{Int}
 end
 
-MHLib.to_maximize(::GraphColoringSolution) = false
+MHLib.to_maximize(::Type{GraphColoringSolution}) = false
 
 GraphColoringSolution(inst::GraphColoringInstance) =
     GraphColoringSolution(inst, -1, false, fill(1, inst.n))
@@ -110,7 +110,7 @@ function MHLib.check(s::GraphColoringSolution; kwargs...)
     if length(s.x) != s.inst.n
         error("Invalid length of solution")
     end
-    if sum(s.x .> s.inst.n_colors) >= 1
+    if any(s.x .> s.inst.n_colors)
         error("Too many colors used")
     end
     invoke(MHLib.check, Tuple{supertype(typeof(s))}, s; kwargs...)
@@ -136,6 +136,7 @@ of a vertex involved in a conflict.
 """
 function MHLib.local_improve!(s::GraphColoringSolution, ::Any, result::Result)
     n = length(s.x)
+    obj(s)  # ensure objective value is valid
     order = sample(1:n, n, replace = false)
     for p in order
         # Count colors in the neighborhood
@@ -169,13 +170,13 @@ end
 `MHMethod` that randomly assigns different colors to 'par' vertices involved in conflicts.
 """
 function MHLib.shaking!(s::GraphColoringSolution, par::Int, result::Result)
-    under_conflict = Vector{Int}()
+    under_conflict = Int[]
     result.changed = false
 
     for u in 1:length(s.x)
         for v in neighbors(s.inst.graph, u)
             if s.x[u] == s.x[v]
-                # Conflict found
+                # conflict found
                 append!(under_conflict, u)
                 break
             end
@@ -183,12 +184,12 @@ function MHLib.shaking!(s::GraphColoringSolution, par::Int, result::Result)
     end
 
     for _ in 1:par
-        iszero(under_conflict) && return
+        isempty(under_conflict) && return
 
-        index = sample(1:length(under_conflict))[1]
+        index = rand(1:length(under_conflict))
         u = under_conflict[index]
 
-        # Pick random color (different from current)
+        # pick random color (different from current)
         col_candits = sample(1:s.inst.n_colors, 2, replace = false)
         rand_col = s.x[u] == col_candits[1] ? col_candits[2] : col_candits[1]
         s.x[u] = rand_col
@@ -196,7 +197,7 @@ function MHLib.shaking!(s::GraphColoringSolution, par::Int, result::Result)
         invalidate!(s)
         result.changed = true
 
-        # Prevent this vertex from getting changed again
+        # prevent this vertex from getting changed again
         deleteat!(under_conflict, index)
     end
 end
@@ -233,7 +234,7 @@ function solve_graph_coloring(
     println("Graph Coloring Demo $(git_version())")
     println("name=$name, n_colors=$n_colors, seed=$seed, ", (; kwargs...))
    
-    inst = GraphColoringInstance(name)
+    inst = GraphColoringInstance(name, n_colors)
     sol = GraphColoringSolution(inst)
     initialize!(sol)
     println(sol)
