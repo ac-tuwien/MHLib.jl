@@ -45,6 +45,7 @@ function GraphColoringInstance(name::AbstractString, n_colors::Int=3)
     graph = create_or_read_simple_graph(name)
     n = nv(graph)
     m = ne(graph)
+    @assert n_colors >= 2
     GraphColoringInstance(graph, n, m, n_colors)
 end
 
@@ -104,14 +105,15 @@ end
     check(s::GraphColoringSolution; ...)
 
 Check if s is a valid solution.
+    
 Raises an error if a problem is detected.
 """
 function MHLib.check(s::GraphColoringSolution; kwargs...)
     if length(s.x) != s.inst.n
         error("Invalid length of solution")
     end
-    if any(s.x .> s.inst.n_colors)
-        error("Too many colors used")
+    if !all(1 .<= s.x .<= s.inst.n_colors)
+        error("Invalid color assigned")
     end
     invoke(MHLib.check, Tuple{supertype(typeof(s))}, s; kwargs...)
 end

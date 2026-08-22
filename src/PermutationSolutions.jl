@@ -36,7 +36,7 @@ function MHLib.check(s::PermutationSolution{T}; kwargs...) where T
 end
 
 """
-    two_opt_neighborhood_search(::PermutationSolution, best_improvement)
+    two_opt_neighborhood_search!(::PermutationSolution, best_improvement)
 
 Systematic search of the 2-opt neighborhood, i.e., consider all inversions of subsequences.
 

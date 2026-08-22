@@ -128,9 +128,15 @@ end
     init_method_selector!(::LNS{ALNSMethodSelector})
 
 Initialize method selector with current state of LNS.
+
+Also called from `reinitialize!`, therefore the learned operator weights and the
+scores of a possibly unfinished segment are reset to their initial values.
 """
 function init_method_selector!(lns::LNS{ALNSMethodSelector})
     sel = lns.method_selector
+    for score_data in (sel.score_data_de, sel.score_data_re), i in eachindex(score_data)
+        score_data[i] = ALNSScoreData()
+    end
     sel.next_segment = lns.scheduler.iteration + sel.segment_size
 end
 

@@ -158,7 +158,6 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
     x_sel_orig = copy(x[begin:sel])
     shuffle!(view(x, 1:sel))
     best = copy(s)
-    num_neighbors = 0
     for (i, v) in enumerate(x[begin:sel])
         # move v at the end of the selection range
         if i != sel
@@ -185,7 +184,6 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
             x[sel], pool[j+1] = vu, x[sel]
             s.sel += 1
 
-            num_neighbors += 1
             if element_added_delta_eval!(s)
                 # neighbor is feasible
                 random_fill_applied = false
@@ -203,9 +201,6 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
                     copy!(best, s)
                 end
                 if random_fill_applied
-                    if i != s.sel
-                        x[i], x[sel] = x[sel], x[i]
-                    end
                     copy!(s, pre_fillup_backup)
                 end
                 s.sel -= 1

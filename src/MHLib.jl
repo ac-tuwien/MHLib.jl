@@ -269,7 +269,7 @@ Perform one major iteration of a `k`-flip local search, i.e., search one neighbo
 
 If `best_improvement` is set, the neighborhood is completely searched and a best neighbor is
 kept; otherwise the search terminates in a first-improvement manner, i.e., keeping a first
-encountered better solution. The new bijective value is returned.
+encountered better solution. The new objective value is returned.
 """
 function k_flip_neighborhood_search!(s::BoolVectorSolution, k::Int, best_improvement::Bool)
     len_x = length(s.x)
@@ -285,9 +285,9 @@ function k_flip_neighborhood_search!(s::BoolVectorSolution, k::Int, best_improve
     while i >= 1
         # evaluate solution
         if i == k + 1
-            if obj_val > best_obj
+            if is_better_obj(s, obj_val, best_obj)
                 if !best_improvement
-                    return true
+                    return obj_val
                 end
                 copy!(best_sol, s.x)
                 best_obj = obj_val
@@ -316,9 +316,10 @@ function k_flip_neighborhood_search!(s::BoolVectorSolution, k::Int, best_improve
     end
     if better_found
         copy!(s.x, best_sol)
-        obj_val = best_obj
+        obj_val = s.obj_val = best_obj
+        s.obj_val_valid = true
     end
-    obj_val
+    return obj_val
 end
 
 

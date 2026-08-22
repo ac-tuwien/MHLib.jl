@@ -80,7 +80,7 @@ Concrete algorithm types wrap a `Scheduler` and organize methods into named phas
   each iteration is delegated to a pluggable `MethodSelector` (e.g.
   `UniformRandomMethodSelector`) plus an optional `meths_compat` matrix restricting
   which destroy/repair method pairs may be combined; includes simulated-annealing-like
-  acceptance via `init_temp_factor`/`temp_dec_factor`.
+  acceptance via `init_temp`/`temp_dec_factor`.
 - `ALNSs.jl` → `ALNS`: built on `LNS` with `ALNSMethodSelector`, adaptively reweighting
   destroy/repair methods using a segment-based scoring scheme (`segment_size`, `gamma`,
   `sigma1/2/3`).

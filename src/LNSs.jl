@@ -36,7 +36,7 @@ A basic large neighborhood search.
 - `method_selector`: method selector for selecting destroy and repair methods
 
 # Configuration Parameters
-- `init_temp_factor`: factor for determining the initial temperature
+- `init_temp`: initial temperature
 - `temp_dec_factor`: factor for determining the temperature decay factor
 """
 mutable struct LNS{TMethodSelector <: MethodSelector, TSolution <: Solution}
@@ -49,7 +49,7 @@ mutable struct LNS{TMethodSelector <: MethodSelector, TSolution <: Solution}
     const meths_re::Vector{MHMethod}
     const meths_compat::Union{Nothing, Matrix{Bool}}
     const method_selector::TMethodSelector
-    const init_temp_factor::Float64
+    const init_temp::Float64
     const temp_dec_factor::Float64
 end
 
@@ -64,7 +64,7 @@ Enumeration type for type of result of method application.
 """
     LNS(sol::Solution, meths_ch, meths_de, meths_re;
         meths_compat=nothing, method_selector=UniformRandomMethodSelector(),
-        init_temp_factor=0.0, temp_dec_factor=0.99, kwargs...)
+        init_temp=0.0, temp_dec_factor=0.99, kwargs...)
 
 Create a Large Neighborhood Search (LNS).
 
@@ -76,9 +76,8 @@ and repair methods provided as `Vector{MHMethod}`.
     method can be applied in conjunction with which repair method
 - `method_selector` is the technique used for selecting the destroy and repair methods,
     by default `UniformRandomMethodSelector`
-- `init_temp_factor`: factor for determining the initial temperature, i.e., the objective value
-    of the initial solution multiplied by this factor is the initial temperature
-- `temp_dec_factor`: factor by wich the temperature is decreased each iteration
+- `init_temp`: initial temperature
+- `temp_dec_factor`: factor by which the temperature is decreased each iteration
 - `kwargs`: configuration parameters  passed to `Scheduler` and `SchedulerConfig`, 
     respectively, e.g., `titer`
 """
@@ -86,12 +85,14 @@ function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMetho
         meths_re::Vector{MHMethod}; 
         meths_compat::Union{Nothing, Matrix{Bool}}=nothing,
         method_selector::MethodSelector=UniformRandomMethodSelector(),
-        init_temp_factor::Float64=0.0, temp_dec_factor::Float64=0.99, kwargs...)
-    temperature = obj(sol) * init_temp_factor
+        init_temp::Float64=0.0, temp_dec_factor::Float64=0.99, kwargs...)
+    @assert init_temp >= 0.0
+    @assert 0.0 <= temp_dec_factor <= 1.0
+    temperature = init_temp
     scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re]; kwargs...)
     lns = LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), temperature, scheduler, 
         meths_ch, meths_de, meths_re,
-        meths_compat, method_selector, init_temp_factor, temp_dec_factor)
+        meths_compat, method_selector, init_temp, temp_dec_factor)
     init_method_selector!(lns)
     return lns
 end
@@ -106,7 +107,7 @@ function reinitialize!(lns::LNS{<:MethodSelector, TSolution},
     copy!(lns.solution, sol)
     copy!(lns.new_solution, sol)
     reinitialize!(lns.scheduler, sol)
-    lns.temperature = obj(sol) * lns.init_temp_factor
+    lns.temperature = lns.init_temp
     init_method_selector!(lns)
 end
 
@@ -204,7 +205,7 @@ Update the method selector according to the result of last performed method pair
 
 Default implementation does nothing.
 """
-update_method_selector!(::LNS, destroy::Int, repair::Int, result_case::ResultCase, Δ, Δ_inc) = 
+update_method_selector!(::LNS, destroy::Int, repair::Int, ::ResultCase, Δ, Δ_inc) = 
     nothing
 
 """
@@ -217,11 +218,12 @@ function lns_iteration!(lns::LNS, destroy_idx::Union{Nothing,Int}=nothing,
     destroy = isnothing(destroy_idx) ? select_method(lns, eachindex(lns.meths_de), true) : 
         destroy_idx
     repair = isnothing(repair_idx) ? select_repair_method(lns, destroy) : repair_idx
+    obj_incumbent = obj(lns.scheduler.incumbent)
     res = perform_method_pair!(lns.scheduler, lns.meths_de[destroy], 
         lns.meths_re[repair], lns.new_solution)
     obj_new_solution = obj(lns.new_solution)
     Δ = obj_new_solution - obj(lns.solution)
-    Δ_inc = obj_new_solution - obj(lns.scheduler.incumbent)
+    Δ_inc = obj_new_solution - obj_incumbent
     case = update_solution!(lns, lns.new_solution, lns.solution, res.new_incumbent)
     update_method_selector!(lns, destroy, repair, case, Δ, Δ_inc)
     cool_down!(lns)

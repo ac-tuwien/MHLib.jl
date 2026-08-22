@@ -48,7 +48,7 @@ function MAXSATInstance(file_name::String)
     local variable_usage::Vector{Vector{Int}}
     open(file_name) do f
         for line in eachline(f)
-            if line[1] == 'c'
+            if isempty(line) || line[1] == 'c'
                 # ignore comments
                 continue
             end

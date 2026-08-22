@@ -14,12 +14,12 @@ export MKPInstance, MKPSolution, solve_mkp
 """
     MKPInstance
 
-Instance oof a multidimensional knapsack problem.
+Instance of a multidimensional knapsack problem.
 
 - `n`: number of elements
 - `m`: number of resources
 - `p`: vector of prizes of elements
-- `r`: resource consumption values of each each element
+- `r`: resource consumption values of each element
 - `b`: capacities of resources
 - `r_min`: minimum resource consumption value of any element
 - `obj_opt`: optimal solution value (if known)
@@ -55,9 +55,11 @@ function MKPInstance(file_name::String)
     end
     obj_opt = all_values[3]
     p = all_values[4:4+n-1]
-    r = reshape(all_values[4+n:4+n+m*n-1], (m,n))
+    # the instance file stores the resource consumptions row-wise, i.e., m blocks of
+    # n values, while reshape fills column-major; hence read as (n,m) and transpose
+    r = permutedims(reshape(all_values[4+n:4+n+m*n-1], (n,m)))
     b = all_values[4+n+m*n:4+n+m*n+m-1]
-    r_min = min(minimum(r),1)
+    r_min = minimum(r)
     MKPInstance(n, m, p, r, b, r_min, obj_opt)
 end
 
@@ -79,7 +81,7 @@ mutable struct MKPSolution <: SubsetVectorSolution{Int}
 end
 
 MKPSolution(inst::MKPInstance) =
-    MKPSolution(inst, -1, false, collect(1:inst.n), zeros(inst.m), 0)
+    MKPSolution(inst, -1, false, collect(1:inst.n), zeros(Int, inst.m), 0)
 
 function Base.copy!(s1::MKPSolution, s2::MKPSolution)
     s1.inst = s2.inst
@@ -106,21 +108,18 @@ MHLib.calc_objective(s::MKPSolution) =
 Calculate consumed amounts of resources for current solution.
 """
 function calc_y!(s::MKPSolution)
-    if s.sel > 0
-        s.y = vec(sum(s.inst.r[begin:end, s.x[1:s.sel]], dims=2))
-    end
-    return 0
+    s.y = s.sel > 0 ? vec(sum(s.inst.r[:, s.x[1:s.sel]], dims=2)) : zeros(Int, s.inst.m)
 end
 
 function MHLib.check(s::MKPSolution; kwargs...)
     invoke(check, Tuple{SubsetVectorSolution}, s; kwargs...)
-    y_old = s.y
+    y_old = copy(s.y)  # copy, as calc_y! may assign a new vector or update in place
     calc_y!(s)
     if any(y_old .!= s.y)
         error("Solution had invalid y values: $(s.y) $(y_old)")
     end
     if any(s.y .> s.inst.b)
-        error("Solution exceeds capacity limits: $(self.y) $(s.inst.b)")
+        error("Solution exceeds capacity limits: $(s.y) $(s.inst.b)")
     end
 end
 
@@ -132,14 +131,14 @@ end
 """
     construct!(mkp_solution, ::Nothing, result)
 
-`MHMethod` thatnonstructs a new solution by random initialization.
+`MHMethod` that constructs a new solution by random initialization.
 """
 MHLib.construct!(s::MKPSolution, ::Nothing, r::Result) = initialize!(s)
 
 """
     local_improve!(mkp_solution, ::Nothing, result)
 
-`MHMethod that performs two-exchange local search followed by random fill.
+`MHMethod` that performs two-exchange local search followed by random fill.
 """
 function MHLib.local_improve!(s::MKPSolution, ::Nothing, result::Result)
     if !two_exchange_random_fill_neighborhood_search!(s, false)
@@ -150,7 +149,7 @@ end
 """
     shaking!(mkp_solution, par, result)
 
-`MHMethod` that performs shaking by removing `par` randoml elements followed by random fill.
+`MHMethod` that performs shaking by removing `par` random elements followed by random fill.
 """
 function MHLib.shaking!(s::MKPSolution, par::Int, ::Result)
     remove_randomly_selected!(s, par)
@@ -191,7 +190,7 @@ end
 # -------------------------------------------------------------------------------
 
 """
-    solve_misp(filename::AbstractString; seed=nothing, titer=3000, kwargs...)
+    solve_mkp(filename::AbstractString; seed=nothing, titer=3000, kwargs...)
 
 Solve a given MKP instance with a variable neighborhood search.
 
@@ -230,7 +229,7 @@ function solve_mkp(
 end
 
 # To run from REPL, activate `MHLibDemos` environment, use `MHLibDemos`,
-# and call e.g. `solve_misp(titer=200, seed=1)`.
+# and call e.g. `solve_mkp(titer=200, seed=1)`.
 
 # Run with profiler:
 # @profview solve_mkp(args)

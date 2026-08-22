@@ -123,8 +123,7 @@ destroy methods, and repair methods.
 method can be applied in conjunction with which repair method.  
 - `method_selector=UniformRandomMethodSelector()` is the technique used for selecting the 
   - destroy and repair methods
-- `init_temp_factor=0.0`: factor for determining the initial temperature, i.e., the objective value
-    of the initial solution multiplied by this factor is the initial temperature
+- `init_temp=0.0`: initial temperature
 - `temp_dec_factor=0.99`: factor by which the temperature is decreased each iteration
 - all parameters of the `Scheduler` (see above)
 
