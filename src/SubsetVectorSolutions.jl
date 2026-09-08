@@ -128,13 +128,7 @@ function MHLib.check(s::SubsetVectorSolution; unsorted::Bool=true, kwargs...)
     if !unsorted && !issorted(s.x[begin:s.sel])
         error("Solution not sorted: $(s.x[1:s.sel])")
     end
-    if s.obj_val_valid
-        old_obj = s.obj_val
-        invalidate!(s)
-        if old_obj != obj(s)
-            error("Solution has wrong objective value: $(old_obj) should be $(obj(s))")
-        end
-    end
+    invoke(check, Tuple{Solution}, s; kwargs...)
 end
 
 """
@@ -172,8 +166,9 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
 
         # search v (the deleted item) and place it at the front of the extension pool
         v_pos = findfirst(==(v), pool)
-        if length(v_pos) > 0 && v_pos[1] != 1
-            pool[1], pool[v_pos[1]] = pool[v_pos[1]], pool[1]
+        @assert !isnothing(v_pos)
+        if v_pos != 1
+            pool[1], pool[v_pos] = pool[v_pos], pool[1]
         end
         # enumerate over all items in the extension pool except for v
         for (j, vu) in enumerate(pool[2:end])

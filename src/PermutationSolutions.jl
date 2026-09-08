@@ -2,7 +2,7 @@
 #
 # A module for solutions that are represented by a permutation of distinct elements.
 
-export PermutationSolution, initialize!, two_opt_neighborhood_search!, 
+export PermutationSolution, two_opt_neighborhood_search!, 
     random_two_exchange_moves!, random_remove_elements!, random_reinsert_removed!,
     greedy_reinsert_removed!, insert_val_at_best_pos!
 
@@ -11,7 +11,9 @@ export PermutationSolution, initialize!, two_opt_neighborhood_search!,
 
 A type for solutions that are represented by a permutation of distinct elements.
 
-A concrete type must implement the attributes of a vector solution.
+A concrete type must implement the attributes of a vector solution, plus obtionally
+a `destroyed` field that is used for destroy and repair operations in LNS to store
+the elements that have been removed from the solution.
 """
 abstract type PermutationSolution{T} <: VectorSolution{T} end
 
@@ -20,7 +22,7 @@ abstract type PermutationSolution{T} <: VectorSolution{T} end
 
 Random construction of a new solution by applying shuffling existing elements.
 """
-function MHLib.initialize!(s::PermutationSolution)
+function initialize!(s::PermutationSolution)
     shuffle!(s.x)
     invalidate!(s)
 end
@@ -30,7 +32,7 @@ end
 
 Check correctness of permutation solution.
 """
-function MHLib.check(s::PermutationSolution{T}; kwargs...) where T
+function check(s::PermutationSolution{T}; kwargs...) where T
     !allunique(s.x) && error("PermutationSolution is no permutation: $(s.x)")
     invoke(check, Tuple{VectorSolution{T}}, s; kwargs...)
 end
@@ -52,8 +54,8 @@ function two_opt_neighborhood_search!(s::PermutationSolution, best_improvement::
     best_p2 = nothing
 
     obj(s)  # ensure objective value is valid
-    for (idx, p1) in enumerate(order[1:end-1])
-        for p2 in order[idx+1:end]
+    for (idx, p1) in enumerate(@view order[1:end-1])
+        for p2 in @view order[idx+1:end]
             pa, pb = p1 < p2 ? (p1, p2) : (p2, p1)
             delta = two_opt_move_delta_eval(s, pa, pb)
             if is_better_obj(s, delta, best_delta)
@@ -127,41 +129,34 @@ end
 
 Destroy solution by removing `num` elements at random positions.
 
-Store them in the `destroyed` field.
+Store them in the `destroyed` field, which must exist in the concrete solution type.
 """
 function random_remove_elements!(s::PermutationSolution, num::Int)
     @assert 0 < num <= length(s.x)
-    # create uninitialized vector for destroyed elements if not yet existing
-    if isnothing(s.destroyed)
-        s.destroyed = destroyed = typeof(s.x)(undef, num)
-    else
-        destroyed = s.destroyed
-        @assert length(destroyed) == 0
-        resize!(destroyed, num)
-    end
-
-    sample!(1:length(s.x), destroyed, replace=false, ordered=true)  # select pos to remove
+    destroyed = s.destroyed
+    @assert isempty(destroyed)  # current solution must be complete
+    resize!(destroyed, num)
+    sample!(s.x, destroyed, replace=false, ordered=true)  # select elements to remove
     pos = 1
     di = 1
     x = s.x
     for i in eachindex(x)
-        if di <= length(destroyed) && destroyed[di] == i
-            destroyed[di] = x[i]
+        if di <= length(destroyed) && x[i] == destroyed[di]
             di += 1
         else
             x[pos] = x[i]
             pos += 1
         end
     end
-    @assert di == num + 1 "di=$di != num=$num"
+    @assert di == num + 1
     resize!(s.x, length(s.x) - num)
     invalidate!(s)
 end
 
 """
-    random_reinsert_removed!(::PermutationSolution)
+    random_reinsert_removed!(s::PermutationSolution)
 
-Repair solution by inserting the elements from `destroyed` at random positions.
+Repair solution by inserting the elements from `s.destroyed` at random positions.
 
 Note that this is a very naive repair heuristic just for demonstration purposes.
 In a real application, the repair would, for example, test all possible insertion
@@ -175,16 +170,16 @@ function random_reinsert_removed!(s::PermutationSolution)
     num = length(destroyed)
     resize!(x, length(x) + length(destroyed))
     positions = sample(1:length(x), num, replace=false, ordered=true)
-    pi = num
+    remaining = num  # number of destroyed elements still to be inserted
     for i in length(x):-1:1
-        if pi >= 1 && positions[pi] == i
-            x[i] = destroyed[pi]
-            pi -= 1
+        if remaining >= 1 && positions[remaining] == i
+            x[i] = destroyed[remaining]
+            remaining -= 1
         else
-            x[i] = x[i - pi]
+            x[i] = x[i - remaining]
         end
     end
-    @assert pi == 0
+    @assert remaining == 0
     empty!(destroyed)
     invalidate!(s)
 end

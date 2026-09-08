@@ -102,32 +102,33 @@ end
 """
     TSPSolution
 
-Solution to a TSP instance represented as permutation of integers
+Solution to a TSP instance represented as permutation of integers.
+
+Attriute `destroyed` is an optional vector of destroyed elements when using destroy+repair operators, e.g., in LNS.
 """
 mutable struct TSPSolution <: PermutationSolution{Int}
     inst::TSPInstance
     obj_val::Int
     obj_val_valid::Bool
     x::Vector{Int}
-    destroyed::Union{Nothing, Vector{Int}}  # for LNS destroy and repair operations
+    destroyed::Vector{Int}
 end
 
 MHLib.to_maximize(::Type{TSPSolution}) = false
 
 TSPSolution(inst::TSPInstance) =
-    TSPSolution(inst, -1, false, collect(1:inst.n), nothing)
+    TSPSolution(inst, -1, false, collect(1:inst.n), Int[])
 
 function Base.copy!(s1::TSPSolution, s2::TSPSolution)
     s1.inst = s2.inst
     s1.obj_val = s2.obj_val
     s1.obj_val_valid = s2.obj_val_valid
-    s1.destroyed = isnothing(s2.destroyed) ? nothing : copy(s2.destroyed)
+    s1.destroyed = copy(s2.destroyed)
     copy!(s1.x, s2.x)
 end
 
 Base.copy(s::TSPSolution) =
-    TSPSolution(s.inst, s.obj_val, s.obj_val_valid, copy(s.x), 
-        (isnothing(s.destroyed) ? nothing : copy(s.destroyed)))
+    TSPSolution(s.inst, s.obj_val, s.obj_val_valid, copy(s.x), copy(s.destroyed))
 
 Base.show(io::IO, s::TSPSolution) =
     println(io, s.x)
@@ -154,11 +155,11 @@ end
 MHLib.construct!(s::TSPSolution, ::Nothing, result::Result) = initialize!(s)
 
 """
-    local_improve!(tsp_solution, ::Any, result)
+    local_improve!(tsp_solution, ::Nothing, result)
 
 `MHMethod` that performs two-opt local search.
 """
-function MHLib.local_improve!(s::TSPSolution, ::Any, result::Result)
+function MHLib.local_improve!(s::TSPSolution, ::Nothing, result::Result)
     if !two_opt_neighborhood_search!(s, false)
         result.changed = false
     end
@@ -243,14 +244,14 @@ end
 # -------------------------------------------------------------------------------
 
 """
-    solve_tsp(alg::AbstractString, filename::AbstractString; seed=nothing, titer=1000, 
+    solve_tsp(alg::Symbol=:lns, filename::AbstractString; seed=nothing, titer=1000,
         kwargs...)
 
 Solve a given TSP instance with the algorithm `alg`.
 
 # Parameters
-- `filename`: File name of the MAXSAT instance in CNF format
-- `alg`: Algorithm to apply (:gvns or :lns)
+- `alg`: Algorithm to apply (`:gvns` or `:lns`)
+- `filename`: File name of the TSP instance in TSPLIB format with 2D Euclidean coordinates
 - `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
 - `titer`: Number of iterations for the solving algorithm, gets a new default value
 - `kwargs`: Additional configuration parameters passed to the algorithm, e.g., `ttime`
@@ -262,7 +263,7 @@ function solve_tsp(alg::Symbol=:lns,
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
 
-    println("TSP Demo version $(git_version())")
+    println("TSP Demo $(git_version())")
     println("alg=$alg, filename=$filename, seed=$seed, ", (; kwargs...))
 
     inst = TSPInstance(filename)
@@ -277,7 +278,7 @@ function solve_tsp(alg::Symbol=:lns,
             consider_initial_sol=true, titer, kwargs...)
     elseif alg === :gvns
         heuristic = GVNS(sol, [MHMethod("con", construct!)],
-            [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
+            [MHMethod("li1", local_improve!)], [MHMethod("sh1", shaking!, 1)];
             consider_initial_sol=true, titer, kwargs...)
     else
         error("Invalid parameter alg: $alg")

@@ -27,7 +27,7 @@ Concrete subtypes need to implement:
 - `obj_val_valid::Bool`: indicates if obj_val is valid
 - `calc_objective(::Solution)`: calculate and return objective value of solution
 - `initialize!(::Solution)`: initialize solution in some meaningful way
-- `to_maximize(::Type)`: for minimization this method must return false
+- `to_maximize(::Type{<:Solution})`: for minimization this method must return false
 - `copy!(::Solution, ::Solution)`: make first solution a copy of the second
 - `copy(::Solution)`: return an independent copy of the solution
 """
@@ -35,7 +35,7 @@ abstract type Solution end
 
 
 """
-    to_maximize(::Type)
+    to_maximize(::Type{<:Solution})
 
 Return true if the optimization goal is to maximize the objective function
 in the given type of solutions.
@@ -44,7 +44,7 @@ This default implementation returns `true`, i.e., assumes maximization.
 
 Overwrite this method for concrete solution *types* that are to be minimized.
 """
-to_maximize(::Type) = true
+to_maximize(::Type{<:Solution}) = true
 to_maximize(s::Solution) = to_maximize(typeof(s))
 
 
@@ -60,7 +60,7 @@ initialize!(::Solution) =
 """
     obj(s::Solution)
 
-Return `s.obj_val` if `obj_val_valid` or calculate it via `objective(::Solution)`.
+Return `s.obj_val` if `obj_val_valid` or calculate it via `calc_objective(::Solution)`.
 """
 function obj(s::Solution)
     if !s.obj_val_valid
@@ -175,7 +175,7 @@ end
 
 """
     get_number_to_destroy(::Solution, num_elements;
-        min_abs, max_abs=num_elements, min_ratio=0.0, max_ratio=1.0)
+        min_abs=1, max_abs=num_elements, min_ratio=0.0, max_ratio=1.0)
 
 Randomly sample the number of elements to destroy in a destroy operator.
 
@@ -202,8 +202,6 @@ An abstract solution encoded by a vector of elements with type `T`.
 Concrete subtypes need to implement:
 - all requirements of the supertype `Solution`
 - `x::AbstractVector`: vector representing the solution
-- `destroyed::Union{Nothing, Int[]}`: vector of positions of destroyed elements when 
-    using destroy+repair operators e.g. in LNS
 """
 abstract type VectorSolution{T} <: Solution end
 
@@ -367,12 +365,12 @@ end
 # -----------------------------------------------------------
 
 include("Schedulers.jl")
+include("Log.jl")  # defines methods on `Scheduler`, thus must come after Schedulers.jl
 include("GVNSs.jl")
 include("LNSs.jl")
 include("ALNSs.jl")
 include("SubsetVectorSolutions.jl")
 include("PermutationSolutions.jl")
-include("Log.jl")
 include("OneMax.jl")
 
 

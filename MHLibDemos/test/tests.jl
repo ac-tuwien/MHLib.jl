@@ -15,6 +15,14 @@ using TestItems
     datapath = joinpath(@__DIR__, "..", "data")
 end
 
+@testitem "next_method" setup=[MHLibTestInit] begin
+    meths = [MHMethod("a", construct!), MHMethod("b", construct!), MHMethod("c", construct!)]
+    @test collect(next_method(meths)) == meths
+    @test collect(Iterators.take(next_method(meths; repeat=true), 6)) == [meths; meths]
+    r = collect(next_method(meths; randomize=true))
+    @test length(r) == 3 && Set(r) == Set(meths)
+end
+
 
 @testitem "GVNS-MAXSAT" setup=[MHLibTestInit] begin
     inst = MAXSATInstance(joinpath(datapath, "maxsat-simple.cnf"))
@@ -23,7 +31,7 @@ end
     gvns = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!, 1)],
         [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
-            MHMethod("sh3", shaking!, 3)]; titer=10)
+            MHMethod("sh3", shaking!, 3)]; titer=10, checkit=true)
     run!(gvns)
     method_statistics(gvns.scheduler)
     main_results(gvns.scheduler)
@@ -52,14 +60,14 @@ end
     method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
     alg = LNS(sol, [MHMethod("const", construct!)],
         [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-        [MHMethod("re", repair!)]; method_selector, titer=120)
+        [MHMethod("re", repair!)]; method_selector, titer=120, checkit=true)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
     @test obj(sol) >= 0
 end
 
-@testitem "LNS-MAXSAT" setup=[MHLibTestInit] begin
+@testitem "LNS-TSP" setup=[MHLibTestInit] begin
     inst = TSPInstance(50)
     sol = TSPSolution(inst)
     println(sol)
@@ -67,7 +75,7 @@ end
     method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
     alg = LNS(sol, [MHMethod("const", construct!)],
         [MHMethod("de$i", destroy!, i) for i in 1:num_de],
-        [MHMethod("re", repair!)]; method_selector, titer=120)
+        [MHMethod("re", repair!)]; method_selector, titer=120, checkit=true)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
@@ -95,7 +103,7 @@ end
     gvns = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
         [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
-            MHMethod("sh3", shaking!, 3)], titer=25)
+            MHMethod("sh3", shaking!, 3)], titer=25, checkit=true)
     run!(gvns)
     method_statistics(gvns.scheduler)
     main_results(gvns.scheduler)
@@ -109,7 +117,7 @@ end
     gvns = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
         [MHMethod("sh1", shaking!, 1), MHMethod("sh2", shaking!, 2),
-            MHMethod("sh3", shaking!, 3)], titer=25)
+            MHMethod("sh3", shaking!, 3)], titer=25, checkit=true)
     run!(gvns)
     method_statistics(gvns.scheduler)
     main_results(gvns.scheduler)
@@ -139,14 +147,17 @@ end
     println(obj(sol))
     @test obj(sol) >= 0
     @test sol.obj_val_valid
-    @assert !to_maximize(sol)
+    @test !to_maximize(sol)
     search = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
         [MHMethod("sh1", shaking!, 1)],
-        consider_initial_sol=true, titer=300)
+        consider_initial_sol=true, titer=300, checkit=true)
     run!(search)
     main_results(search.scheduler)
     @test obj(sol) >= 0
+    # obj_gain is an absolute improvement, thus non-negative also for minimization
+    @test all(ms.obj_gain >= 0 for ms in values(search.scheduler.method_stats))
+    @test any(ms.obj_gain > 0 for ms in values(search.scheduler.method_stats))
 end
 
 @testitem "GVNS-GraphColoring1" setup=[MHLibTestInit] begin
@@ -161,7 +172,7 @@ end
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
         [MHMethod("sh$i", shaking!, i) for i in 1:5],
-        titer=1000)
+        titer=1000, checkit=true)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
@@ -179,10 +190,34 @@ end
     alg = GVNS(sol, [MHMethod("con", construct!)],
         [MHMethod("li1", local_improve!)],
         [MHMethod("sh$i", shaking!, i) for i in 1:5],
-        titer=50)
+        titer=50, checkit=true)
     run!(alg)
     method_statistics(alg.scheduler)
     main_results(alg.scheduler)
     check(sol)
     @test iszero(obj(sol))
+end
+
+@testitem "solve-functions-smoke" setup=[MHLibTestInit] begin
+    # Every solve_* entry point must at least run with a tiny iteration budget on its
+    # default instance and return a valid solution; the algorithm-specific tests above
+    # construct the algorithms directly and would not catch errors in these functions.
+    for f in (
+            () -> solve_graph_coloring(; titer=5, seed=1, log=false),
+            () -> solve_maxsat(:gvns; titer=5, seed=1, log=false),
+            () -> solve_maxsat(:lns; titer=5, seed=1, log=false),
+            () -> solve_maxsat(:weighted_lns; titer=5, seed=1, log=false),
+            () -> solve_maxsat(:alns; titer=5, seed=1, log=false),
+            () -> solve_misp(; titer=5, seed=1, log=false),
+            () -> solve_mkp(; titer=5, seed=1, log=false),
+            () -> solve_tsp(:gvns; titer=5, seed=1, log=false),
+            () -> solve_tsp(:lns; titer=5, seed=1, log=false))
+        sol = redirect_stdout(devnull) do
+            f()
+        end
+        check(sol)
+        @test sol isa MHLib.Solution
+    end
+    @test_throws ErrorException solve_maxsat(:unknown; titer=5, log=false)
+    @test_throws ErrorException solve_tsp(:unknown; titer=5, log=false)
 end

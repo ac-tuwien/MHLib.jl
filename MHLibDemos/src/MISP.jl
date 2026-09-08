@@ -2,8 +2,9 @@
 #
 # Demo problem: maximum (weighted) independent set problem (MISP).
 #
-# Give an undirected (weighted) graph, find a maximum cardinality subset of nodes where
-# no pair of nodes is adjacent in the graph.
+# Given an undirected graph with node weights, find a maximum weight subset of nodes where
+# no pair of nodes is adjacent in the graph. So far, only unweighted instances are created,
+# i.e., all node weights are one and the cardinality of the subset is maximized.
 
 using Graphs
 using Random
@@ -18,13 +19,14 @@ export MISPInstance, MISPSolution, solve_misp
 
 Maximum (weighted) independent set problem (MISP) instance.
 
-Give an undirected (weighted) graph, find a maximum cardinality subset of nodes where
-no pair of nodes is adjacent in the graph.
+Given an undirected graph with node weights `p`, find a maximum weight subset of nodes
+where no pair of nodes is adjacent in the graph. So far, only unweighted instances are
+created, i.e., all node weights are one.
 
 # Elements
 - `graph`: undirected unweighted graph to consider
 - `n`: number of nodes
-- `m` number of edges
+- `m`: number of edges
 - `p`: prices (weights) of items
 """
 struct MISPInstance
@@ -205,7 +207,7 @@ function solve_misp(
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
     
-    println("MISP Demo version $(git_version())")
+    println("MISP Demo $(git_version())")
     println("filename=$filename, seed=$seed, ", (; kwargs...))
    
     inst = MISPInstance(filename)

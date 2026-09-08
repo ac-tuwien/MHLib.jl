@@ -78,6 +78,8 @@ end
     MAXSATSolution
 
 A concrete solution type to solve the MAXSAT problem.
+
+Element `destroyed` is a vector of positions of destroyed elements when using destroy+repair operators, e.g., in LNS.
 """
 mutable struct MAXSATSolution <: BoolVectorSolution
     inst::MAXSATInstance
@@ -136,7 +138,6 @@ function MHLib.flip_variable!(s::MAXSATSolution, pos::Int)::Int
         fulfilled_by_other = false
         val_fulfills_now = false
         for v in s.inst.clauses[clause]
-            if v == 0 break end
             if abs(v) == pos
                 val_fulfills_now = (v>0 ? val : !val)
             elseif s.x[abs(v)] == (v>0)
@@ -153,30 +154,30 @@ end
 
 
 """
-    destroy(maxsat_solution, par, result)
+    destroy!(maxsat_solution, par, result)
 
-`MHMethod` that selects `3 * par` positions uniformly at random for removal.
+`MHMethod` that selects `3 * par` positions (at most all) uniformly at random for removal.
 
-Selected positions are stored with the solution in list `self.destroyed`.
+Selected positions are stored with the solution in `sol.destroyed`. The solution
+vector itself is not modified here; the positions get new values in `repair!`.
 """
 function MHLib.destroy!(sol::MAXSATSolution, par::Int, ::Result)
     x = sol.x
-    num = get_number_to_destroy(sol, length(x); min_abs=3par, max_abs=3par)
+    num = min(3par, length(x))
     sol.destroyed = sample(1:length(x), num, replace=false)
-    invalidate!(sol)
 end
 
 
 """
     repair!(::MAXSATSolution, ::Nothing, result)
 
-`MHMethod`that assigns new random values to all positions in `sol.destroyed`.
+`MHMethod` that assigns new random values to all positions in `sol.destroyed`.
 """
 function MHLib.repair!(sol::MAXSATSolution, ::Nothing, ::Result)
     @assert !isempty(sol.destroyed)
     x = sol.x
     for p in sol.destroyed
-        x[p] = rand(0:1)
+        x[p] = rand(Bool)
     end
     empty!(sol.destroyed)
     invalidate!(sol)
@@ -185,16 +186,17 @@ end
 # -------------------------------------------------------------------------------
 
 """
-    solve_maxsat(alg::AbstractString, filename::AbstractString; seed=nothing, kwargs...)
+    solve_maxsat(alg::Symbol=:alns, filename::AbstractString; seed=nothing, titer=1000,
+        kwargs...)
 
 Solve a given MAXSAT problem instance with the algorithm `alg`.
 
 # Parameters
-- `alg`: Algorithm to apply (:gvns, :lns, :weighted-lns, :alns)
+- `alg`: Algorithm to apply (`:gvns`, `:lns`, `:weighted_lns`, or `:alns`)
 - `filename`: File name of the MAXSAT instance in CNF format
 - `seed`: Possible random seed for reproducibility; if `nothing`, a random seed is chosen
 - `titer`: Number of iterations for the solving algorithm, gets a new default value
-- `kwargs`: Configuration parameters to pass to the the solving algorithm, e.g., `ttime`
+- `kwargs`: Configuration parameters to pass to the solving algorithm, e.g., `ttime`
 """
 function solve_maxsat(alg::Symbol=:alns,
         filename::AbstractString=joinpath(@__DIR__, "..", "data", "maxsat-adv1.cnf");
@@ -203,7 +205,7 @@ function solve_maxsat(alg::Symbol=:alns,
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
 
-    println("MAXSAT Demo version $(git_version())")
+    println("MAXSAT Demo $(git_version())")
     println("alg=$alg, filename=$filename, seed=$seed, ", (; kwargs...))
 
     inst = MAXSATInstance(filename)
@@ -217,7 +219,7 @@ function solve_maxsat(alg::Symbol=:alns,
             [MHMethod("re", repair!)];
             meths_compat = [true;;],
             titer, kwargs...)
-    elseif alg === :weighted-lns
+    elseif alg === :weighted_lns
         num_de = 5
         method_selector = WeightedRandomMethodSelector(num_de:-1:1, 1:1)
         heuristic = LNS(sol, [MHMethod("const", construct!)],

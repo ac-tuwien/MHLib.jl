@@ -46,7 +46,8 @@ function create_or_read_simple_graph(name::AbstractString) :: SimpleGraph{Int}
                 split_line = split(line)
                 u = parse(Int, split_line[2])
                 v = parse(Int, split_line[3])
-                @assert add_edge!(graph, u, v)
+                added = add_edge!(graph, u, v)
+                @assert added "Failed to add edge from $u to $v"
             end
         end
         @assert nv(graph) > 0
@@ -61,6 +62,6 @@ include("MISP.jl")
 include("MKP.jl")
 include("TSP.jl")
 
-include("../test/tests.jl")
+# include("../test/tests.jl")
 
 end  # module

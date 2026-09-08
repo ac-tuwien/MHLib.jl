@@ -9,12 +9,6 @@
 #
 # The logging process works as follows.
 #
-# - If the user does not set the `--ofile` argument than no log file is created. 
-#     Print statements are still sent to stdout as is normal
-# - If the user does set the `--ofile` argument then by default a simple logger is 
-#     created with the `get_logger()` function. This logger is an instance of the 
-#     MHLogger type that simply writes the message directly to a file with 
-#     no additional information.
 # - If the user overloads the `get_logger` method than any logger can be returned. 
 #     This allows for the user to create their own custom loggers that save the solution
 #     data in different ways.
@@ -169,6 +163,8 @@ sdiv(x::Real, y::Real) = iszero(y) ? NaN : x/y
     method_statistics(::Scheduler)
 
 Write overall statistics.
+
+Also sets `sched.run_time` if not yet set.
 """
 function method_statistics(sched::Scheduler)
 
@@ -179,42 +175,42 @@ function method_statistics(sched::Scheduler)
     end
 
     total_applications = 0
-    total_netto_time = 0.0
+    total_net_time = 0.0
     total_successes = 0
-    total_brutto_time = 0.0
+    total_gross_time = 0.0
     total_obj_gain = 0.0
 
     for ms in values(sched.method_stats)
         total_applications += ms.applications
-        total_netto_time += ms.netto_time
+        total_net_time += ms.net_time
         total_successes += ms.successes
-        total_brutto_time += ms.brutto_time
+        total_gross_time += ms.gross_time
         total_obj_gain += ms.obj_gain
     end
 
     res = "\nMethod statistics\n" *
           "S  method    iter  succ  succ-rate%  tot-obj-gain  avg-obj-gain  rel-succ%  \
-            net-time  net-time%  brut-time  brut-time%\n"
+            net-time  net-time%  gross-time  gross-time%\n"
 
-    for key in keys(sched.method_stats)
-        e = sched.method_stats[key]
-        temp = ("S  " * key * "       ")[1:11]
-        res *=@sprintf("%s%6d%6d%12.5f%14.5f%14.5f%11.5f%10.5f%11.5f%11.5f%12.5f",
+    for m ∈ sched.methods
+        e = sched.method_stats[m.name]
+        temp = "S  " * first(rpad(m.name, 8), 8)
+        res *=@sprintf("%s%6d%6d%12.5f%14.5f%14.5f%11.5f%10.5f%11.5f%12.5f%13.5f",
           temp, e.applications, e.successes, sdiv(e.successes, e.applications) * 100,
           e.obj_gain, sdiv(e.obj_gain, e.applications),
           sdiv(e.successes, total_successes) * 100,
-          e.netto_time, sdiv(e.netto_time, sched.run_time) * 100,
-          e.brutto_time, sdiv(e.brutto_time, sched.run_time) * 100)
+          e.net_time, sdiv(e.net_time, sched.run_time) * 100,
+          e.gross_time, sdiv(e.gross_time, sched.run_time) * 100)
         res *= "\n"
     end
 
     temp = ("S  SUM/AVG       ")[1:11]
-    res *= @sprintf("%s%6d%6d%12.5f%14.5f%14.5f%11.5f%10.5f%11.5f%11.5f%12.5f",
+    res *= @sprintf("%s%6d%6d%12.5f%14.5f%14.5f%11.5f%10.5f%11.5f%12.5f%13.5f",
       temp, total_applications, total_successes, sdiv(total_successes, total_applications) * 100,
       total_obj_gain, sdiv(total_obj_gain, total_applications),
       100.0,
-      total_netto_time, sdiv(total_netto_time, sched.run_time) * 100,
-      total_brutto_time, sdiv(total_brutto_time, sched.run_time) * 100)
+      total_net_time, sdiv(total_net_time, sched.run_time) * 100,
+      total_gross_time, sdiv(total_gross_time, sched.run_time) * 100)
     res *= "\n"
 
     println(res)
@@ -231,6 +227,9 @@ Print main results.
 """
 function main_results(sched::Scheduler)
     !sched.config.log && return
+    if sched.run_time !== missing
+        sched.run_time = time() - sched.time_start
+    end
     str = "T best solution: $(sched.incumbent)\nT best obj: $(obj(sched.incumbent))\n" *
         "T best iteration: $(sched.incumbent_iteration)\n" *
         "T total iterations: $(sched.iteration)\n" *

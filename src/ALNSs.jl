@@ -29,7 +29,12 @@ ALNSScoreData() = ALNSScoreData(1.0, 0, 0)
 
 
 """
-An Adaptive Large Neighborhood Search (ALNS).
+    ALNSMethodSelector
+
+Method selector realizing an Adaptive Large Neighborhood Search (ALNS) within an `LNS`.
+
+Destroy and repair methods are selected with probabilities proportional to weights
+that are adapted in a segment-wise fashion according to the methods' scores.
 
 # Elements
 - `score_data_de`: dictionary which stores a ScoreData struct for each destroy method

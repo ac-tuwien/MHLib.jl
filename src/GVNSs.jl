@@ -54,32 +54,35 @@ Perform variable neighborhood descent (VND) on given solution.
 Return true if a global termination condition is fulfilled, else false.
 """
 function vnd!(gvns::GVNS, sol::Solution)::Bool
+    meths = gvns.meths_li
     sol2 = copy(sol)
-    improvement_found = true
-    is_local_optimum = false
-    while improvement_found && !is_local_optimum
-        improvement_found = false
-        for m in next_method(gvns.meths_li)
-            res = perform_method!(gvns.scheduler, m, sol2)
-            if is_better(sol2, sol)
-                copy!(sol, sol2)
-                res.terminate && return true
-                improvement_found = true
-                if res.is_local_optimum
-                    is_local_optimum = true
-                else
-                    is_local_optimum = false
-                    break
-                end
-            else
-                res.terminate && return true
-                if res.changed
-                    copy!(sol2, sol)
-                end
-            end
+    # Compare against the remembered objective value rather than `sol` itself, as `sol` may
+    # be the scheduler's incumbent, which `perform_method!` already updates on improvement.
+    obj_sol = obj(sol)
+    # is_lopt[k]: sol is known to be a local optimum w.r.t. meths[k]
+    is_lopt = falses(length(meths))
+    k = 1
+    while k <= length(meths)
+        if is_lopt[k]
+            k += 1
+            continue
+        end
+        res = perform_method!(gvns.scheduler, meths[k], sol2)
+        if is_better_obj(sol2, obj(sol2), obj_sol)
+            copy!(sol, sol2)
+            obj_sol = obj(sol2)
+            res.terminate && return true
+            fill!(is_lopt, false)              # new solution, nothing known anymore
+            is_lopt[k] = res.is_local_optimum  # except what the method just told us
+            k = 1                              # classic VND: restart with first neighborhood
+        else
+            res.terminate && return true
+            res.changed && copy!(sol2, sol)
+            is_lopt[k] = true
+            k += 1
         end
     end
-    false
+    return false
 end
 
 
@@ -132,12 +135,16 @@ end
     run!(gvns)
 
 Actually performs the construction heuristics followed by the GVNS.
+
+The GVNS is started from the scheduler's incumbent, i.e., the best solution obtained
+by the construction heuristics or the given initial solution if considered.
 """
 function MHLib.run!(gvns::GVNS)
     sol = copy(gvns.scheduler.incumbent)
     @assert gvns.scheduler.incumbent_valid || !isempty(gvns.meths_ch)
     terminate = perform_sequentially!(gvns.scheduler, sol, gvns.meths_ch)
     terminate && return
+    copy!(sol, gvns.scheduler.incumbent)
     gvns!(gvns, sol)
 end
 

@@ -6,7 +6,7 @@
 # heuristics, destroy methods and repair methods.
 
 export LNS, MethodSelector, UniformRandomMethodSelector, 
-    WeightedRandomMethodSelector, destroy!, repair!, ResultCase, reinitialize!
+    WeightedRandomMethodSelector, destroy!, repair!, ResultCase
 
 
 """
@@ -88,10 +88,14 @@ function LNS(sol::Solution, meths_ch::Vector{MHMethod}, meths_de::Vector{MHMetho
         init_temp::Float64=0.0, temp_dec_factor::Float64=0.99, kwargs...)
     @assert init_temp >= 0.0
     @assert 0.0 <= temp_dec_factor <= 1.0
+    if !isnothing(meths_compat) && size(meths_compat) != (length(meths_de), length(meths_re))
+        throw(ArgumentError("meths_compat must be a $(length(meths_de))×$(length(meths_re)) " *
+            "matrix (destroy methods × repair methods), got size $(size(meths_compat))"))
+    end
     temperature = init_temp
     scheduler = Scheduler(sol, [meths_ch; meths_de; meths_re]; kwargs...)
-    lns = LNS{typeof(method_selector), typeof(sol)}(sol, copy(sol), temperature, scheduler, 
-        meths_ch, meths_de, meths_re,
+    lns = LNS{typeof(method_selector), typeof(sol)}(copy(sol), copy(sol), temperature, 
+        scheduler, meths_ch, meths_de, meths_re,
         meths_compat, method_selector, init_temp, temp_dec_factor)
     init_method_selector!(lns)
     return lns
@@ -230,25 +234,23 @@ function lns_iteration!(lns::LNS, destroy_idx::Union{Nothing,Int}=nothing,
     res
 end
 
-
 """
     lns!(lns, sol)
 
 Perform basic large neighborhood search (LNS) on the given solution.
 """
 function lns!(lns::LNS, sol::Solution)
-    lns.solution = sol
-    lns.new_solution = copy(sol)
+    copy!(lns.solution, sol)
+    copy!(lns.new_solution, sol)
     while true
         res = lns_iteration!(lns)
         if res.terminate
             copy!(lns.solution, lns.scheduler.incumbent)
+            copy!(sol, lns.solution)
             return
         end
     end
 end
-
-
 
 """
     run!(lns)
@@ -256,14 +258,14 @@ end
 Perform the construction heuristics followed by an LNS.
 """
 function run!(lns::LNS)
-    sol = copy(lns.scheduler.incumbent)
-    @assert lns.scheduler.incumbent_valid || !isempty(lns.meths_ch)
-    terminate = perform_sequentially!(lns.scheduler, sol, lns.meths_ch)
+    sched = lns.scheduler
+    @assert sched.incumbent_valid || !isempty(lns.meths_ch)
+    sol = copy(sched.incumbent)
+    terminate = perform_sequentially!(sched, sol, lns.meths_ch)
     terminate && return
-    sol = copy(lns.scheduler.incumbent)
+    copy!(sol, sched.incumbent)
     lns!(lns, sol)
 end
-
 
 """
     select_repair_method(lns, destroy::Int)

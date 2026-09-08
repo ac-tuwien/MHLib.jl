@@ -62,7 +62,7 @@ repair!(sol::OneMaxSolution, ::Nothing, result::Result) = shaking!(sol, 1, resul
 # -------------------------------------------------------------------------------
 
 """
-    solve_onemax(n::Int=100; seed=nothing, titer::Int==100, kwargs...)
+    solve_onemax(n::Int=100; seed=nothing, titer::Int=100, kwargs...)
 
 Solve the OneMax problem with `n` bits, using a variable neighborhood search.
 

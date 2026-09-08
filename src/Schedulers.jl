@@ -5,8 +5,6 @@
 # The module is intended for metaheuristics in which a set of methods
 # (or several of them) are in some way repeatedly applied to candidate solutions.
 
-using DataStructures  # SortedDict for method_stats
-
 export Result, MHMethod, MHMethodStatistics, Scheduler, SchedulerConfig, 
     perform_method!, next_method, update_incumbent!, check_termination, 
     perform_sequentially!, delayed_success_update!, construct!, local_improve!, shaking!, 
@@ -54,7 +52,8 @@ Data in conjunction with a method application's result.
 # Elements
 - `changed`: if `false`, the solution has not been changed by the method application
 - `is_local_optimum`: if `true`, the solution is considered a local optimum in respect to
-    the applied method
+    the applied method; setting it only prevents the same method from being re-applied to
+    the unchanged solution (e.g., in a VND), other neighborhoods are still searched
 - `terminate`: if `true`, a termination condition has been fulfilled
 - `new_incumbent`: if `true`, the resulting solution has become the new incumbent
 - `log_info`: customized log info
@@ -98,19 +97,20 @@ Struct that collects data on the applications of a `MHMethod`.
 
 Attributes
 - `applications`: number of applications of this method
-- `netto_time`: accumulated time of all applications of this method without further costs
+- `net_time`: accumulated time of all applications of this method without further costs
     (e.g., VND)
 - `successes`: number of applications in which an improved solution was found
-- `obj_gain`: sum of gains in the objective values over all successful applications
-- `brutto_time`: accumulated time of all applications of this method including further
+- `obj_gain`: sum of the absolute improvements of the objective value over all
+    successful applications (always non-negative, also for minimization problems)
+- `gross_time`: accumulated time of all applications of this method including further
     costs (e.g., VND)
 """
 mutable struct MHMethodStatistics
     applications::Int
-    netto_time::Float64
+    net_time::Float64
     successes::Int
     obj_gain::Float64
-    brutto_time::Float64
+    gross_time::Float64
 end
 
 MHMethodStatistics() = MHMethodStatistics(0, 0.0, 0, 0.0, 0.0)
@@ -162,7 +162,9 @@ and their meaning.
 """
 function Scheduler(sol::Solution, methods::Vector{MHMethod}; kwargs...)
     config = SchedulerConfig(; kwargs...)
-    method_stats = Dict([(m.name, MHMethodStatistics()) for m ∈ methods])
+    names = [m.name for m ∈ methods]
+    allunique(names) || throw(ArgumentError("method names must be unique: $names"))
+    method_stats = Dict([(name, MHMethodStatistics()) for name ∈ names])
     logger = get_logger(sol)
     sched = Scheduler(config, sol, config.consider_initial_sol, 0, 0.0, methods, 
         method_stats, 0, time(), missing, logger)
@@ -189,10 +191,10 @@ function reinitialize!(sched::Scheduler{TSolution}, sol::TSolution) where
     sched.run_time = missing
     for ms in values(sched.method_stats)
         ms.applications = 0
-        ms.netto_time = 0.0
+        ms.net_time = 0.0
         ms.successes = 0
         ms.obj_gain = 0.0
-        ms.brutto_time = 0.0
+        ms.gross_time = 0.0
     end
 end
 
@@ -225,34 +227,19 @@ It iterates through all methods.
 - `repeat`: repeat infinitely, otherwise just do one pass
 """
 function next_method(meths::Vector{MHMethod}; randomize::Bool=false, repeat::Bool=false)
-    if randomize
-        meths = copy(meths)
-    end
-    function gen_methods(channel::Channel)
-        while true
-            if randomize
-                shuffle!(meths)
-            end
-            for method in meths
-                put!(channel, method)
-            end
-            if !repeat
-                break
-            end
-        end
-    end
-    Channel(gen_methods)
+    passes = repeat ? Iterators.countfrom() : 1:1
+    return Iterators.flatten(randomize ? shuffle(meths) : meths for _ in passes)
 end
 
 
 """
     perform_method!(scheduler, method, solution; delayed_success=false)::Result
 
-Perform method on given solution and return `Results` object.
+Perform method on given solution and return `Result` object.
 
 Also updates incumbent, iteration and the method's statistics in method_stats.
 Furthermore checks the termination condition and eventually sets terminate in the
-returned Results object. If `delayed_success`, the success is not immediately determined
+returned `Result` object. If `delayed_success`, the success is not immediately determined
 and the statistics updated accordingly but at some later call of `delayed_success_update!`.
 """
 function perform_method!(sched::Scheduler, method::MHMethod, sol::Solution;
@@ -267,11 +254,11 @@ function perform_method!(sched::Scheduler, method::MHMethod, sol::Solution;
     end
     ms = sched.method_stats[method.name]
     ms.applications += 1
-    ms.netto_time += t_end - t_start
+    ms.net_time += t_end - t_start
     obj_new = obj(sol)
     if !delayed_success
-        ms.brutto_time += t_end - t_start
-        if is_better_obj(sol, obj(sol), obj_old)
+        ms.gross_time += t_end - t_start
+        if is_better_obj(sol, obj_new, obj_old)
             ms.successes += 1
             ms.obj_gain += abs(obj_new - obj_old)
         end
@@ -295,12 +282,12 @@ end
 Check termination conditions and return `true` when to terminate.
 """
 function check_termination(sched::Scheduler)::Bool
-    t = time()
+    elapsed = time() - sched.time_start
     config = sched.config
     if 0 <= config.titer <= sched.iteration ||
         0 <= config.tciter <= sched.iteration - sched.incumbent_iteration ||
-        0 <= config.ttime <= t - sched.time_start ||
-        0 <= config.tctime <= t - sched.incumbent_time ||
+        0 <= config.ttime <= elapsed ||
+        0 <= config.tctime <= elapsed - sched.incumbent_time ||
         0 <= config.tobj && !is_worse_obj(sched.incumbent, obj(sched.incumbent), 
             config.tobj)
         return true
@@ -338,11 +325,11 @@ function delayed_success_update!(sched::Scheduler, method::MHMethod, obj_old,
         t_start::Float64, sol::Solution)
     t_end = time()
     ms = sched.method_stats[method.name]
-    ms.brutto_time += t_end - t_start
+    ms.gross_time += t_end - t_start
     obj_new = obj(sol)
-    if is_better_obj(sol, obj(sol), obj_old)
+    if is_better_obj(sol, obj_new, obj_old)
         ms.successes += 1
-        ms.obj_gain += obj_new - obj_old
+        ms.obj_gain += abs(obj_new - obj_old)
     end
 end
 
@@ -350,11 +337,11 @@ end
 """
     perform_method_pair!(scheduler, destroy, repair, sol)
 
-Performs a destroy/repair method pair on given solution and returns `Results` structure.
+Performs a destroy/repair method pair on given solution and returns `Result` structure.
 
 Also updates incumbent, iteration and the method's statistics in method_stats.
 Furthermore checks the termination condition and eventually sets terminate in the 
-returned `Results` structure.
+returned `Result` structure.
 """
 function perform_method_pair!(sched::Scheduler, destroy::MHMethod, repair::MHMethod, 
         sol::Solution)
@@ -385,18 +372,19 @@ function update_stats_for_method_pair!(sched::Scheduler, destroy::MHMethod,
         t_repair::Float64)
     ms_destroy = sched.method_stats[destroy.name]
     ms_destroy.applications += 1
-    ms_destroy.netto_time += t_destroy
-    ms_destroy.brutto_time += t_destroy
+    ms_destroy.net_time += t_destroy
+    ms_destroy.gross_time += t_destroy
     ms_repair = sched.method_stats[repair.name]
     ms_repair.applications += 1
-    ms_repair.netto_time += t_repair
-    ms_repair.brutto_time += t_repair
+    ms_repair.net_time += t_repair
+    ms_repair.gross_time += t_repair
     obj_new = obj(sol)
     if is_better_obj(sol, obj_new, obj_old)
+        gain = abs(obj_new - obj_old)
         ms_destroy.successes += 1
-        ms_destroy.obj_gain += obj_new - obj_old
+        ms_destroy.obj_gain += gain
         ms_repair.successes += 1
-        ms_repair.obj_gain += obj_new - obj_old
+        ms_repair.obj_gain += gain
     end
     sched.iteration += 1
     new_incumbent = update_incumbent!(sched, sol, time() - sched.time_start)
@@ -444,10 +432,16 @@ function shaking! end
 
 `MHMethod` that tries to locally improve the solution.
 
-Perform one `k_flip_neighborhood_search`.
+Perform one `k_flip_neighborhood_search!` with `k=par` in a first-improvement manner.
+`result.changed` is set to `false` if no improvement was found, in which case the
+solution is unchanged.
 """
-local_improve!(s::BoolVectorSolution, par::Int, ::Result) =
-    k_flip_neighborhood_search!(s, par, false)
+function local_improve!(s::BoolVectorSolution, par::Int, result::Result)
+    obj_old = obj(s)
+    obj_new = k_flip_neighborhood_search!(s, par, false)
+    result.changed = obj_new != obj_old
+    return nothing
+end
 
 """
     shaking!(::BoolVectorSolution, k, result)

@@ -8,6 +8,7 @@
 # capacities.
 
 using MHLib
+using Random
 
 export MKPInstance, MKPSolution, solve_mkp
 
@@ -207,7 +208,7 @@ function solve_mkp(
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
     Random.seed!(seed)
     
-    println("MKP Demo version $(git_version())")
+    println("MKP Demo $(git_version())")
     println("filename=$filename, seed=$seed, ", (; kwargs...))
 
     inst = MKPInstance(filename)

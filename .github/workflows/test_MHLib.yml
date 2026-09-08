@@ -29,7 +29,7 @@ jobs:
         version:
           # - "1.0"  # LTS
           # - "1"    # Latest Release
-          - '1'   # change to '1' when v1.6 is out
+          - '1'   # current stable Julia release
         os:
           - ubuntu-latest
           # - macOS-latest
@@ -52,7 +52,6 @@ jobs:
           using Pkg
           # dev mono repo versions
           pkg"registry up"
-          Pkg.update()
           pkg"dev ."
           Pkg.test("MHLib"; coverage=true)
       - uses: julia-actions/julia-processcoverage@v1

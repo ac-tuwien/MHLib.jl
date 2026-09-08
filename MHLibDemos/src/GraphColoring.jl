@@ -26,7 +26,7 @@ the number of adjacent nodes having the same color is minimized.
 Attributes
 - `graph`: undirected graph we want to color
 - `n`: number of nodes
-- `m` number of edges
+- `m`: number of edges
 - `n_colors`: number of colors
 """
 struct GraphColoringInstance
@@ -128,7 +128,7 @@ MHLib.construct!(s::GraphColoringSolution, ::Nothing, ::Result) = initialize!(s)
 
 
 """
-    local_improve!(s::GraphColoringSolution, par, result)
+    local_improve!(s::GraphColoringSolution, ::Nothing, result)
 
 `MHMethod` that performs one iteration of a local search.
 
@@ -136,7 +136,7 @@ Following a first improvement strategy.
 The neighborhood used is defined by all solutions that can be created by changing the color
 of a vertex involved in a conflict.
 """
-function MHLib.local_improve!(s::GraphColoringSolution, ::Any, result::Result)
+function MHLib.local_improve!(s::GraphColoringSolution, ::Nothing, result::Result)
     n = length(s.x)
     obj(s)  # ensure objective value is valid
     order = sample(1:n, n, replace = false)
@@ -179,7 +179,7 @@ function MHLib.shaking!(s::GraphColoringSolution, par::Int, result::Result)
         for v in neighbors(s.inst.graph, u)
             if s.x[u] == s.x[v]
                 # conflict found
-                append!(under_conflict, u)
+                push!(under_conflict, u)
                 break
             end
         end
@@ -206,7 +206,7 @@ end
 
 
 function MHLib.initialize!(s::GraphColoringSolution)
-    s.x = sample(1:s.inst.n_colors, s.inst.n, replace = true)
+    rand!(s.x, 1:s.inst.n_colors)
     invalidate!(s)
 end
 
@@ -214,10 +214,10 @@ end
 # -------------------------------------------------------------------------------
 
 """
-    solve_graph_coloring(name::"data/fpsol2.i.1.col", n_colors=3; seed=nothing, 
-        titer=1000, kwargs...)
+    solve_graph_coloring(name::AbstractString="../data/fpsol2.i.1.col", n_colors::Int=3;
+        seed=nothing, titer=1000, kwargs...)
 
-Solve the graph coloring problem for the given graph and number of colurs using a GVNS.
+Solve the graph coloring problem for the given graph and number of colors using a GVNS.
 
 # Parameters
 - `name::AbstractString`: Name of the graph file to read or to generate
@@ -227,7 +227,7 @@ Solve the graph coloring problem for the given graph and number of colurs using 
 - `kwargs...`: Configuration parameters to pass to the solving algorithm, e.g., `ttime`
 """
 function solve_graph_coloring(
-        name::AbstractString=joinpath(@__DIR__(), "..", "data/fpsol2.i.1.col"),
+        name::AbstractString=joinpath(@__DIR__, "..", "data", "fpsol2.i.1.col"),
         n_colors::Int=3; seed=nothing, titer=1000, kwargs...)
     # Make results reproducibly by either setting a given seed or picking one randomly
     isnothing(seed) && (seed = rand(0:typemax(Int32)))
@@ -242,7 +242,7 @@ function solve_graph_coloring(
     println(sol)
 
     alg = GVNS(sol, [MHMethod("con", construct!)],
-        [MHMethod("li1", local_improve!, 1)], [MHMethod("sh1", shaking!, 1)];
+        [MHMethod("li1", local_improve!)], [MHMethod("sh1", shaking!, 1)];
         consider_initial_sol=true, titer, kwargs...)
     run!(alg)
     method_statistics(alg.scheduler)
