@@ -82,7 +82,8 @@ end
 Removes `min(k, sel)` randomly selected elements from the solution.
 
 Uses `element_removed_delta_eval`, which should be overloaded and adapted to the problem.
-The elements are removed even when the solution becomes infeasible.
+The elements are removed even when the solution becomes infeasible; subsequent calls of
+`element_removed_delta_eval` may therefore start from an infeasible (but consistent) state.
 """
 function remove_randomly_selected!(s::SubsetVectorSolution, k::Int)
     x = s.x
@@ -201,12 +202,14 @@ function two_exchange_random_fill_neighborhood_search!(s::SubsetVectorSolution,
                 s.sel -= 1
                 element_removed_delta_eval!(s, update_obj_val=false, allow_infeasible=true)
                 s.obj_val = obj1
+                s.obj_val_valid = true
             end
             x[sel], pool[j+1] = pool[j+1], vu
         end
         s.sel += 1
-        element_added_delta_eval!(s,update_obj_val=false, allow_infeasible=true)
+        element_added_delta_eval!(s, update_obj_val=false, allow_infeasible=true)
         s.obj_val = orig_obj
+        s.obj_val_valid = true
         if i != sel
             x[i], x[sel] = x[sel], x[i]
         end
@@ -238,8 +241,13 @@ else revert.
 This is a helper function for delta-evaluating solutions when searching a neighborhood that 
 needs to be overloaded for a concrete problem.
 
-It is assumed that the solution was in a correct state with a valid objective value in 
-`obj_val` *before* the already applied move, `obj_val_valid` therefore is true.
+It is assumed that, *before* the already applied move, all auxiliary data of the solution
+and `obj_val` were consistent with the selection, and `obj_val_valid` therefore is true.
+This state need not be feasible, however: it may result from an earlier move applied with
+`allow_infeasible=true`, e.g., in `remove_randomly_selected!` with `k > 1`, or in
+`two_exchange_random_fill_neighborhood_search!` for problems where removing an element may
+break feasibility. Implementations must therefore keep their data consistent also for
+infeasible selections.
 The default implementation just calls `invalidate!()` and returns true.
 
 - `update_obj_val`: if set, the objective value should also be updated or `invalidate!` 
@@ -267,8 +275,13 @@ else revert.
 This is a helper function for delta-evaluating solutions when searching a neighborhood 
 that needs to be overloaded for a concrete problem.
 
-It is assumed that the solution was in a correct state with a valid objective value 
-in `obj_val` *before* the already applied move, `obj_val_valid` therefore is true.
+It is assumed that, *before* the already applied move, all auxiliary data of the solution
+and `obj_val` were consistent with the selection, and `obj_val_valid` therefore is true.
+This state need not be feasible, however: it may result from an earlier move applied with
+`allow_infeasible=true`, e.g., an element removal in
+`two_exchange_random_fill_neighborhood_search!` for problems where removing an element may
+break feasibility. Implementations must therefore keep their data consistent also for
+infeasible selections.
 The default implementation just calls `invalidate!()` and returns true.
 
 - `update_obj_val`: if set, the objective value should also be updated or `invalidate!` 
